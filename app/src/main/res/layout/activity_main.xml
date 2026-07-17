@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home: top 30% = clock + today's events (non-drawable); lower 70% = gesture canvas. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/homeRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/contentColumn"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top widget zone: safe (no gesture capture). -->
+        <LinearLayout
+            android:id="@+id/widgetPanel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="30"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="12dp">
+
+            <LinearLayout
+                android:id="@+id/clockWidget"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextClock
+                    android:id="@+id/clockTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="HH:mm"
+                    android:shadowColor="#B0000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:textColor="@color/white"
+                    android:textSize="46sp"
+                    android:textStyle="bold" />
+
+                <TextClock
+                    android:id="@+id/clockDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginBottom="8dp"
+                    android:format12Hour="EEE, MMM d"
+                    android:format24Hour="EEE, MMM d"
+                    android:shadowColor="#B0000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:textColor="@color/white"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- Today's events, filled at runtime. Whole area opens the calendar app. -->
+            <LinearLayout
+                android:id="@+id/eventsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingVertical="6dp" />
+        </LinearLayout>
+
+        <!-- Only this lower region captures gestures. -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="70">
+
+            <dev.neffly.gesturelauncher.ui.GestureCanvasView
+                android:id="@+id/gestureCanvas"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Shown only while zero gestures are saved; never intercepts touch (plain,
+                 non-clickable TextView) so strokes still reach the canvas underneath it. -->
+            <TextView
+                android:id="@+id/emptyHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_margin="32dp"
+                android:alpha="0.75"
+                android:gravity="center"
+                android:shadowColor="#B0000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="10"
+                android:text="@string/home_hint_empty"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <!-- Shown briefly after a long/deliberate stroke matches nothing, so a real attempt
+                 gets feedback instead of silently doing nothing. Never intercepts touch. -->
+            <TextView
+                android:id="@+id/recognitionHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_margin="32dp"
+                android:alpha="0.85"
+                android:gravity="center"
+                android:shadowColor="#B0000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="10"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- Kept outside the canvas view so a recognizer crash can't remove it. -->
+    <ImageButton
+        android:id="@+id/drawerButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="28dp"
+        android:background="@drawable/bg_drawer_button"
+        android:contentDescription="@string/open_drawer"
+        android:scaleType="center"
+        android:src="@drawable/ic_apps"
+        app:tint="@color/white" />
+
+</FrameLayout>

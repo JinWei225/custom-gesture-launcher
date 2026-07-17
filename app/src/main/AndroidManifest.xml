@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Read the system calendar to show today's events on the home screen. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
+    <!-- Required since API 26 for the drawer's long-press "Uninstall" (ACTION_DELETE) to work. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!-- Enumerate launchable apps + resolve the clock/calendar intents (Android 11+ visibility). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SHOW_ALARMS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="content" android:host="com.android.calendar" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DELETE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GestureLauncher">
+
+        <!-- Home screen: registers as a HOME launcher, shows the system wallpaper. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:clearTaskOnLaunch="true"
+            android:stateNotNeeded="true"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:theme="@style/Theme.GestureLauncher.Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".drawer.AppDrawerActivity"
+            android:exported="false"
+            android:label="@string/drawer_title"
+            android:windowSoftInputMode="adjustNothing"
+            android:theme="@style/Theme.GestureLauncher.Drawer" />
+
+        <activity
+            android:name=".settings.SettingsHubActivity"
+            android:exported="false"
+            android:label="@string/settings_hub_title"
+            android:theme="@style/Theme.GestureLauncher.Overlay" />
+
+        <activity
+            android:name=".settings.GestureSettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <activity
+            android:name=".settings.GestureTrainingActivity"
+            android:exported="false"
+            android:label="@string/training_title"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <activity
+            android:name=".settings.GestureActionChooserActivity"
+            android:exported="false"
+            android:label="@string/gesture_action_chooser_title"
+            android:theme="@style/Theme.GestureLauncher.Overlay" />
+
+        <activity
+            android:name=".settings.GestureUrlEntryActivity"
+            android:exported="false"
+            android:label="@string/gesture_url_entry_title"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.GestureLauncher.Overlay" />
+
+        <activity
+            android:name=".settings.GestureSensitivityActivity"
+            android:exported="false"
+            android:label="@string/gesture_sensitivity_title"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <activity
+            android:name=".crash.SafeModeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <!-- Live app-list refresh uses LauncherApps.registerCallback (see App.onCreate) — the
+             old PACKAGE_* manifest receiver never fired on API 26+. -->
+    </application>
+
+</manifest>

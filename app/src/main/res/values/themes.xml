@@ -1,0 +1,44 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base theme for drawer/settings screens. Every screen here is always a dark surface, but
+         Material3 DayNight's automatic status/nav bar icon-contrast resolution doesn't reliably
+         carry through on this app/OS combination — without pinning these explicitly, bars flip to
+         the wrong (light-on-light) contrast instead of staying consistent with the home screen. -->
+    <style name="Theme.GestureLauncher" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/white</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- App drawer: the activity transition itself is suppressed (see AppDrawerActivity); the
+         drawer's root view animates its own slide up/down instead. Translucent + a transparent
+         window background so MainActivity stays visible underneath during the slide, and so OEM
+         skins (e.g. HyperOS) that force their own "app opening" zoom on ordinary opaque activities
+         treat this one as an overlay/dialog instead and leave it alone. -->
+    <style name="Theme.GestureLauncher.Drawer" parent="Theme.GestureLauncher">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <!-- Settings hub: same translucent/self-animated-slide technique as the drawer above, but
+         sliding in from the right over whichever screen (the drawer) launched it, instead of up
+         from the bottom. -->
+    <style name="Theme.GestureLauncher.Overlay" parent="Theme.GestureLauncher">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <!-- Home screen: draw behind system bars and show the wallpaper.
+         WallpaperManager is used primarily; windowShowWallpaper is the fallback. -->
+    <style name="Theme.GestureLauncher.Home" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+</resources>

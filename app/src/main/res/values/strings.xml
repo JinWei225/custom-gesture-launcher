@@ -1,0 +1,119 @@
+<resources>
+    <string name="app_name">Gesture Launcher</string>
+    <string name="drawer_title">All apps</string>
+    <string name="settings_title">Gestures</string>
+    <string name="training_title">Add gesture</string>
+
+    <string name="open_drawer">Open app drawer</string>
+    <string name="search_apps">Search apps</string>
+    <string name="app_info">App info</string>
+    <string name="uninstall">Uninstall</string>
+    <string name="label">Label</string>
+    <string name="label_app_title">Label app</string>
+    <string name="label_app_hint">e.g. tng</string>
+    <string name="remove_label">Remove label</string>
+
+    <string name="menu_gesture_settings">Settings</string>
+    <string name="menu_auto_keyboard">Auto keyboard</string>
+    <string name="menu_haptic_feedback">Haptic feedback</string>
+
+    <string name="today">Today</string>
+    <string name="no_events_today">No events today</string>
+    <string name="enable_calendar">Tap to show today\'s events</string>
+    <string name="all_day">All day</string>
+    <string name="more_events">+%1$d more</string>
+    <string name="no_clock_app">No clock app found</string>
+
+    <string name="add_gesture">Add gesture</string>
+    <string name="no_gestures">No gestures yet — tap + to add one.</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="redraw_gesture">Redraw gesture</string>
+    <string name="change_app">Change app</string>
+    <string name="edit_url">Edit URL</string>
+    <string name="gesture_deleted">Gesture deleted</string>
+    <string name="gesture_app_missing">App not installed</string>
+    <string name="undo">Undo</string>
+
+    <string name="gesture_action_chooser_title">New gesture</string>
+    <string name="gesture_action_pick_app">Open an app</string>
+    <string name="gesture_action_pick_app_subtitle">Draw a shape, launch that app</string>
+    <string name="gesture_action_open_drawer">Open the drawer</string>
+    <string name="gesture_action_open_drawer_subtitle">Draw a shape, open the app drawer</string>
+    <string name="gesture_action_open_url">Open a URL</string>
+    <string name="gesture_action_open_url_subtitle">Draw a shape, open a link in your browser</string>
+    <string name="gesture_url_entry_title">Open a URL</string>
+    <string name="gesture_url_hint">example.com</string>
+    <string name="gesture_url_empty">Enter a URL</string>
+    <string name="gesture_url_open_failed">Couldn\'t open that link</string>
+    <string name="gesture_not_recognized">Not recognized — try again</string>
+
+    <string name="pick_app">Pick an app</string>
+    <string name="draw_step">Draw your gesture (%1$d of %2$d)</string>
+    <string name="draw_hint">Draw a single stroke anywhere below</string>
+    <string name="stroke_too_short">Too short — try again</string>
+    <string name="redo_attempt">Redo this attempt</string>
+    <string name="strokes_differ">These strokes look quite different. Redraw?</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="save_anyway">Save anyway</string>
+    <string name="collision_warning">This looks a lot like your gesture for %1$s. Save anyway?</string>
+    <string name="save_prompt">Save this gesture for %1$s?</string>
+    <string name="keep">Keep</string>
+    <string name="gesture_saved">Gesture saved</string>
+
+    <string name="safe_mode_title">Gesture Launcher has crashed repeatedly</string>
+    <string name="safe_mode_body">To keep you from getting stuck, the gesture home screen is disabled. Open your other apps below, or switch your default Home app.</string>
+    <string name="open_home_settings">Change default Home app</string>
+    <string name="reset_safe_mode">Try gesture home again</string>
+
+    <string name="gesture_sensitivity_title">Adjust gesture sensitivity</string>
+    <string name="sensitivity_message">Higher = stricter matching (fewer wrong launches). Lower = more forgiving.</string>
+    <string name="sensitivity_row_subtitle">Tune the match threshold and test gestures live</string>
+
+    <string name="test_hint">Draw a gesture to see what it would match, without launching anything</string>
+    <string name="test_no_gestures">No gestures saved yet</string>
+    <string name="test_no_match">No match</string>
+    <string name="test_result">%1$s — %2$d%% (%3$s)</string>
+    <string name="test_pass">would launch</string>
+    <string name="test_fail">below your %1$d%% threshold</string>
+    <string name="test_alias_refreshed"> (launcher icon changed since training, still opens fine)</string>
+
+    <string name="menu_export">Export backup</string>
+    <string name="menu_import">Import backup</string>
+    <string name="export_success">Backup saved</string>
+    <string name="export_failed">Couldn\'t save backup</string>
+    <string name="import_invalid_file">This doesn\'t look like a valid Gesture Launcher backup file.</string>
+    <string name="import_confirm_title">Import backup</string>
+    <string name="import_confirm_message">%1$d gesture(s) and %2$d app label(s) found in this file.\n\nHow should it be applied?</string>
+    <string name="import_replace">Replace all</string>
+    <string name="import_merge">Merge</string>
+    <string name="import_result_title">Import complete</string>
+    <string name="import_result_message">Imported %1$d gesture(s) and %2$d app label(s).</string>
+    <string name="import_result_missing_apps">\n\n⚠ %1$d gesture(s) point to apps not installed on this device:\n%2$s</string>
+    <string name="ok">OK</string>
+
+    <string name="home_hint_empty">No gestures yet.\nTap the app-drawer button below to add one.</string>
+    <string name="profile_welcome_title">Welcome!</string>
+    <string name="profile_welcome_message">What should we call you? This stays on your device.</string>
+    <string name="profile_name_hint">Your name</string>
+    <string name="get_started">Get started</string>
+    <string name="profile">Profile</string>
+    <string name="edit_profile">Edit profile</string>
+    <string name="guest">Guest</string>
+
+    <string name="settings_hub_title">Settings</string>
+    <string name="section_gestures">Gestures</string>
+    <string name="section_backup">Backup</string>
+    <string name="gestures_row_subtitle">%1$d saved</string>
+    <string name="export_row_subtitle">Save your gestures, sensitivity, and app labels to a file</string>
+    <string name="import_row_subtitle">Restore from a previously exported backup file</string>
+    <string name="about_version">Gesture Launcher v%1$s</string>
+
+    <string name="section_general">General</string>
+    <string name="auto_keyboard_row_subtitle">Auto-open the keyboard when the app drawer opens</string>
+    <string name="haptic_feedback_row_subtitle">Vibrate when a gesture is recognized</string>
+    <string name="change_default_launcher">Change default launcher</string>
+    <string name="change_default_launcher_row_subtitle">Open system settings to switch your default Home app</string>
+    <string name="could_not_open_settings">Could not open settings</string>
+</resources>

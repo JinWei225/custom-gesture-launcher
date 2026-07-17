@@ -1,0 +1,8 @@
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="stroke_trail">#FFFFFFFF</color>
+    <color name="stroke_preview">#8AFFFFFF</color>
+    <color name="ic_launcher_background">#101317</color>
+    <color name="scrim">#66000000</color>
+</resources>

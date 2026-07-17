@@ -1,0 +1,20 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Internal working docs — planning/review notes not meant for end users browsing the repo.
+recommendations.md
+improvement-todo.md
+
+# Signing material, if/when a real release keystore is added — never commit this.
+*.jks
+*.keystore
+keystore.properties
