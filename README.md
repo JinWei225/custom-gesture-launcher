@@ -42,8 +42,7 @@ listing.
   installed** as the real safety net — this app is not a drop-in replacement for a full-featured
   launcher.
 - To switch back: Settings → Apps → Default apps → **Home app**.
-- Three built-in safety layers (see the spec §4): the always-present drawer button, an "Open
-  Android Settings" item in the drawer menu, and Safe Mode after 3 crashes.
+- Safe Mode after 3 crashes that will change back to your system launcher of your phone to prevent hanging situation.
 
 ## First use
 
