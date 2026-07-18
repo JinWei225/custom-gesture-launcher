@@ -6,6 +6,7 @@ import android.content.pm.LauncherApps
 import android.graphics.drawable.Drawable
 import android.os.Process
 import android.util.LruCache
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Small LRU of app icons, loaded on demand as rows bind (see AppListAdapter) instead of eagerly
@@ -17,6 +18,15 @@ object IconCache {
     private const val MAX_ENTRIES = 64
 
     private val cache = LruCache<String, Drawable>(MAX_ENTRIES)
+
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
+
+    /** Notified whenever [clear] runs, so any adapter currently showing icons (see
+     *  AppListAdapter) can force its bound rows to rebind — DiffUtil alone won't do this, since an
+     *  app's label/tag are typically unchanged when only its icon did (a theme swap, or an update
+     *  that changes the icon without changing the label). */
+    fun addListener(listener: () -> Unit) { listeners.add(listener) }
+    fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
 
     /** Cached icon, or null if it hasn't been loaded yet. Cheap; safe on the main thread. */
     fun cached(app: AppInfo): Drawable? = cache.get(app.key)
@@ -49,8 +59,10 @@ object IconCache {
     }
 
     /** Drops everything — called when the app list is invalidated (installs/updates can change
-     *  icons). */
+     *  icons) and whenever the system theme/icon pack changes (see App's configuration-change
+     *  receiver). */
     fun clear() {
         cache.evictAll()
+        listeners.forEach { it() }
     }
 }

@@ -1,11 +1,16 @@
 package dev.neffly.gesturelauncher
 
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.LauncherApps
 import android.os.UserHandle
+import androidx.core.content.ContextCompat
 import dev.neffly.gesturelauncher.crash.CrashHandler
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.drawer.IconCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +45,26 @@ class App : Application() {
                 packageNames: Array<out String>, user: UserHandle, replacing: Boolean
             ) = AppRepository.invalidate()
         })
+
+        // OEM theme engines (e.g. Xiaomi/HyperOS "Themes") re-skin app icons in place — no package
+        // is installed/updated/removed, so the LauncherApps callback above never fires for them.
+        // What they do trigger is a resource/asset change, which the OS reports via a
+        // CONFIGURATION_CHANGED broadcast; that's not something a manifest-declared receiver can
+        // ever see (the action doesn't support manifest registration at all), only a
+        // context-registered one, so it's done here rather than in AndroidManifest. Dropping the
+        // icon cache on every such broadcast is deliberately broad — it also fires for unrelated
+        // config changes like rotation — but the drop itself is just an in-memory evictAll, so the
+        // worst case is a handful of already-visible icons re-fetching from PackageManager (cheap;
+        // see IconCache) rather than any full app-list rescan.
+        val configReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) = IconCache.clear()
+        }
+        ContextCompat.registerReceiver(
+            this,
+            configReceiver,
+            IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Warm the drawer's app-list cache as early as possible. MainActivity (the HOME app) is a
         // background/cached process from Android's point of view, so after the user spends a

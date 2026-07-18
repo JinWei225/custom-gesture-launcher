@@ -37,7 +37,22 @@ class AppListAdapter(
 
     private var headersShown = false
 
-    fun submit(list: List<AppInfo>, showHeaders: Boolean = false) {
+    // Rebinds every bound row whenever IconCache is cleared — DiffUtil won't do this on its own
+    // since a row's AppInfo (label/tag) is typically unchanged when only its icon is (theme swap,
+    // or an update that swaps the icon without touching the label).
+    private val iconListener: () -> Unit = { notifyItemRangeChanged(0, itemCount) }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        IconCache.addListener(iconListener)
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        IconCache.removeListener(iconListener)
+    }
+
+    fun submit(list: List<AppInfo>, showHeaders: Boolean = false, onCommitted: (() -> Unit)? = null) {
         headersShown = showHeaders
         val rows = ArrayList<Row>(list.size + if (showHeaders) 28 else 0)
         if (showHeaders) {
@@ -53,7 +68,10 @@ class AppListAdapter(
         } else {
             list.mapTo(rows) { Row.Item(it) }
         }
-        submitList(rows)
+        // The commit callback fires once this list has actually been dispatched (DiffUtil runs
+        // async off the main thread), so a caller scrolling in response — e.g. jumping back to the
+        // top after a filter change — lands after the rows are in place instead of racing them.
+        submitList(rows, onCommitted)
     }
 
     /** The topmost app row currently shown, i.e. what Enter in the search bar should launch. */

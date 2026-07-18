@@ -89,18 +89,27 @@ object AppRepository {
      * characters appear in order in the label (not necessarily contiguous — a superset of a
      * plain substring match), ranked so contiguous/word-boundary matches sort first.
      *
-     * An app whose user-set [AppInfo.tag] exactly matches [query] is pinned above every fuzzy
-     * match regardless of its own fuzzy score — including apps whose real label wouldn't fuzzy
-     * -match the query at all (e.g. a Chinese-labeled app tagged with an English shortcut), since
-     * that's the whole point of a tag: an independent, guaranteed-findable shortcut.
+     * An app's user-set [AppInfo.tag], when present, is fuzzy-matched the same way and used
+     * instead of the label score whenever it's the better match — including apps whose real label
+     * wouldn't fuzzy-match the query at all (e.g. a Chinese-labeled app tagged with an English
+     * shortcut), since that's the whole point of a tag: an independent, guaranteed-findable
+     * shortcut. Any tag match (even a partial one, like "gma" against a "gmaps" tag) is boosted
+     * above ordinary label matches, since it's a deliberate shortcut the user typed in themselves.
+     * An exact tag match is pinned above everything, tag or label, regardless of score.
      */
     fun filter(apps: List<AppInfo>, query: String): List<AppInfo> {
         val q = normalize(query)
         if (q.isEmpty()) return apps
         return apps.mapNotNull { app ->
-            val tagExact = app.tag?.let { normalize(it) == q } == true
-            if (tagExact) app to TAG_EXACT_SCORE
-            else fuzzyScore(normalize(app.label), q)?.let { app to it }
+            val tagNorm = app.tag?.let { normalize(it) }
+            val score = if (tagNorm != null && tagNorm == q) {
+                TAG_EXACT_SCORE
+            } else {
+                val tagScore = tagNorm?.let { fuzzyScore(it, q) }?.plus(TAG_MATCH_BONUS)
+                val labelScore = fuzzyScore(normalize(app.label), q)
+                listOfNotNull(tagScore, labelScore).maxOrNull()
+            }
+            score?.let { app to it }
         }.sortedWith(compareByDescending<Pair<AppInfo, Int>> { it.second }
             .thenBy { normalize(it.first.label) })
             .map { it.first }
@@ -138,6 +147,10 @@ object AppRepository {
 
     /** Sort tier for an exact tag match — comfortably above any possible fuzzy score. */
     private const val TAG_EXACT_SCORE = Int.MAX_VALUE
+
+    /** Added to a fuzzy tag match's score so it outranks any ordinary label match, however good —
+     *  comfortably larger than a realistic label fuzzy score even for long queries/labels. */
+    private const val TAG_MATCH_BONUS = 1000
 
     private const val MATCH_SCORE = 16
     private const val CONSECUTIVE_BONUS = 12

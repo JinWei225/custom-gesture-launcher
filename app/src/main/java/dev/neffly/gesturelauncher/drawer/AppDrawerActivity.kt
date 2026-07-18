@@ -112,7 +112,7 @@ class AppDrawerActivity : AppCompatActivity() {
         appList.layoutManager = LinearLayoutManager(this)
         adapter = AppListAdapter(
             scope = lifecycleScope,
-            onClick = { app -> AppRepository.launch(this, app) },
+            onClick = { app -> launchAndClearSearch(app) },
             onLongClick = { app, anchor -> showAppMenu(app, anchor) }
         )
         appList.adapter = adapter
@@ -152,7 +152,7 @@ class AppDrawerActivity : AppCompatActivity() {
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                submitList(AppRepository.filter(allApps, s?.toString().orEmpty()))
+                submitList(AppRepository.filter(allApps, s?.toString().orEmpty()), resetScroll = true)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -162,7 +162,7 @@ class AppDrawerActivity : AppCompatActivity() {
                 (actionId == EditorInfo.IME_ACTION_UNSPECIFIED &&
                     event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
             if (isSearchAction) {
-                adapter.firstItem()?.let { AppRepository.launch(this, it) }
+                adapter.firstItem()?.let { launchAndClearSearch(it) }
                 true
             } else {
                 false
@@ -187,6 +187,14 @@ class AppDrawerActivity : AppCompatActivity() {
         // Cheap when the cache is warm — LauncherApps callbacks (see App) invalidate it whenever
         // packages change, so no per-open full rescan is needed anymore.
         loadApps()
+    }
+
+    /** Launches [app] and clears the search bar, so a leftover query from this search doesn't
+     *  greet the user the next time this same drawer instance resurfaces (e.g. via back/recents —
+     *  this activity isn't finished just because another app was launched from it). */
+    private fun launchAndClearSearch(app: AppInfo) {
+        AppRepository.launch(this, app)
+        searchInput.text = null
     }
 
     private fun showKeyboardOnSearch() {
@@ -227,10 +235,16 @@ class AppDrawerActivity : AppCompatActivity() {
         }
     }
 
-    private fun submitList(items: List<AppInfo>) {
+    private fun submitList(items: List<AppInfo>, resetScroll: Boolean = false) {
         // Section headers only make sense over the plain alphabetical order — fuzzy search results
         // are sorted by relevance, so grouping by letter there would read as arbitrarily jumbled.
-        adapter.submit(items, showHeaders = searchInput.text.isNullOrBlank())
+        adapter.submit(items, showHeaders = searchInput.text.isNullOrBlank()) {
+            // Deferred to the diff's commit callback: scrolling right after calling submit() would
+            // race the async DiffUtil dispatch and could land against the still-old row count.
+            // Only done for search-driven updates — a background app-list refresh shouldn't yank
+            // the user back to the top of whatever they were scrolled to.
+            if (resetScroll) appList.scrollToPosition(0)
+        }
         alphabetIndex.setActiveLetters(items.mapTo(sortedSetOf()) { it.indexLetter() })
         alphabetIndex.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
     }
