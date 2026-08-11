@@ -164,7 +164,12 @@ class AppDrawerActivity : AppCompatActivity() {
                 (actionId == EditorInfo.IME_ACTION_UNSPECIFIED &&
                     event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
             if (isSearchAction) {
-                adapter.firstItem()?.let { launchAndClearSearch(it) }
+                // Only once something is typed. With auto-keyboard on, the drawer opens focused
+                // with Enter one keystroke away, so an empty query would launch whichever app
+                // happens to sort first. Still consumed, to keep the keyboard up.
+                if (!searchInput.text.isNullOrBlank()) {
+                    adapter.firstItem()?.let { launchAndClearSearch(it) }
+                }
                 true
             } else {
                 false
