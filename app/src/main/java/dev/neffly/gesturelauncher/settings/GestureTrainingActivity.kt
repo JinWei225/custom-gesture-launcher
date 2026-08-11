@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.settings
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PointF
 import android.os.Bundle
 import android.os.Process
@@ -19,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
@@ -95,6 +97,14 @@ class GestureTrainingActivity : AppCompatActivity() {
 
         canvas.autoClearMillis = 0L // keep the trail until the next stroke / redo
         canvas.multiStrokeGapMillis = GestureCanvasView.MULTI_STROKE_GAP_MILLIS // tolerate pen lifts
+        // The canvas defaults to the home screen's white-over-wallpaper ink. Here it sits on a
+        // themed card, where white would be invisible in light mode, so draw in the accent and
+        // drop the halo — it exists to survive an unknown wallpaper, which isn't the case here.
+        // colorPrimary is fully qualified because nonTransitiveRClass keeps library attrs out
+        // of this module's R.
+        canvas.strokeColor =
+            MaterialColors.getColor(canvas, com.google.android.material.R.attr.colorPrimary)
+        canvas.haloColor = Color.TRANSPARENT
         findViewById<Button>(R.id.redoButton).setOnClickListener { redoAttempt() }
 
         setupPicker()

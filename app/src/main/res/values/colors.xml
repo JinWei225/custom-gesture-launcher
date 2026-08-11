@@ -1,8 +1,83 @@
 <resources>
+
+    <!-- ============================================================================
+         Raw values. Only for places that genuinely mean "the literal colour", never
+         for theming — everything theme-dependent goes through the md_* tokens below.
+         ============================================================================ -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="stroke_trail">#FFFFFFFF</color>
     <color name="stroke_preview">#8AFFFFFF</color>
+
+    <!-- Adaptive-icon background. Deliberately has no values-night/ variant: the OS renders
+         launcher icons against its own backdrop and never applies our night qualifier to them. -->
     <color name="ic_launcher_background">#101317</color>
+
+    <!-- Dark circle behind the home screen's white drawer glyph. Sits over the wallpaper, so
+         like the wallpaper_overlay_* pair below it is intentionally theme-invariant. -->
     <color name="scrim">#66000000</color>
+
+    <!-- ============================================================================
+         Wallpaper overlay pair — DELIBERATELY IDENTICAL in values/ and values-night/.
+
+         These style the home screen only: the clock, the date, the hint text, the calendar
+         event rows and the drawer glyph. All of those are drawn straight over the user's
+         wallpaper, whose brightness has no relationship to the system theme — a light
+         wallpaper is just as likely in dark mode as in light. Making them follow the theme
+         would tie legibility to a variable that says nothing about what is actually behind
+         them, so instead they stay white and lean on the shadow for contrast, which holds
+         against any wallpaper.
+
+         If you are here because these look like a missed dark-mode conversion: they aren't.
+         ============================================================================ -->
+    <color name="wallpaper_overlay_text">#FFFFFFFF</color>
+    <color name="wallpaper_overlay_shadow">#B0000000</color>
+
+    <!-- ============================================================================
+         Material 3 palette — LIGHT.
+
+         Same key set as values-night/colors.xml, which is what lets themes.xml reference
+         these unqualified and stay a single file. Add a token here and you MUST add it
+         there too, or `lint` fails with MissingDefaultResource.
+
+         Note the surface/surfaceContainer relationship: in light, `md_surface` (#FFFFFF) is
+         *lighter* than `md_surface_container` (#F2F3F5). The window background uses the
+         container token and cards/toolbars use surface, so the app reads as light grey with
+         white cards floating on it rather than as a flat sheet of white. In dark that
+         relationship inverts, per M3 elevation semantics.
+         ============================================================================ -->
+    <color name="md_primary">#3B6FD4</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#D8E2FF</color>
+    <color name="md_on_primary_container">#001A43</color>
+
+    <color name="md_secondary_container">#DCE3EE</color>
+    <color name="md_on_secondary_container">#1A2430</color>
+
+    <color name="md_surface">#FFFFFF</color>
+    <color name="md_on_surface">#1A1C1E</color>
+    <color name="md_surface_variant">#E2E5EA</color>
+    <color name="md_on_surface_variant">#44474A</color>
+
+    <color name="md_surface_container_lowest">#FFFFFF</color>
+    <color name="md_surface_container_low">#F7F8FA</color>
+    <color name="md_surface_container">#F2F3F5</color>
+    <color name="md_surface_container_high">#E9EBEF</color>
+    <color name="md_surface_container_highest">#E2E4E8</color>
+
+    <color name="md_outline">#74777C</color>
+    <color name="md_outline_variant">#C7CACF</color>
+
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+
+    <!-- Semantic status colours, kept separate from the accent so they stay readable as
+         "pass / fail / not yet run" regardless of what colorPrimary happens to be. -->
+    <color name="result_pass">#2E7D32</color>
+    <color name="result_fail">#C62828</color>
+    <color name="result_neutral">#5F6368</color>
+
+    <!-- Amber is unreadable on a light ground, so light mode gets a darkened variant. -->
+    <color name="warning">#B26A00</color>
+
 </resources>

@@ -8,6 +8,8 @@ import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
+import dev.neffly.gesturelauncher.R
 
 /**
  * Full-screen transparent canvas that captures a stroke session (down -> move -> up, optionally
@@ -47,8 +49,8 @@ class GestureCanvasView @JvmOverloads constructor(
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0xFFFFFFFF.toInt()
-        alpha = 210
+        color = ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
+        alpha = STROKE_ALPHA
         strokeWidth = 12f
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
@@ -59,11 +61,36 @@ class GestureCanvasView @JvmOverloads constructor(
      *  invalidate while drawing; two plain strokes stay fully hardware-accelerated. */
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0x66000000
+        color = ContextCompat.getColor(context, R.color.scrim)
         strokeWidth = 22f
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
+
+    /** Colour of the drawn stroke. Defaults to the wallpaper-overlay white, which is right for
+     *  the home screen — the only place this view is drawn straight over the wallpaper.
+     *
+     *  The two settings screens that host it (gesture training and sensitivity) put it on a
+     *  themed card instead, where white-on-near-white is invisible in light mode, so they
+     *  override this with colorPrimary. */
+    var strokeColor: Int
+        get() = paint.color
+        set(value) {
+            paint.color = value
+            // Assigning .color resets the alpha channel, so re-apply it afterwards.
+            paint.alpha = STROKE_ALPHA
+            invalidate()
+        }
+
+    /** Colour of the wider stroke drawn beneath [strokeColor]. Its job is contrast against an
+     *  unknown wallpaper, so on a themed surface — where the background is known — callers set
+     *  it to transparent rather than stacking a dark halo under a dark stroke. */
+    var haloColor: Int
+        get() = haloPaint.color
+        set(value) {
+            haloPaint.color = value
+            invalidate()
+        }
 
     init {
         isFocusable = true
@@ -163,5 +190,9 @@ class GestureCanvasView @JvmOverloads constructor(
 
     companion object {
         const val MULTI_STROKE_GAP_MILLIS = 400L
+
+        /** Slight transparency on the stroke so it reads as ink over the backdrop rather than
+         *  as an opaque cut-out. */
+        private const val STROKE_ALPHA = 210
     }
 }

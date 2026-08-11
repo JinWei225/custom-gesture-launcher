@@ -11,8 +11,10 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.materialswitch.MaterialSwitch
 import dev.neffly.gesturelauncher.R
@@ -41,6 +43,7 @@ class SettingsHubActivity : AppCompatActivity() {
     private lateinit var gesturesSubtitle: TextView
     private lateinit var autoKeyboardSwitch: MaterialSwitch
     private lateinit var hapticFeedbackSwitch: MaterialSwitch
+    private lateinit var themeSubtitle: TextView
     private var isClosing = false
 
     private val exportLauncher =
@@ -61,12 +64,16 @@ class SettingsHubActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings_hub)
 
         hubRoot = findViewById(R.id.settingsHubRoot)
-        hubRoot.translationX = resources.displayMetrics.widthPixels.toFloat()
-        hubRoot.animate()
-            .translationX(0f)
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        // Only slide in on a genuine open. Changing the theme recreates this activity, and
+        // replaying the entry animation then would read as the panel being re-opened.
+        if (savedInstanceState == null) {
+            hubRoot.translationX = resources.displayMetrics.widthPixels.toFloat()
+            hubRoot.animate()
+                .translationX(0f)
+                .setDuration(SLIDE_DURATION_MS)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
@@ -106,6 +113,9 @@ class SettingsHubActivity : AppCompatActivity() {
             Prefs.setHapticFeedback(this, enabled)
             hapticFeedbackSwitch.isChecked = enabled
         }
+        themeSubtitle = findViewById(R.id.themeSubtitle)
+        findViewById<View>(R.id.themeRow).setOnClickListener { showThemeDialog() }
+
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()
         }
@@ -122,6 +132,45 @@ class SettingsHubActivity : AppCompatActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
+        themeSubtitle.setText(themeLabelFor(Prefs.themeMode(this)))
+    }
+
+    /** Label for a MODE_NIGHT_* constant. Anything unrecognised (an older build's value, or a
+     *  mode we don't offer) falls back to "follow system", which is also the stored default. */
+    @StringRes
+    private fun themeLabelFor(mode: Int): Int = when (mode) {
+        AppCompatDelegate.MODE_NIGHT_NO -> R.string.theme_light
+        AppCompatDelegate.MODE_NIGHT_YES -> R.string.theme_dark
+        else -> R.string.theme_system
+    }
+
+    private fun showThemeDialog() {
+        val modes = intArrayOf(
+            AppCompatDelegate.MODE_NIGHT_NO,
+            AppCompatDelegate.MODE_NIGHT_YES,
+            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        )
+        val labels = modes.map { getString(themeLabelFor(it)) }.toTypedArray()
+        // Fall back to follow-system for an unrecognised stored value, matching what
+        // themeLabelFor already displays for one — otherwise the row and the dialog's
+        // preselected item would disagree.
+        val current = modes.indexOf(Prefs.themeMode(this))
+            .takeIf { it >= 0 }
+            ?: modes.indexOf(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_theme)
+            .setSingleChoiceItems(labels, current) { dialog, which ->
+                val mode = modes[which]
+                Prefs.setThemeMode(this, mode)
+                // Dismiss before applying: setDefaultNightMode recreates this activity
+                // synchronously, and tearing the window down with the dialog still attached
+                // leaks it (and logs a WindowLeaked warning).
+                dialog.dismiss()
+                AppCompatDelegate.setDefaultNightMode(mode)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun finish() {

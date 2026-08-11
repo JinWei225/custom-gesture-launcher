@@ -82,12 +82,16 @@ class AppDrawerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_app_drawer)
 
         drawerRoot = findViewById(R.id.drawerRoot)
-        drawerRoot.translationY = resources.displayMetrics.heightPixels.toFloat()
-        drawerRoot.animate()
-            .translationY(0f)
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        // Only slide up on a genuine open, not on a recreate (e.g. a theme change), where
+        // replaying the entry animation would look like the drawer re-opening itself.
+        if (savedInstanceState == null) {
+            drawerRoot.translationY = resources.displayMetrics.heightPixels.toFloat()
+            drawerRoot.animate()
+                .translationY(0f)
+                .setDuration(SLIDE_DURATION_MS)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.inflateMenu(R.menu.drawer_menu)
@@ -269,7 +273,7 @@ class AppDrawerActivity : AppCompatActivity() {
 
         PopupMenu(this, anchor).apply {
             menu.add(0, ID_APP_INFO, 0, R.string.app_info).icon = menuIcon(R.drawable.ic_info)
-            menu.add(0, ID_LABEL, 1, R.string.label).icon = menuIcon(R.drawable.ic_label)
+            menu.add(0, ID_LABEL, 1, R.string.add_alias).icon = menuIcon(R.drawable.ic_label)
             if (!isSystemApp) {
                 menu.add(0, ID_UNINSTALL, 2, R.string.uninstall).icon = menuIcon(R.drawable.ic_delete)
             }
@@ -342,7 +346,7 @@ class AppDrawerActivity : AppCompatActivity() {
         input.setSelection(input.text?.length ?: 0)
 
         val builder = AlertDialog.Builder(this)
-            .setTitle(R.string.label_app_title)
+            .setTitle(R.string.app_alias_title)
             .setView(view)
             .setPositiveButton(R.string.save) { _, _ ->
                 val text = input.text?.toString()?.trim().orEmpty()
@@ -355,7 +359,7 @@ class AppDrawerActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
         if (app.tag != null) {
-            builder.setNeutralButton(R.string.remove_label) { _, _ ->
+            builder.setNeutralButton(R.string.remove_alias) { _, _ ->
                 AppTagStore.clearTag(this, app.componentName)
                 AppRepository.invalidate()
             }

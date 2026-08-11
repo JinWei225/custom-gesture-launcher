@@ -4,7 +4,7 @@
     android:id="@+id/settingsHubRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="?attr/colorSurfaceContainer"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -291,6 +291,34 @@
                     android:layout_height="wrap_content"
                     android:clickable="false"
                     android:focusable="false" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/themeRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/menu_theme"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in SettingsHubActivity.onResume, not here: it reflects the
+                     current selection rather than a fixed description. -->
+                <TextView
+                    android:id="@+id/themeSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
 

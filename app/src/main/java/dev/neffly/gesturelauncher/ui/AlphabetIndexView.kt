@@ -1,7 +1,6 @@
 package dev.neffly.gesturelauncher.ui
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -9,6 +8,7 @@ import android.util.AttributeSet
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import com.google.android.material.color.MaterialColors
 
 /**
  * Thin side strip of "#, A..Z" glyphs for fast-scrolling a long, alphabetically sorted list.
@@ -79,10 +79,18 @@ class AlphabetIndexView @JvmOverloads constructor(
         }
     }
 
-    private fun dim(color: Int): Int = (color and 0x00FFFFFF) or 0x50000000
+    /** Letters with no apps under them are drawn at [DIM_ALPHA] so the index still shows the
+     *  full alphabet without implying those rows are reachable. */
+    private fun dim(color: Int): Int = (color and 0x00FFFFFF) or DIM_ALPHA
 
-    private fun currentTextColorTint(): Int {
-        val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        return if (night == Configuration.UI_MODE_NIGHT_YES) Color.WHITE else Color.BLACK
+    /** The theme's on-surface colour, resolved per draw so a theme change lands on the next
+     *  invalidate rather than being baked in at construction. */
+    private fun currentTextColorTint(): Int = MaterialColors.getColor(
+        this, com.google.android.material.R.attr.colorOnSurface, Color.GRAY
+    )
+
+    companion object {
+        /** ~31% opacity, in the top byte of an ARGB int. */
+        private const val DIM_ALPHA = 0x50000000
     }
 }

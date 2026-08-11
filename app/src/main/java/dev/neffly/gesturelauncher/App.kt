@@ -7,8 +7,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.LauncherApps
 import android.os.UserHandle
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import dev.neffly.gesturelauncher.crash.CrashHandler
+import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.drawer.IconCache
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +28,16 @@ class App : Application() {
         super.onCreate()
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(CrashHandler(applicationContext, previous))
+
+        // Apply the saved Light/Dark/Follow-system choice before anything can inflate. This has
+        // to happen here rather than in an activity: Application.onCreate is guaranteed to finish
+        // before the first Activity.onCreate, so no window is ever built against the wrong mode
+        // and there's no light-to-dark flash on the first frame. Deliberately sits *after* the
+        // crash handler, preserving this file's "crash handler first, always" invariant.
+        //
+        // The synchronous SharedPreferences read is the same file MainActivity already reads on
+        // its safe-mode path, so it's paged in either way.
+        AppCompatDelegate.setDefaultNightMode(Prefs.themeMode(this))
 
         // Keep the drawer's app list live. LauncherApps callbacks are the launcher-grade
         // replacement for PACKAGE_ADDED/REMOVED broadcasts (which stopped reaching manifest

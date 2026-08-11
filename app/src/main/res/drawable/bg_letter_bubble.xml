@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The big letter bubble shown while dragging the drawer's alphabet index.
+
+     Uses colorOnSurface — an inverse-surface treatment — rather than a surface tone, because
+     the bubble has to stand out from the app list it floats over. A surface-family colour
+     would be near-identical to that list in both themes and the bubble would disappear.
+     Its label uses ?attr/colorSurface to match (see activity_app_drawer.xml). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
-    <solid android:color="#D0202020" />
+    <solid android:color="?attr/colorOnSurface" />
 </shape>

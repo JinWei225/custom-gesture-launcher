@@ -37,14 +37,22 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GestureLauncher">
 
-        <!-- Home screen: registers as a HOME launcher, shows the system wallpaper. -->
+        <!-- Home screen: registers as a HOME launcher, shows the system wallpaper.
+
+             uiMode is deliberately absent from configChanges below. Everything else in that
+             list fires during ordinary use (rotation, keyboard dock, fold), where skipping
+             recreation avoids real churn on the home screen. A day/night flip isn't in that
+             category — it happens twice a day at most, or once when the user picks a theme —
+             and declaring uiMode would opt this activity out of the recreation that
+             AppCompatDelegate.setDefaultNightMode drives, leaving the launcher stuck on a
+             stale theme until it was killed. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.GestureLauncher.Home">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.data
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 
 /**
  * SharedPreferences wrapper for the crash-counter safety net and the tunable recognition threshold.
@@ -14,6 +15,7 @@ object Prefs {
     private const val KEY_AUTO_KEYBOARD = "auto_keyboard"
     private const val KEY_PROFILE_NAME = "profile_name"
     private const val KEY_HAPTIC_FEEDBACK = "haptic_feedback"
+    private const val KEY_THEME_MODE = "theme_mode"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -64,6 +66,19 @@ object Prefs {
 
     fun setHapticFeedback(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_HAPTIC_FEEDBACK, value).apply()
+    }
+
+    /** Light / dark / follow-system preference, stored as the raw [AppCompatDelegate]
+     *  MODE_NIGHT_* constant so it feeds straight back into
+     *  [AppCompatDelegate.setDefaultNightMode] with no mapping table. Those constants are part
+     *  of the stable API, so persisting them is safe.
+     *
+     *  Applied once per process in App.onCreate, before any activity inflates. */
+    fun themeMode(context: Context): Int =
+        prefs(context).getInt(KEY_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
+    fun setThemeMode(context: Context, mode: Int) {
+        prefs(context).edit().putInt(KEY_THEME_MODE, mode).apply()
     }
 
     /** Local display name shown in the settings hub. Null means "never asked yet" (first run);

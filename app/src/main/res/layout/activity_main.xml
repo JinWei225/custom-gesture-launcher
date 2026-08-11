@@ -38,11 +38,11 @@
                     android:layout_height="wrap_content"
                     android:format12Hour="h:mm"
                     android:format24Hour="HH:mm"
-                    android:shadowColor="#B0000000"
+                    android:shadowColor="@color/wallpaper_overlay_shadow"
                     android:shadowDx="0"
                     android:shadowDy="0"
                     android:shadowRadius="10"
-                    android:textColor="@color/white"
+                    android:textColor="@color/wallpaper_overlay_text"
                     android:textSize="46sp"
                     android:textStyle="bold" />
 
@@ -54,11 +54,11 @@
                     android:layout_marginBottom="8dp"
                     android:format12Hour="EEE, MMM d"
                     android:format24Hour="EEE, MMM d"
-                    android:shadowColor="#B0000000"
+                    android:shadowColor="@color/wallpaper_overlay_shadow"
                     android:shadowDx="0"
                     android:shadowDy="0"
                     android:shadowRadius="10"
-                    android:textColor="@color/white"
+                    android:textColor="@color/wallpaper_overlay_text"
                     android:textSize="15sp" />
             </LinearLayout>
 
@@ -96,12 +96,12 @@
                 android:layout_margin="32dp"
                 android:alpha="0.75"
                 android:gravity="center"
-                android:shadowColor="#B0000000"
+                android:shadowColor="@color/wallpaper_overlay_shadow"
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="10"
                 android:text="@string/home_hint_empty"
-                android:textColor="@color/white"
+                android:textColor="@color/wallpaper_overlay_text"
                 android:textSize="15sp"
                 android:visibility="gone" />
 
@@ -115,11 +115,11 @@
                 android:layout_margin="32dp"
                 android:alpha="0.85"
                 android:gravity="center"
-                android:shadowColor="#B0000000"
+                android:shadowColor="@color/wallpaper_overlay_shadow"
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="10"
-                android:textColor="@color/white"
+                android:textColor="@color/wallpaper_overlay_text"
                 android:textSize="15sp"
                 android:visibility="gone" />
 
@@ -139,6 +139,6 @@
         android:contentDescription="@string/open_drawer"
         android:scaleType="center"
         android:src="@drawable/ic_apps"
-        app:tint="@color/white" />
+        app:tint="@color/wallpaper_overlay_text" />
 
 </FrameLayout>

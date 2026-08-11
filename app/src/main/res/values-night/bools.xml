@@ -1,0 +1,7 @@
+<resources>
+
+    <!-- Dark mode wants light-on-dark bar icons, which is the *absence* of the "light bar"
+         appearance. See the longer note in values/bools.xml. -->
+    <bool name="light_system_bars">false</bool>
+
+</resources>

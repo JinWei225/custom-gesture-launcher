@@ -1,22 +1,75 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Base theme for drawer/settings screens. Every screen here is always a dark surface, but
-         Material3 DayNight's automatic status/nav bar icon-contrast resolution doesn't reliably
-         carry through on this app/OS combination — without pinning these explicitly, bars flip to
-         the wrong (light-on-light) contrast instead of staying consistent with the home screen. -->
+    <!-- Base theme for drawer/settings screens.
+
+         Every colour is mapped from the md_* tokens in colors.xml rather than set literally,
+         so the light/dark split lives entirely in the resource qualifier and this file stays
+         single-source. The only thing values-night/themes.xml overrides is the pair of
+         light-bar flags at the bottom, which are booleans and therefore can't come from a
+         colour token.
+
+         An earlier revision pinned windowLightStatusBar/windowLightNavigationBar to false
+         here on the theory that DayNight's automatic contrast resolution was unreliable on
+         this OS. The real cause was simpler: this theme was overriding the flags to false
+         unconditionally, so once the phone switched to light mode the bars kept light icons
+         while colorSurface resolved to near-white. They're still set explicitly (via
+         @bool/light_system_bars) because being explicit costs nothing and removes any doubt
+         about what an OEM skin might do — but now they follow the theme. -->
     <style name="Theme.GestureLauncher" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/white</item>
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">?attr/colorSurface</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+
+        <item name="colorPrimary">@color/md_primary</item>
+        <item name="colorOnPrimary">@color/md_on_primary</item>
+        <item name="colorPrimaryContainer">@color/md_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/md_on_primary_container</item>
+
+        <item name="colorSecondaryContainer">@color/md_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/md_on_secondary_container</item>
+
+        <item name="colorSurface">@color/md_surface</item>
+        <item name="colorOnSurface">@color/md_on_surface</item>
+        <item name="colorSurfaceVariant">@color/md_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/md_on_surface_variant</item>
+
+        <item name="colorSurfaceContainerLowest">@color/md_surface_container_lowest</item>
+        <item name="colorSurfaceContainerLow">@color/md_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/md_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/md_surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/md_surface_container_highest</item>
+
+        <item name="colorOutline">@color/md_outline</item>
+        <item name="colorOutlineVariant">@color/md_outline_variant</item>
+
+        <item name="colorError">@color/md_error</item>
+        <item name="colorOnError">@color/md_on_error</item>
+
+        <!-- The window ground is the *container* tone, one step down from colorSurface, so
+             light mode reads as soft grey rather than as a flat sheet of white. Dialogs and
+             popups keep colorSurface and float above it.
+
+             The bars use the same token as the window so they blend into the screen instead of
+             leaving a lighter band at the top and bottom — with colorSurface here, an opaque
+             screen showed a visible white strip against the grey content. -->
+        <item name="android:windowBackground">@color/md_surface_container</item>
+
+        <item name="android:statusBarColor">?attr/colorSurfaceContainer</item>
+        <item name="android:navigationBarColor">?attr/colorSurfaceContainer</item>
+
+        <!-- "Light bar" means dark icons for a light background: true in light mode, false in
+             dark. Kept in a bool so this theme needs no night-qualified duplicate — see the
+             note in values/bools.xml for why that matters. -->
+        <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
     </style>
 
     <!-- App drawer: the activity transition itself is suppressed (see AppDrawerActivity); the
          drawer's root view animates its own slide up/down instead. Translucent + a transparent
          window background so MainActivity stays visible underneath during the slide, and so OEM
          skins (e.g. HyperOS) that force their own "app opening" zoom on ordinary opaque activities
-         treat this one as an overlay/dialog instead and leave it alone. -->
+         treat this one as an overlay/dialog instead and leave it alone.
+
+         Losing the base theme's windowBackground is fine here: activity_app_drawer.xml paints
+         ?attr/colorSurfaceContainer on its own root, matching what the base theme would have
+         drawn. -->
     <style name="Theme.GestureLauncher.Drawer" parent="Theme.GestureLauncher">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -24,21 +77,35 @@
 
     <!-- Settings hub: same translucent/self-animated-slide technique as the drawer above, but
          sliding in from the right over whichever screen (the drawer) launched it, instead of up
-         from the bottom. -->
+         from the bottom. activity_settings_hub.xml likewise paints its own root background. -->
     <style name="Theme.GestureLauncher.Overlay" parent="Theme.GestureLauncher">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
     <!-- Home screen: draw behind system bars and show the wallpaper.
-         WallpaperManager is used primarily; windowShowWallpaper is the fallback. -->
-    <style name="Theme.GestureLauncher.Home" parent="Theme.Material3.DayNight.NoActionBar">
+         WallpaperManager is used primarily; windowShowWallpaper is the fallback.
+
+         Extends the base theme (rather than Material3 directly, as it used to) so that the
+         dialogs and touch ripples MainActivity inflates resolve against the same palette as
+         the rest of the app. The transparent-window items below still win, because a child
+         style overrides its parent.
+
+         Both light-bar flags are pinned to a literal false rather than to
+         @bool/light_system_bars, so they stay false in BOTH themes. The bars here sit over
+         the user's wallpaper, and
+         wallpaper brightness is independent of the system theme, so following the theme would
+         make bar legibility depend on something unrelated to what's behind the bars. Light
+         icons over a transparent bar is the same bet the clock makes with its drop shadow. -->
+    <style name="Theme.GestureLauncher.Home" parent="Theme.GestureLauncher">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
 </resources>

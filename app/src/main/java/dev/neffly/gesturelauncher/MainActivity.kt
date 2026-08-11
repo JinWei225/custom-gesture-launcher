@@ -296,11 +296,19 @@ class MainActivity : AppCompatActivity() {
         for (line in lines) {
             val tv = TextView(this).apply {
                 text = line
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.white))
+                // White-on-shadow in both themes, matching the clock above — these rows are
+                // drawn straight over the wallpaper, so they can't follow the app theme.
+                // See the note on wallpaper_overlay_text in res/values/colors.xml.
+                setTextColor(
+                    ContextCompat.getColor(this@MainActivity, R.color.wallpaper_overlay_text)
+                )
                 textSize = 14f
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setShadowLayer(10f, 0f, 0f, 0xB0000000.toInt())
+                setShadowLayer(
+                    10f, 0f, 0f,
+                    ContextCompat.getColor(this@MainActivity, R.color.wallpaper_overlay_shadow)
+                )
                 setPadding(0, 6, 0, 6)
                 gravity = Gravity.CENTER_VERTICAL
             }

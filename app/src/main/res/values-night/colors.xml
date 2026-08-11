@@ -1,0 +1,58 @@
+<resources>
+
+    <!-- Dark counterpart to values/colors.xml. Only tokens whose value actually changes in
+         dark mode live here; anything absent falls back to the default qualifier. -->
+
+    <!-- ============================================================================
+         Wallpaper overlay pair — DELIBERATELY THE SAME VALUES as values/colors.xml.
+
+         Repeated here rather than left to fall through, so that anyone reading only this
+         file sees the intent instead of assuming the dark variant was forgotten. The home
+         screen draws these over the user's wallpaper, and a wallpaper can be any brightness
+         in either theme, so white-plus-shadow is the treatment that survives both. See the
+         longer note in values/colors.xml.
+         ============================================================================ -->
+    <color name="wallpaper_overlay_text">#FFFFFFFF</color>
+    <color name="wallpaper_overlay_shadow">#B0000000</color>
+
+    <!-- ============================================================================
+         Material 3 palette — DARK.
+
+         Mirrors the key set in values/colors.xml exactly. Here `md_surface` (#1C2024) is
+         *darker* than `md_surface_container` (#1D2126) — the inverse of the light palette,
+         which is what M3 elevation expects: raised things get lighter in dark mode and
+         darker in light mode.
+         ============================================================================ -->
+    <color name="md_primary">#A9C4FF</color>
+    <color name="md_on_primary">#05305F</color>
+    <color name="md_primary_container">#24457F</color>
+    <color name="md_on_primary_container">#D8E2FF</color>
+
+    <color name="md_secondary_container">#3A4351</color>
+    <color name="md_on_secondary_container">#D6E3F7</color>
+
+    <color name="md_surface">#1C2024</color>
+    <color name="md_on_surface">#E3E6E9</color>
+    <color name="md_surface_variant">#42474E</color>
+    <color name="md_on_surface_variant">#C0C5CB</color>
+
+    <color name="md_surface_container_lowest">#0B0E11</color>
+    <color name="md_surface_container_low">#14171B</color>
+    <color name="md_surface_container">#1D2126</color>
+    <color name="md_surface_container_high">#262B31</color>
+    <color name="md_surface_container_highest">#31363C</color>
+
+    <color name="md_outline">#8B9198</color>
+    <color name="md_outline_variant">#3A3F45</color>
+
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+
+    <color name="result_pass">#81C995</color>
+    <color name="result_fail">#F28B82</color>
+    <color name="result_neutral">#9AA0A6</color>
+
+    <!-- Full-strength amber reads fine against a dark surface. -->
+    <color name="warning">#FFC107</color>
+
+</resources>

@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
+import com.google.android.material.color.MaterialColors
 
 /**
  * Renders a saved stroke as a small thumbnail, scaled to fit the view bounds with padding.
@@ -82,14 +83,18 @@ class StrokePreviewView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Follow the current text color so it works in light and dark.
-        paint.color = (0x99000000.toInt() or (currentTextColorTint() and 0x00FFFFFF))
+        // Take the theme's on-surface colour and force it to PREVIEW_ALPHA, so the thumbnail
+        // reads as a muted sketch rather than competing with the row's actual text. Resolved
+        // per draw rather than cached, so a theme change is picked up on the next invalidate.
+        val tint = MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorOnSurface, Color.GRAY
+        )
+        paint.color = (tint and 0x00FFFFFF) or PREVIEW_ALPHA
         if (!path.isEmpty) canvas.drawPath(path, paint)
     }
 
-    private fun currentTextColorTint(): Int {
-        val night = resources.configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        return if (night == android.content.res.Configuration.UI_MODE_NIGHT_YES) Color.WHITE else Color.BLACK
+    companion object {
+        /** ~60% opacity, in the top byte of an ARGB int. */
+        private const val PREVIEW_ALPHA = 0x99000000.toInt()
     }
 }

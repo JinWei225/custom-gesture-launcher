@@ -1,0 +1,16 @@
+<resources>
+
+    <!-- Whether the system bars should use their "light" appearance, which confusingly means
+         DARK icons drawn for a LIGHT background. True in light mode, false in dark (see
+         values-night/bools.xml).
+
+         This is a bool resource rather than an override in a values-night/themes.xml because
+         a style declared under a qualifier *replaces* the default one outright instead of
+         merging with it — a night themes file containing just these two flags would silently
+         drop every colour mapping and the window background. Every colour in the theme
+         already flips via the md_* tokens in values-night/colors.xml, so routing these last
+         two booleans through a bool keeps the whole theme in a single file with no duplicated
+         style to keep in sync. -->
+    <bool name="light_system_bars">true</bool>
+
+</resources>

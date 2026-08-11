@@ -8,10 +8,10 @@
     <string name="search_apps">Search apps</string>
     <string name="app_info">App info</string>
     <string name="uninstall">Uninstall</string>
-    <string name="label">Label</string>
-    <string name="label_app_title">Label app</string>
-    <string name="label_app_hint">e.g. tng</string>
-    <string name="remove_label">Remove label</string>
+    <string name="add_alias">Add alias</string>
+    <string name="app_alias_title">App alias</string>
+    <string name="app_alias_hint">e.g. tng</string>
+    <string name="remove_alias">Remove alias</string>
 
     <string name="menu_gesture_settings">Settings</string>
     <string name="menu_auto_keyboard">Auto keyboard</string>
@@ -85,11 +85,11 @@
     <string name="export_failed">Couldn\'t save backup</string>
     <string name="import_invalid_file">This doesn\'t look like a valid Gesture Launcher backup file.</string>
     <string name="import_confirm_title">Import backup</string>
-    <string name="import_confirm_message">%1$d gesture(s) and %2$d app label(s) found in this file.\n\nHow should it be applied?</string>
+    <string name="import_confirm_message">%1$d gesture(s) and %2$d app alias(es) found in this file.\n\nHow should it be applied?</string>
     <string name="import_replace">Replace all</string>
     <string name="import_merge">Merge</string>
     <string name="import_result_title">Import complete</string>
-    <string name="import_result_message">Imported %1$d gesture(s) and %2$d app label(s).</string>
+    <string name="import_result_message">Imported %1$d gesture(s) and %2$d app alias(es).</string>
     <string name="import_result_missing_apps">\n\n⚠ %1$d gesture(s) point to apps not installed on this device:\n%2$s</string>
     <string name="ok">OK</string>
 
@@ -106,13 +106,17 @@
     <string name="section_gestures">Gestures</string>
     <string name="section_backup">Backup</string>
     <string name="gestures_row_subtitle">%1$d saved</string>
-    <string name="export_row_subtitle">Save your gestures, sensitivity, and app labels to a file</string>
+    <string name="export_row_subtitle">Save your gestures, sensitivity, and app aliases to a file</string>
     <string name="import_row_subtitle">Restore from a previously exported backup file</string>
     <string name="about_version">Gesture Launcher v%1$s</string>
 
     <string name="section_general">General</string>
     <string name="auto_keyboard_row_subtitle">Auto-open the keyboard when the app drawer opens</string>
     <string name="haptic_feedback_row_subtitle">Vibrate when a gesture is recognized</string>
+    <string name="menu_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">Follow system</string>
     <string name="change_default_launcher">Change default launcher</string>
     <string name="change_default_launcher_row_subtitle">Open system settings to switch your default Home app</string>
     <string name="could_not_open_settings">Could not open settings</string>

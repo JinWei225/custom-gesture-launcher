@@ -7,7 +7,9 @@ import android.os.Bundle
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.color.MaterialColors
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
@@ -42,6 +44,12 @@ class GestureSensitivityActivity : AppCompatActivity() {
         canvas = findViewById(R.id.testCanvas)
         canvas.autoClearMillis = 0L // persist the trail so the result stays legible next to it
         canvas.onStroke = { points, subStrokes -> onTestStroke(points, subStrokes.size) }
+        // Themed card rather than the wallpaper, so the default white ink would vanish in light
+        // mode — see the same override in GestureTrainingActivity. colorPrimary is fully
+        // qualified because nonTransitiveRClass keeps library attrs out of this module's R.
+        canvas.strokeColor =
+            MaterialColors.getColor(canvas, com.google.android.material.R.attr.colorPrimary)
+        canvas.haloColor = Color.TRANSPARENT
 
         sensitivityValue = findViewById(R.id.sensitivityValue)
         val sensitivitySeek = findViewById<SeekBar>(R.id.sensitivitySeek)
@@ -133,12 +141,18 @@ class GestureSensitivityActivity : AppCompatActivity() {
 
     private fun showResult(text: String, pass: Boolean?) {
         resultView.text = text
+        // Kept as their own tokens rather than colorPrimary/colorError: these mean "matched /
+        // didn't match / not run yet", which should stay readable as green/red/grey whatever
+        // the accent happens to be. Both themes get a variant tuned for their ground.
         resultView.setTextColor(
-            when (pass) {
-                true -> Color.parseColor("#4CAF50")
-                false -> Color.parseColor("#F44336")
-                null -> Color.GRAY
-            }
+            ContextCompat.getColor(
+                this,
+                when (pass) {
+                    true -> R.color.result_pass
+                    false -> R.color.result_fail
+                    null -> R.color.result_neutral
+                }
+            )
         )
     }
 }

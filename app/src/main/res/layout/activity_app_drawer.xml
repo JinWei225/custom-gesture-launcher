@@ -4,7 +4,7 @@
     android:id="@+id/drawerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="?attr/colorSurfaceContainer"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -67,7 +67,7 @@
             android:elevation="8dp"
             android:gravity="center"
             android:includeFontPadding="false"
-            android:textColor="@android:color/white"
+            android:textColor="?attr/colorSurface"
             android:textSize="36sp"
             android:textStyle="bold"
             android:visibility="gone" />
