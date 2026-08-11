@@ -22,6 +22,11 @@
             android:paddingHorizontal="24dp"
             android:paddingTop="12dp">
 
+            <!-- Date above the time, not beside it.
+                 Font padding is deliberately left ON here despite the gap it leaves between the
+                 two lines: these TextViews carry a 10px blur shadow with no offset, the parent
+                 clips children to their bounds, and that padding is the only slack keeping the
+                 shadow from being cut off at the top of the glyphs. -->
             <LinearLayout
                 android:id="@+id/clockWidget"
                 android:layout_width="wrap_content"
@@ -29,8 +34,20 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="bottom"
-                android:orientation="horizontal">
+                android:orientation="vertical">
+
+                <TextClock
+                    android:id="@+id/clockDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="EEE, MMM d"
+                    android:format24Hour="EEE, MMM d"
+                    android:shadowColor="@color/wallpaper_overlay_shadow"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:textColor="@color/wallpaper_overlay_text"
+                    android:textSize="15sp" />
 
                 <TextClock
                     android:id="@+id/clockTime"
@@ -45,21 +62,6 @@
                     android:textColor="@color/wallpaper_overlay_text"
                     android:textSize="46sp"
                     android:textStyle="bold" />
-
-                <TextClock
-                    android:id="@+id/clockDate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:format12Hour="EEE, MMM d"
-                    android:format24Hour="EEE, MMM d"
-                    android:shadowColor="@color/wallpaper_overlay_shadow"
-                    android:shadowDx="0"
-                    android:shadowDy="0"
-                    android:shadowRadius="10"
-                    android:textColor="@color/wallpaper_overlay_text"
-                    android:textSize="15sp" />
             </LinearLayout>
 
             <!-- Today's events, filled at runtime. Whole area opens the calendar app. -->
