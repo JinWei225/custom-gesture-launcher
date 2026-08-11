@@ -23,6 +23,7 @@
     <string name="all_day">All day</string>
     <string name="more_events">+%1$d more</string>
     <string name="no_clock_app">No clock app found</string>
+    <string name="app_not_available">That app is no longer available</string>
 
     <string name="add_gesture">Add gesture</string>
     <string name="no_gestures">No gestures yet — tap + to add one.</string>
@@ -94,13 +95,6 @@
     <string name="ok">OK</string>
 
     <string name="home_hint_empty">No gestures yet.\nTap the app-drawer button below to add one.</string>
-    <string name="profile_welcome_title">Welcome!</string>
-    <string name="profile_welcome_message">What should we call you? This stays on your device.</string>
-    <string name="profile_name_hint">Your name</string>
-    <string name="get_started">Get started</string>
-    <string name="profile">Profile</string>
-    <string name="edit_profile">Edit profile</string>
-    <string name="guest">Guest</string>
 
     <string name="settings_hub_title">Settings</string>
     <string name="section_gestures">Gestures</string>
@@ -117,7 +111,22 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_system">Follow system</string>
+    <string name="menu_font">Font</string>
+    <string name="font_system_default">System default</string>
+    <string name="font_custom">Custom font</string>
+    <string name="font_choose_file">Choose a font file…</string>
+    <string name="font_use_system">Use the system font</string>
+    <string name="menu_font_size">Font size</string>
+    <!-- Read with a plain getString (no format args), so the % must NOT be escaped as %% — it
+         would render literally. formatted="false" keeps lint from demanding the escape. -->
+    <string name="font_size_default" formatted="false">Default (100%)</string>
+    <string name="font_size_percent">%1$d%%</string>
+    <string name="font_import_failed">Couldn\'t use that file</string>
+    <string name="font_import_failed_message">%1$s\n\nPick a .ttf or .otf font file. Your current font hasn\'t been changed.</string>
     <string name="change_default_launcher">Change default launcher</string>
     <string name="change_default_launcher_row_subtitle">Open system settings to switch your default Home app</string>
     <string name="could_not_open_settings">Could not open settings</string>
+    <string name="keep_launcher_responsive">Keep launcher in memory</string>
+    <string name="battery_exempt">Unrestricted — the launcher stays loaded</string>
+    <string name="battery_optimized">Restricted — the system may unload the launcher, making the app drawer slow to open</string>
 </resources>

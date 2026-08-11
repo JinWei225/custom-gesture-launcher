@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import com.google.android.material.color.MaterialColors
+import dev.neffly.gesturelauncher.data.Prefs
 
 /**
  * Thin side strip of "#, A..Z" glyphs for fast-scrolling a long, alphabetically sorted list.
@@ -35,7 +37,33 @@ class AlphabetIndexView @JvmOverloads constructor(
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = 26f
+        textSize = BASE_TEXT_SIZE_PX
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        // Set here rather than in init so a font change picked up by an activity recreate lands on
+        // the rebuilt view, and so a detach/reattach across a config change can't lose it.
+        paint.typeface = FontEngine.typeface() ?: Typeface.DEFAULT
+        applyTextSize()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        applyTextSize()
+    }
+
+    /**
+     * These glyphs go straight onto a Canvas in raw pixels, so unlike every TextView in the app
+     * they don't follow the sp scaling the font-size setting works through — the multiplier has to
+     * be applied by hand, or the index stays tiny while everything around it grows.
+     *
+     * Clamped to the strip's own width, which is only known after layout, so a large setting (or a
+     * wide imported font) can't spill out of this narrow fixed-width column.
+     */
+    private fun applyTextSize() {
+        val scaled = BASE_TEXT_SIZE_PX * Prefs.fontScale(context)
+        paint.textSize = if (width > 0) scaled.coerceAtMost(width * MAX_WIDTH_FRACTION) else scaled
     }
 
     fun setActiveLetters(letters: Set<Char>) {
@@ -92,5 +120,11 @@ class AlphabetIndexView @JvmOverloads constructor(
     companion object {
         /** ~31% opacity, in the top byte of an ARGB int. */
         private const val DIM_ALPHA = 0x50000000
+
+        /** Glyph size at a 1.0 font scale. Raw pixels, matching how this view has always drawn. */
+        private const val BASE_TEXT_SIZE_PX = 26f
+
+        /** Largest share of the strip's width a glyph may occupy. */
+        private const val MAX_WIDTH_FRACTION = 0.8f
     }
 }

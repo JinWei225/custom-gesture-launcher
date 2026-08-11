@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -15,9 +14,11 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
+import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.FontEngine
 
 /** Management hub: list existing gestures, add new ones, edit (redraw / change app) and delete. */
-class GestureSettingsActivity : AppCompatActivity() {
+class GestureSettingsActivity : BaseActivity() {
 
     private lateinit var adapter: GestureListAdapter
     private lateinit var emptyView: View
@@ -65,6 +66,7 @@ class GestureSettingsActivity : AppCompatActivity() {
                 GestureAction.OPEN_DRAWER -> {} // nothing to change beyond redrawing the shape
             }
             menu.add(0, ID_DELETE, 2, R.string.delete)
+            FontEngine.applyTo(menu)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     ID_REDRAW -> {
@@ -96,6 +98,7 @@ class GestureSettingsActivity : AppCompatActivity() {
                 GestureStore.add(this, mapping)
                 refresh()
             }
+            .also { FontEngine.applyTo(it.view) }
             .show()
     }
 

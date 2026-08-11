@@ -13,7 +13,6 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -31,8 +30,10 @@ import dev.neffly.gesturelauncher.data.SPoint
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.ui.StrokePreviewView
+import dev.neffly.gesturelauncher.ui.showWithFont
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
 import dev.neffly.gesturelauncher.unistroke.Pt
@@ -47,7 +48,7 @@ import kotlinx.coroutines.withContext
  *  - REDRAW: app fixed, redraw 3x to replace the stored strokes.
  *  - CHANGE_APP: strokes fixed, pick a new app to rebind.
  */
-class GestureTrainingActivity : AppCompatActivity() {
+class GestureTrainingActivity : BaseActivity() {
 
     private lateinit var pickerContainer: View
     private lateinit var drawContainer: View
@@ -154,13 +155,19 @@ class GestureTrainingActivity : AppCompatActivity() {
     }
 
     private fun refreshApps() {
-        lifecycleScope.launch {
-            // Gesture mappings store a bare componentName with no profile, so the picker only
-            // offers personal-profile apps — a work-profile pick couldn't be launched later.
-            val apps = withContext(Dispatchers.IO) { AppRepository.load(this@GestureTrainingActivity) }
-                .filter { it.user == Process.myUserHandle() }
-            allApps = apps
+        // Gesture mappings store a bare componentName with no profile, so the picker only offers
+        // personal-profile apps — a work-profile pick couldn't be launched later.
+        fun show(apps: List<AppInfo>) {
+            allApps = apps.filter { it.user == Process.myUserHandle() }
             appAdapter.submit(AppRepository.filter(allApps, searchInput.text?.toString().orEmpty()))
+        }
+        // Same instant-then-reconcile shape as the drawer: render the cache (or the disk snapshot
+        // after a process kill) immediately, and only pay for a scan when one is actually needed.
+        AppRepository.cachedOrPrime(this).takeIf { it.isNotEmpty() }?.let { show(it) }
+        if (!AppRepository.needsScan()) return
+        lifecycleScope.launch {
+            val apps = withContext(Dispatchers.IO) { AppRepository.load(this@GestureTrainingActivity) }
+            show(apps)
         }
     }
 
@@ -251,7 +258,7 @@ class GestureTrainingActivity : AppCompatActivity() {
                     .setMessage(R.string.strokes_differ)
                     .setPositiveButton(R.string.redo_attempt) { _, _ -> canvas.clearStroke() }
                     .setNegativeButton(R.string.keep) { _, _ -> acceptStroke(points, subStrokeLengths) }
-                    .show()
+                    .showWithFont()
                 return
             }
         }
@@ -284,7 +291,7 @@ class GestureTrainingActivity : AppCompatActivity() {
             .setView(view)
             .setPositiveButton(if (collisionLabel != null) R.string.save_anyway else R.string.save) { _, _ -> doSave() }
             .setNegativeButton(R.string.cancel, null) // stays at 3 strokes; user can Redo
-            .show()
+            .showWithFont()
     }
 
     /** Returns the label of an existing gesture the new strokes strongly match, or null. */

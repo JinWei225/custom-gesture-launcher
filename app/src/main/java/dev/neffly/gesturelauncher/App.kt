@@ -13,6 +13,7 @@ import dev.neffly.gesturelauncher.crash.CrashHandler
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.drawer.IconCache
+import dev.neffly.gesturelauncher.ui.FontEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +37,12 @@ class App : Application() {
         // synchronous SharedPreferences read is the same file MainActivity reads on its safe-mode
         // path, so it's paged in either way.
         AppCompatDelegate.setDefaultNightMode(Prefs.themeMode(this))
+
+        // Same reasoning, same place: the user's font has to be resolved before the first window is
+        // built, or the home screen renders once in the system font and visibly re-renders. Reads
+        // the prefs file the line above just paged in, and only touches the filesystem when a
+        // custom font is actually set.
+        FontEngine.init(this)
 
         // Keep the drawer's app list live. LauncherApps callbacks are the launcher-grade
         // replacement for PACKAGE_ADDED/REMOVED broadcasts (which stopped reaching manifest
@@ -77,6 +84,27 @@ class App : Application() {
         // in-memory cache. Priming it here overlaps with the home screen appearing, so the first
         // drawer open skips the synchronous scan. (Icons are lazy — see IconCache — so this is
         // label-only and cheap.)
-        appScope.launch { AppRepository.load(applicationContext, forceReload = false) }
+        //
+        // Sequential, and the disk snapshot goes first: it lands in milliseconds and makes the
+        // drawer instantly renderable, while the LauncherApps scan behind it takes long enough on a
+        // phone with a lot of apps that the user can beat it to the drawer button. The scan then
+        // reconciles. AppDrawerActivity primes for itself too, for the case where it's restored
+        // from recents before this coroutine has run at all.
+        appScope.launch {
+            AppRepository.primeFromDisk(applicationContext)
+            AppRepository.load(applicationContext, forceReload = false)
+            // Icons are the other half of a cold start: IconCache is in-memory too, so after a kill
+            // every visible row would fetch from PackageManager as it binds. Warming just the first
+            // screenful (bounded well under IconCache.MAX_ENTRIES) is work the drawer would do
+            // anyway, moved a few hundred ms earlier.
+            AppRepository.cached().take(ICON_PREWARM_COUNT).forEach {
+                IconCache.load(applicationContext, it)
+            }
+        }
+    }
+
+    private companion object {
+        /** Roughly a screenful of drawer rows. */
+        const val ICON_PREWARM_COUNT = 24
     }
 }

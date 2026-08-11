@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.ui.FontEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -103,11 +104,15 @@ class AppListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == VIEW_TYPE_HEADER) {
-            HeaderVH(inflater.inflate(R.layout.item_app_header, parent, false))
+        val view = if (viewType == VIEW_TYPE_HEADER) {
+            inflater.inflate(R.layout.item_app_header, parent, false)
         } else {
-            AppVH(inflater.inflate(R.layout.item_app, parent, false))
+            inflater.inflate(R.layout.item_app, parent, false)
         }
+        // Rows keep being created as the list scrolls, long after the activity applied the font to
+        // its content view — so each new one needs it here.
+        FontEngine.applyTo(view)
+        return if (viewType == VIEW_TYPE_HEADER) HeaderVH(view) else AppVH(view)
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -132,13 +137,19 @@ class AppListAdapter(
         }
     }
 
-    /** Cached icon synchronously if available; otherwise clear the slot and fetch off-thread,
+    /** Cached icon synchronously if available; otherwise show a placeholder and fetch off-thread,
      *  applying only if the holder still shows the same app by the time the load lands. */
     private fun bindIcon(holder: AppVH, app: AppInfo) {
         holder.iconJob?.cancel()
         holder.boundKey = app.key
         val cached = IconCache.cached(app)
-        holder.icon.setImageDrawable(cached)
+        if (cached != null) {
+            holder.icon.setImageDrawable(cached)
+        } else {
+            // A placeholder rather than nothing: on a cold start IconCache is empty, so an
+            // otherwise-complete list would render as labels beside a column of holes.
+            holder.icon.setImageResource(R.drawable.bg_icon_placeholder)
+        }
         if (cached == null) {
             val context = holder.itemView.context.applicationContext
             holder.iconJob = scope.launch {

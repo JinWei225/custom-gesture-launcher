@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stand-in for an app icon that hasn't loaded yet (see AppListAdapter.bindIcon). Deliberately
+     a flat, low-contrast shape rather than a glyph: it should read as "this row exists, its icon
+     is coming", not as a real icon the user might try to recognise. Matters most on a cold start,
+     where IconCache is empty and every visible row fetches from PackageManager as it binds. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="?attr/colorSurfaceVariant" />
+</shape>

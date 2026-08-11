@@ -10,12 +10,12 @@ import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureStore
+import dev.neffly.gesturelauncher.ui.BaseActivity
 
 /**
  * Collects a URL for an "Open a URL" gesture, then either:
@@ -26,7 +26,7 @@ import dev.neffly.gesturelauncher.data.GestureStore
  *    updates the existing mapping's URL directly and closes — no redraw, matching how "Change
  *    app" already works for [GestureAction.LAUNCH_APP] mappings.
  */
-class GestureUrlEntryActivity : AppCompatActivity() {
+class GestureUrlEntryActivity : BaseActivity() {
 
     private lateinit var urlEntryRoot: View
     private lateinit var urlInput: TextInputEditText

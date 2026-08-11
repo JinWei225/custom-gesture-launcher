@@ -7,6 +7,8 @@ import android.content.pm.LauncherApps
 import android.os.Process
 import android.os.UserManager
 import android.util.Log
+import android.widget.Toast
+import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
 import java.text.Normalizer
 import java.util.Locale
@@ -21,6 +23,16 @@ object AppRepository {
 
     @Volatile
     private var cache: List<AppInfo>? = null
+
+    /**
+     * True while [cache] holds a disk snapshot rather than the result of a real scan.
+     *
+     * Load-bearing: [load]'s fast path must treat a primed cache as "still needs scanning",
+     * otherwise the snapshot becomes permanently authoritative and the app never re-reads
+     * LauncherApps again for the life of the process.
+     */
+    @Volatile
+    private var cacheFromDisk = false
 
     // Serializes the actual PackageManager scan so a background preload (see App.onCreate) and an
     // activity's own loadApps() call racing against each other don't both pay the full scan cost —
@@ -44,16 +56,50 @@ object AppRepository {
     /** Drops the cached app list (and stale icons), e.g. after a LauncherApps package callback. */
     fun invalidate() {
         cache = null
+        cacheFromDisk = false
         IconCache.clear()
         listeners.forEach { it() }
     }
 
+    /**
+     * Fills [cache] from the last scan's on-disk snapshot when the process has just been recreated.
+     * Idempotent and a no-op once anything is cached.
+     *
+     * Deliberately does NOT notify listeners: [cachedOrPrime] can reach this from the main thread
+     * from inside a listener's own callback (AppDrawerActivity.loadApps), and notifying there would
+     * re-enter that callback synchronously mid-call.
+     */
+    fun primeFromDisk(context: Context) {
+        if (cache != null) return
+        val apps = AppListSnapshot.read(context)
+        if (apps.isEmpty()) return
+        synchronized(loadLock) {
+            if (cache != null) return
+            cache = apps
+            cacheFromDisk = true
+        }
+    }
+
+    /**
+     * The cached list, priming from disk first if this process hasn't scanned yet. Safe on the main
+     * thread: the disk read is a small JSON file, and it only ever happens where the alternative is
+     * rendering an empty list.
+     */
+    fun cachedOrPrime(context: Context): List<AppInfo> {
+        cache?.let { return it }
+        primeFromDisk(context)
+        return cache ?: emptyList()
+    }
+
+    /** Whether [load] would do real work — false means the cache is a scan result and current. */
+    fun needsScan(): Boolean = cache == null || cacheFromDisk
+
     /** Loads apps (blocking). Call off the main thread; result is cached for reuse. Icons are
      *  deliberately NOT loaded here — see [IconCache] — which keeps this scan cheap. */
     fun load(context: Context, forceReload: Boolean = false): List<AppInfo> {
-        if (!forceReload) cache?.let { return it }
+        if (!forceReload && !cacheFromDisk) cache?.let { return it }
         synchronized(loadLock) {
-            if (!forceReload) cache?.let { return it }
+            if (!forceReload && !cacheFromDisk) cache?.let { return it }
             val launcherApps =
                 context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
             val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
@@ -72,6 +118,9 @@ object AppRepository {
                     )
                 }.sortedWith(DRAWER_ORDER)
             cache = apps
+            cacheFromDisk = false
+            // Cheap: a no-op unless the list actually changed since the last scan.
+            AppListSnapshot.write(context, apps)
             return apps
         }
     }
@@ -126,6 +175,11 @@ object AppRepository {
      * go stale once the app disables that alias in favor of another, so a direct launch by the
      * exact stored component can throw ActivityNotFoundException indefinitely afterward. Falls
      * back to whatever launcher activity is currently enabled for the package in that case.
+     *
+     * The other way a component goes stale is the drawer rendering a disk snapshot (see
+     * [AppListSnapshot]) that was written before an app was uninstalled while this process was
+     * dead. When neither intent works, the list is invalidated so it self-heals immediately rather
+     * than waiting for a LauncherApps callback that already fired while nothing was listening.
      */
     fun launch(context: Context, componentName: ComponentName) {
         val flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
@@ -141,6 +195,8 @@ object AppRepository {
                 runCatching { context.startActivity(fallback) }.isSuccess
             if (!fallbackLaunched) {
                 Log.w("AppRepository", "launch failed for $componentName (no valid launcher intent)")
+                Toast.makeText(context, R.string.app_not_available, Toast.LENGTH_SHORT).show()
+                invalidate()
             }
         }
     }

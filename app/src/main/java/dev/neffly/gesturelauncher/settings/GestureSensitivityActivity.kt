@@ -6,7 +6,6 @@ import android.graphics.PointF
 import android.os.Bundle
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.color.MaterialColors
@@ -14,6 +13,7 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
@@ -25,7 +25,7 @@ import dev.neffly.gesturelauncher.unistroke.Pt
  * whether it now passes — instead of bouncing between a separate dialog and a separate test
  * screen to find the right threshold.
  */
-class GestureSensitivityActivity : AppCompatActivity() {
+class GestureSensitivityActivity : BaseActivity() {
 
     private lateinit var canvas: GestureCanvasView
     private lateinit var resultView: TextView

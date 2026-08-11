@@ -21,7 +21,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -38,7 +37,8 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
-import dev.neffly.gesturelauncher.settings.ProfileDialog
+import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
@@ -51,7 +51,7 @@ import java.util.Date
  * the screen. The top ~30% is a non-drawable widget zone (clock + today's events). An always-present
  * drawer button is rendered independently of the recognizer.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -111,10 +111,6 @@ class MainActivity : AppCompatActivity() {
         emptyHint = findViewById(R.id.emptyHint)
         recognitionHint = findViewById(R.id.recognitionHint)
         eventsContainer = findViewById(R.id.eventsContainer)
-
-        if (Prefs.profileName(this) == null) {
-            ProfileDialog.show(this, null) { name -> Prefs.setProfileName(this, name) }
-        }
 
         // Keep widgets below the status bar and the canvas above the navigation bar.
         val column = findViewById<View>(R.id.contentColumn)
@@ -311,6 +307,10 @@ class MainActivity : AppCompatActivity() {
                 )
                 setPadding(0, 6, 0, 6)
                 gravity = Gravity.CENTER_VERTICAL
+                // Built in code, so it never passes through the activity's pass over its content
+                // view — without this the event rows keep the system font while the clock above
+                // them changes.
+                FontEngine.applyToSelf(this)
             }
             eventsContainer.addView(
                 tv,

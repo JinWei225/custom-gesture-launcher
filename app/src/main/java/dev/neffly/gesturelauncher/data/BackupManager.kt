@@ -7,12 +7,14 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-/** Whole-app backup: gestures, recognition/behavior prefs, app labels, and the local profile name. */
+/** Whole-app backup: gestures, recognition/behavior prefs, and app labels.
+ *
+ *  Older files carry a `profileName` field from when the app had a local profile; `Json` is
+ *  configured with `ignoreUnknownKeys` below, so those still import cleanly. */
 @Serializable
 data class BackupData(
     val version: Int = 1,
     val exportedAt: Long = System.currentTimeMillis(),
-    val profileName: String? = null,
     val matchThreshold: Float,
     val autoKeyboard: Boolean,
     val gestures: List<GestureMapping>,
@@ -34,7 +36,6 @@ object BackupManager {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
 
     fun buildBackup(context: Context): BackupData = BackupData(
-        profileName = Prefs.profileName(context),
         matchThreshold = Prefs.matchThreshold(context),
         autoKeyboard = Prefs.autoKeyboard(context),
         gestures = GestureStore.all(context),
@@ -63,7 +64,6 @@ object BackupManager {
         }
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)
-        data.profileName?.let { Prefs.setProfileName(context, it) }
 
         val missingApps = data.gestures.filter {
             runCatching { context.packageManager.getApplicationInfo(it.packageName, 0) }.isFailure

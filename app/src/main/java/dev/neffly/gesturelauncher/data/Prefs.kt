@@ -13,9 +13,10 @@ object Prefs {
     private const val KEY_LAST_CRASH = "last_crash_ts"
     private const val KEY_THRESHOLD = "match_threshold"
     private const val KEY_AUTO_KEYBOARD = "auto_keyboard"
-    private const val KEY_PROFILE_NAME = "profile_name"
     private const val KEY_HAPTIC_FEEDBACK = "haptic_feedback"
     private const val KEY_THEME_MODE = "theme_mode"
+    private const val KEY_FONT_NAME = "font_name"
+    private const val KEY_FONT_SCALE = "font_scale"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -81,11 +82,25 @@ object Prefs {
         prefs(context).edit().putInt(KEY_THEME_MODE, mode).apply()
     }
 
-    /** Local display name shown in the settings hub. Null means "never asked yet" (first run);
-     *  "" means the user was asked and skipped — both are distinct from a real chosen name. */
-    fun profileName(context: Context): String? = prefs(context).getString(KEY_PROFILE_NAME, null)
+    /** Display name of the user's imported font, or null for "use the system font".
+     *
+     *  Doubles as the "is a custom font set" flag, which is why
+     *  [dev.neffly.gesturelauncher.ui.FontEngine] can decide whether to touch the filesystem at all
+     *  from a value already in this prefs file. The font itself lives in filesDir — see
+     *  [FontStore]. */
+    fun fontName(context: Context): String? = prefs(context).getString(KEY_FONT_NAME, null)
 
-    fun setProfileName(context: Context, value: String) {
-        prefs(context).edit().putString(KEY_PROFILE_NAME, value).apply()
+    fun setFontName(context: Context, value: String?) {
+        prefs(context).edit().putString(KEY_FONT_NAME, value).apply()
+    }
+
+    /** Multiplier applied on top of the device's own text-size setting, so every `sp` dimension in
+     *  the app scales together. Exists mainly because imported fonts differ a lot in how large
+     *  they render at the same point size — a font that draws small is otherwise unusable.
+     *  1.0 means "exactly what the system says", which is the default. */
+    fun fontScale(context: Context): Float = prefs(context).getFloat(KEY_FONT_SCALE, 1f)
+
+    fun setFontScale(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_FONT_SCALE, value).apply()
     }
 }

@@ -22,7 +22,6 @@ import android.view.inputmethod.EditorInfo
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
@@ -41,6 +40,9 @@ import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
+import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +51,7 @@ import kotlinx.coroutines.withContext
  * The guaranteed fallback: a plain, dependency-free list of all apps with a type-to-filter search
  * bar. Kept intentionally simple so it's the least crash-prone screen in the app.
  */
-class AppDrawerActivity : AppCompatActivity() {
+class AppDrawerActivity : BaseActivity() {
 
     private lateinit var adapter: AppListAdapter
     private lateinit var appList: RecyclerView
@@ -95,6 +97,7 @@ class AppDrawerActivity : AppCompatActivity() {
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.inflateMenu(R.menu.drawer_menu)
+        FontEngine.applyTo(toolbar.menu)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_gesture_settings -> {
@@ -228,13 +231,20 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     private fun loadApps() {
-        // Show whatever's cached instantly (usually everything — the warm-up in App primes it),
-        // then reconcile against a fresh load off the main thread. lifecycleScope cancels the
-        // load if the drawer is closed before it lands.
-        AppRepository.cached().takeIf { it.isNotEmpty() }?.let { apps ->
+        // Show whatever's cached instantly, falling back to the on-disk snapshot when this process
+        // was just recreated (see AppListSnapshot) — that disk read is the difference between a
+        // full list on the first frame and 1-2s of empty drawer after the OS hibernated us. Then
+        // reconcile against a fresh load off the main thread; lifecycleScope cancels it if the
+        // drawer is closed before it lands.
+        AppRepository.cachedOrPrime(this).takeIf { it.isNotEmpty() }?.let { apps ->
             allApps = apps
             submitList(AppRepository.filter(allApps, searchInput.text?.toString().orEmpty()))
         }
+        // Nothing to reconcile against when the cache is already a scan result. Both onResume and
+        // the AppRepository listener call this, so without the check an ordinary open pays two full
+        // scans plus two DiffUtil passes for no change. invalidate() — the only way the list goes
+        // stale — makes needsScan() true again, so the listener path still refreshes.
+        if (!AppRepository.needsScan()) return
         lifecycleScope.launch {
             val apps = withContext(Dispatchers.IO) { AppRepository.load(this@AppDrawerActivity) }
             allApps = apps
@@ -287,6 +297,7 @@ class AppDrawerActivity : AppCompatActivity() {
                     menuIcon(icon ?: ContextCompat.getDrawable(this@AppDrawerActivity, R.drawable.ic_arrow_forward)!!)
             }
             forceShowIcons()
+            FontEngine.applyTo(menu)
             setOnMenuItemClickListener { item ->
                 when {
                     item.itemId == ID_APP_INFO -> { openAppInfo(app); true }
@@ -367,7 +378,7 @@ class AppDrawerActivity : AppCompatActivity() {
                 AppRepository.invalidate()
             }
         }
-        builder.show()
+        builder.showWithFont()
     }
 
     private fun openAppInfo(app: AppInfo) {

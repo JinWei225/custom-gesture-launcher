@@ -7,6 +7,13 @@
     <!-- Required since API 26 for the drawer's long-press "Uninstall" (ACTION_DELETE) to work. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
+    <!-- Lets the settings hub show the "don't optimise this app" prompt directly instead of
+         dropping the user in a settings list to find us themselves. A launcher that the OEM
+         hibernates loses its app-list cache, its icon cache and its LauncherApps callbacks, so
+         this is a core-function exemption rather than a background-work one. Normal permission:
+         no runtime request, and the deep link degrades to the plain settings screen without it. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Enumerate launchable apps + resolve the clock/calendar intents (Android 11+ visibility). -->
     <queries>
         <intent>

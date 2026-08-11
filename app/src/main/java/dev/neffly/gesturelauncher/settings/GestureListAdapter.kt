@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
+import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.StrokePreviewView
 
 /** Lists saved gesture -> app mappings with a stroke thumbnail and a per-row overflow. */
@@ -28,6 +29,8 @@ class GestureListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(parent.context).inflate(R.layout.item_gesture, parent, false)
+        // Rows outlive the activity's one-shot pass over its content view — see FontEngine.
+        FontEngine.applyTo(v)
         return VH(v)
     }
 

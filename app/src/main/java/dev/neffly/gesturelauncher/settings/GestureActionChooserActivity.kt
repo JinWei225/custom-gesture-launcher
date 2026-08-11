@@ -7,10 +7,10 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
-import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.appbar.MaterialToolbar
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
+import dev.neffly.gesturelauncher.ui.BaseActivity
 
 /**
  * First step when adding a brand-new gesture: "what should this gesture do?" Reached from
@@ -20,7 +20,7 @@ import dev.neffly.gesturelauncher.data.GestureAction
  * "app opening" zoom). Each row hands off to the next screen without finishing itself, so Back
  * unwinds the whole add-gesture chain naturally.
  */
-class GestureActionChooserActivity : AppCompatActivity() {
+class GestureActionChooserActivity : BaseActivity() {
 
     private lateinit var chooserRoot: View
     private var isClosing = false

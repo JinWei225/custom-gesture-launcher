@@ -26,56 +26,6 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
-            <!-- Profile header: local-only display name, tap to edit. -->
-            <LinearLayout
-                android:id="@+id/profileRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/profileAvatar"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_profile_avatar"
-                    android:gravity="center"
-                    android:textAppearance="?attr/textAppearanceTitleLarge"
-                    android:textColor="?attr/colorOnPrimaryContainer" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/profileName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/edit_profile"
-                        android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?attr/colorOutlineVariant" />
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -323,6 +273,61 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/fontRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/menu_font"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in SettingsHubActivity.onResume: it's the chosen font's name,
+                     not a fixed description. -->
+                <TextView
+                    android:id="@+id/fontSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/fontScaleRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/menu_font_size"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in SettingsHubActivity.onResume: it's the current multiplier. -->
+                <TextView
+                    android:id="@+id/fontScaleSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/defaultLauncherRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -343,6 +348,34 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/change_default_launcher_row_subtitle"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/batteryRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/keep_launcher_responsive"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in SettingsHubActivity.onResume: it reflects the current
+                     exemption state, not a fixed description. -->
+                <TextView
+                    android:id="@+id/batterySubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 

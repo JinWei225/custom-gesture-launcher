@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.settings
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,35 +14,44 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.materialswitch.MaterialSwitch
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.BackupData
 import dev.neffly.gesturelauncher.data.BackupManager
+import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.showWithFont
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
- * Settings entry point: a local-only profile name up top (see [ProfileDialog]), with sections
- * below for Gestures ([GestureSettingsActivity], sensitivity/test via [GestureSensitivityActivity])
- * and Backup ([BackupManager]). Reached from the app drawer's overflow menu.
+ * Settings entry point: sections for Gestures ([GestureSettingsActivity], sensitivity/test via
+ * [GestureSensitivityActivity]) and Backup ([BackupManager]). Reached from the app drawer's
+ * overflow menu.
  *
  * Slides in from the right over the drawer and back out on close — same translucent-window +
  * self-driven-animation technique [dev.neffly.gesturelauncher.drawer.AppDrawerActivity] uses (OEM
  * skins like HyperOS otherwise replace the requested transition with their own "app opening" zoom).
  */
-class SettingsHubActivity : AppCompatActivity() {
+class SettingsHubActivity : BaseActivity() {
 
     private lateinit var hubRoot: View
-    private lateinit var profileName: TextView
-    private lateinit var profileAvatar: TextView
     private lateinit var gesturesSubtitle: TextView
     private lateinit var autoKeyboardSwitch: MaterialSwitch
     private lateinit var hapticFeedbackSwitch: MaterialSwitch
     private lateinit var themeSubtitle: TextView
+    private lateinit var batterySubtitle: TextView
+    private lateinit var fontSubtitle: TextView
+    private lateinit var fontScaleSubtitle: TextView
     private var isClosing = false
 
     private val exportLauncher =
@@ -51,6 +61,10 @@ class SettingsHubActivity : AppCompatActivity() {
     private val importLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) doImport(uri)
+        }
+    private val fontLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) importFont(uri)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,16 +89,8 @@ class SettingsHubActivity : AppCompatActivity() {
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
-        profileName = findViewById(R.id.profileName)
-        profileAvatar = findViewById(R.id.profileAvatar)
         gesturesSubtitle = findViewById(R.id.gesturesSubtitle)
 
-        findViewById<View>(R.id.profileRow).setOnClickListener {
-            ProfileDialog.show(this, Prefs.profileName(this).orEmpty()) { name ->
-                Prefs.setProfileName(this, name)
-                refreshProfile()
-            }
-        }
         findViewById<View>(R.id.gesturesRow).setOnClickListener {
             startActivity(Intent(this, GestureSettingsActivity::class.java))
         }
@@ -114,8 +120,19 @@ class SettingsHubActivity : AppCompatActivity() {
         themeSubtitle = findViewById(R.id.themeSubtitle)
         findViewById<View>(R.id.themeRow).setOnClickListener { showThemeDialog() }
 
+        fontSubtitle = findViewById(R.id.fontSubtitle)
+        findViewById<View>(R.id.fontRow).setOnClickListener { showFontDialog() }
+
+        fontScaleSubtitle = findViewById(R.id.fontScaleSubtitle)
+        findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
+
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()
+        }
+
+        batterySubtitle = findViewById(R.id.batterySubtitle)
+        findViewById<View>(R.id.batteryRow).setOnClickListener {
+            openBatteryOptimizationSettings()
         }
 
         val version = runCatching {
@@ -126,11 +143,110 @@ class SettingsHubActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        refreshProfile()
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
         themeSubtitle.setText(themeLabelFor(Prefs.themeMode(this)))
+        // Re-read on every resume, not just at create: the usual flow is tapping the row, changing
+        // it in system settings, and coming straight back here.
+        batterySubtitle.setText(
+            if (isBatteryOptimizationExempt()) R.string.battery_exempt else R.string.battery_optimized
+        )
+        fontSubtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
+        fontScaleSubtitle.text = fontScaleLabel(Prefs.fontScale(this))
+    }
+
+    /** "Default (100%)" for 1.0, a bare percentage otherwise — the default is worth naming so it's
+     *  obvious which entry undoes any experimenting. */
+    private fun fontScaleLabel(scale: Float): String =
+        if (scale == 1f) {
+            getString(R.string.font_size_default)
+        } else {
+            getString(R.string.font_size_percent, (scale * 100).roundToInt())
+        }
+
+    private fun showFontScaleDialog() {
+        val labels = FONT_SCALES.map { fontScaleLabel(it) }.toTypedArray()
+        val current = Prefs.fontScale(this)
+        // Nearest entry rather than indexOf: a value restored from an older build (or a future one
+        // with a different set of steps) should still preselect something sensible.
+        val selected = FONT_SCALES.indices.minBy { kotlin.math.abs(FONT_SCALES[it] - current) }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_font_size)
+            .setSingleChoiceItems(labels, selected) { dialog, which ->
+                Prefs.setFontScale(this, FONT_SCALES[which])
+                // Dismiss before recreating, for the same reason as the theme dialog above:
+                // tearing the window down with the dialog attached leaks it.
+                dialog.dismiss()
+                FontEngine.notifyScaleChanged()
+                recreate()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .showWithFont()
+    }
+
+    private fun showFontDialog() {
+        val options = arrayOf(
+            getString(R.string.font_choose_file),
+            getString(R.string.font_use_system)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_font)
+            .setItems(options) { _, which ->
+                if (which == 0) fontLauncher.launch(FontStore.PICKER_MIME_TYPES) else clearFont()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .showWithFont()
+    }
+
+    /** Copies, validates and activates the picked font. The import touches the filesystem, so it
+     *  runs off the main thread; everything after it is UI work and hops back. */
+    private fun importFont(uri: Uri) {
+        lifecycleScope.launch {
+            val name = withContext(Dispatchers.IO) {
+                FontStore.displayName(this@SettingsHubActivity, uri)
+            }
+            val result = withContext(Dispatchers.IO) {
+                FontStore.import(this@SettingsHubActivity, uri)
+            }
+            result.fold(
+                onSuccess = { typeface ->
+                    // The name is only ever a label for the settings row, but it also doubles as
+                    // the "a custom font is set" flag, so it must never end up blank.
+                    Prefs.setFontName(
+                        this@SettingsHubActivity,
+                        name?.takeIf { it.isNotBlank() } ?: getString(R.string.font_custom)
+                    )
+                    applyFont(typeface)
+                },
+                onFailure = { error ->
+                    AlertDialog.Builder(this@SettingsHubActivity)
+                        .setTitle(R.string.font_import_failed)
+                        .setMessage(
+                            getString(
+                                R.string.font_import_failed_message,
+                                error.message.orEmpty()
+                            )
+                        )
+                        .setPositiveButton(R.string.ok, null)
+                        .showWithFont()
+                }
+            )
+        }
+    }
+
+    private fun clearFont() {
+        FontStore.clear(this)
+        Prefs.setFontName(this, null)
+        applyFont(null)
+    }
+
+    /** Swaps the process-wide typeface and rebuilds this screen against it. Everything below in
+     *  the stack notices via the version check in [BaseActivity.onResume]. */
+    private fun applyFont(typeface: Typeface?) {
+        FontEngine.set(typeface)
+        recreate()
     }
 
     /** Label for a MODE_NIGHT_* constant. Anything unrecognised (an older build's value, or a
@@ -168,7 +284,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 AppCompatDelegate.setDefaultNightMode(mode)
             }
             .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            .showWithFont()
     }
 
     override fun finish() {
@@ -186,13 +302,6 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshProfile() {
-        val name = Prefs.profileName(this).orEmpty()
-        profileName.text = name.ifBlank { getString(R.string.guest) }
-        profileAvatar.text = name.trim().firstOrNull()?.uppercaseChar()?.toString()
-            ?: getString(R.string.guest).first().toString()
-    }
-
     private fun doExport(uri: Uri) {
         val result = BackupManager.writeTo(this, uri, BackupManager.buildBackup(this))
         val message = if (result.isSuccess) R.string.export_success else R.string.export_failed
@@ -207,7 +316,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     .setTitle(R.string.import_confirm_title)
                     .setMessage(R.string.import_invalid_file)
                     .setPositiveButton(R.string.ok, null)
-                    .show()
+                    .showWithFont()
             }
         )
     }
@@ -220,7 +329,7 @@ class SettingsHubActivity : AppCompatActivity() {
             .setPositiveButton(R.string.import_replace) { _, _ -> applyImport(data, replace = true) }
             .setNeutralButton(R.string.import_merge) { _, _ -> applyImport(data, replace = false) }
             .setNegativeButton(R.string.cancel, null)
-            .show()
+            .showWithFont()
     }
 
     private fun applyImport(data: BackupData, replace: Boolean) {
@@ -229,7 +338,6 @@ class SettingsHubActivity : AppCompatActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
-        refreshProfile()
 
         var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
         if (result.missingApps.isNotEmpty()) {
@@ -243,10 +351,15 @@ class SettingsHubActivity : AppCompatActivity() {
             .setTitle(R.string.import_result_title)
             .setMessage(message)
             .setPositiveButton(R.string.ok, null)
-            .show()
+            .showWithFont()
     }
 
     companion object {
         private const val SLIDE_DURATION_MS = 260L
+
+        /** Offered font-size multipliers. Skewed upward because the reason this setting exists is
+         *  imported fonts that render small at a given point size; 0.9 is there so the drawer can
+         *  still be made denser if someone wants that. */
+        private val FONT_SCALES = floatArrayOf(0.9f, 1f, 1.1f, 1.25f, 1.4f, 1.6f)
     }
 }
