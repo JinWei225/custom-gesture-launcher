@@ -4,11 +4,10 @@ import android.content.ComponentName
 import android.os.UserHandle
 
 /** A launchable app entry for the drawer / app picker. [label] is always the real OS-provided
- *  name — never overwritten. [tag] is an optional short user-set searchable shortcut (see
- *  AppTagStore), shown as a small badge and given top priority on an exact search match.
- *  [user] is the profile the activity lives in (work-profile apps appear alongside personal
- *  ones). Icons are NOT carried here — they're loaded lazily via [IconCache] so the app scan
- *  stays cheap and memory isn't pinned by icons the user never scrolls to. */
+ *  name — never overwritten. [tag] is an optional user-set searchable shortcut (see AppTagStore),
+ *  shown as a badge and prioritized on an exact match. [user] is the activity's profile (work
+ *  apps appear alongside personal ones). Icons aren't carried here — loaded lazily via [IconCache]
+ *  so the scan stays cheap and memory isn't pinned by icons never scrolled to. */
 data class AppInfo(
     val label: String,
     val packageName: String,

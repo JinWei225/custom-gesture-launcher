@@ -29,14 +29,12 @@ class App : Application() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(CrashHandler(applicationContext, previous))
 
-        // Apply the saved Light/Dark/Follow-system choice before anything can inflate. This has
-        // to happen here rather than in an activity: Application.onCreate is guaranteed to finish
-        // before the first Activity.onCreate, so no window is ever built against the wrong mode
-        // and there's no light-to-dark flash on the first frame. Deliberately sits *after* the
-        // crash handler, preserving this file's "crash handler first, always" invariant.
-        //
-        // The synchronous SharedPreferences read is the same file MainActivity already reads on
-        // its safe-mode path, so it's paged in either way.
+        // Apply the saved Light/Dark/Follow-system choice before anything can inflate. Must happen
+        // here, not in an activity: Application.onCreate finishes before the first Activity.onCreate,
+        // so no window is ever built against the wrong mode (no light-to-dark flash on first frame).
+        // Deliberately after the crash handler, preserving "crash handler first, always". The
+        // synchronous SharedPreferences read is the same file MainActivity reads on its safe-mode
+        // path, so it's paged in either way.
         AppCompatDelegate.setDefaultNightMode(Prefs.themeMode(this))
 
         // Keep the drawer's app list live. LauncherApps callbacks are the launcher-grade
@@ -58,16 +56,12 @@ class App : Application() {
             ) = AppRepository.invalidate()
         })
 
-        // OEM theme engines (e.g. Xiaomi/HyperOS "Themes") re-skin app icons in place — no package
-        // is installed/updated/removed, so the LauncherApps callback above never fires for them.
-        // What they do trigger is a resource/asset change, which the OS reports via a
-        // CONFIGURATION_CHANGED broadcast; that's not something a manifest-declared receiver can
-        // ever see (the action doesn't support manifest registration at all), only a
-        // context-registered one, so it's done here rather than in AndroidManifest. Dropping the
-        // icon cache on every such broadcast is deliberately broad — it also fires for unrelated
-        // config changes like rotation — but the drop itself is just an in-memory evictAll, so the
-        // worst case is a handful of already-visible icons re-fetching from PackageManager (cheap;
-        // see IconCache) rather than any full app-list rescan.
+        // OEM theme engines (e.g. Xiaomi/HyperOS "Themes") re-skin icons in place — no package is
+        // installed/updated/removed, so the LauncherApps callback above never fires. What they do
+        // trigger is a CONFIGURATION_CHANGED broadcast, which doesn't support manifest registration
+        // at all, hence context-registered here. Clearing the icon cache on every such broadcast is
+        // deliberately broad (it also fires on rotation), but it's just an in-memory evictAll — worst
+        // case a handful of visible icons re-fetch from PackageManager (cheap; see IconCache).
         val configReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = IconCache.clear()
         }
@@ -78,13 +72,11 @@ class App : Application() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        // Warm the drawer's app-list cache as early as possible. MainActivity (the HOME app) is a
-        // background/cached process from Android's point of view, so after the user spends a
-        // while in other apps this process is a common target for the OS to kill and later
-        // recreate from scratch — which drops AppRepository's in-memory cache too. Priming it
-        // here runs concurrently with the home screen appearing, so the first drawer open
-        // doesn't pay the scan synchronously. (Icons are lazy — see IconCache — so this is a
-        // label-only scan and much cheaper than it used to be.)
+        // Warm the drawer's app-list cache early. MainActivity (the HOME app) is a background/cached
+        // process, so the OS commonly kills and recreates it after time away, dropping AppRepository's
+        // in-memory cache. Priming it here overlaps with the home screen appearing, so the first
+        // drawer open skips the synchronous scan. (Icons are lazy — see IconCache — so this is
+        // label-only and cheap.)
         appScope.launch { AppRepository.load(applicationContext, forceReload = false) }
     }
 }

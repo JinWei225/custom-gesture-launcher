@@ -11,15 +11,13 @@ import kotlin.math.sqrt
 /**
  * The Protractor variant of the $1 Unistroke Recognizer (Li, 2010; Wobbrock et al., 2007).
  *
- * A drawn stroke is resampled to a fixed number of points, rotated to a canonical "indicative
- * angle", translated to the origin and flattened into a vector normalized to unit magnitude.
- * Candidates are compared to each template by cosine similarity, with the optimal aligning
- * rotation computed in closed form (one O(n) pass per template — no iterative angle search).
+ * A stroke is resampled, rotated to a canonical "indicative angle", translated to the origin,
+ * and flattened into a unit vector. Candidates are compared to templates by cosine similarity,
+ * with the optimal rotation computed in closed form (one O(n) pass per template).
  *
- * Unlike classic $1's scale-to-square step, the uniform vector normalization here **preserves
- * aspect ratio**, so a near-1D stroke (a straight line) is not stretched into a full square and
- * can no longer masquerade as a genuinely 2D shape like a "T". Two additional guards sharpen
- * that further — see [recognize].
+ * Unlike classic $1's scale-to-square step, this normalization **preserves aspect ratio**, so a
+ * near-1D stroke isn't stretched into a square and can't masquerade as a 2D shape like a "T".
+ * Two additional guards sharpen that further — see [recognize].
  */
 object OneDollarRecognizer {
 
@@ -75,17 +73,13 @@ object OneDollarRecognizer {
      *
      * The raw cosine-similarity score is adjusted per template by three guards before picking
      * the best match, all aimed at "wrong stroke happens to score high":
-     *  1. **Size**: a candidate drastically smaller than the template's raw on-screen size (an
-     *     accidental brush tracing a similar shape) is scaled down — shape matching alone is
-     *     scale-invariant and can't see this.
-     *  2. **Straightness**: chord-length / path-length on the raw points. A straight line is
-     *     ~1.0, a "T" stroke far less; scale-preserving vectorization already separates them,
-     *     and this catches the residual overlap (e.g. line vs. shallow "L").
-     *  3. **Sub-strokes**: a pen-lift count mismatch with the template (1-stroke line vs. a
-     *     2-stroke "T") halves the score.
+     *  1. **Size**: a candidate drastically smaller than the template's raw size (accidental
+     *     brush tracing a similar shape) is scaled down — scale-invariant shape matching can't see this.
+     *  2. **Straightness**: chord/path-length ratio on raw points catches residual overlap that
+     *     scale-preserving vectorization misses (e.g. line vs. shallow "L").
+     *  3. **Sub-strokes**: a pen-lift count mismatch with the template halves the score.
      *
-     * [candidateSubStrokes] is the number of pen-lift sub-strokes the candidate was drawn with
-     * (1 when unknown — guards degrade gracefully for templates saved before counts existed).
+     * [candidateSubStrokes] defaults to 1 for templates saved before counts existed.
      */
     fun recognize(
         points: List<Pt>,

@@ -17,12 +17,11 @@ import kotlinx.coroutines.withContext
 
 /**
  * App list for the drawer and the training app-picker. Optionally interleaves alphabet section
- * headers (see [submit]'s `showHeaders`) — used by the drawer when browsing the full alphabetical
- * list, skipped while a search query is active since fuzzy-sorted results aren't grouped by letter.
+ * headers (see [submit]'s `showHeaders`) when browsing the full list — skipped during search since
+ * fuzzy-sorted results aren't grouped by letter.
  *
- * Backed by [ListAdapter]/DiffUtil so search keystrokes and app-list refreshes rebind only the
- * rows that actually changed. Icons load lazily per bound row via [IconCache] on [scope]
- * (pass the owning activity's lifecycleScope so loads die with the screen).
+ * Backed by [ListAdapter]/DiffUtil so only changed rows rebind. Icons load lazily per bound row
+ * via [IconCache] on [scope] (pass the owning activity's lifecycleScope so loads die with the screen).
  */
 class AppListAdapter(
     private val scope: CoroutineScope,

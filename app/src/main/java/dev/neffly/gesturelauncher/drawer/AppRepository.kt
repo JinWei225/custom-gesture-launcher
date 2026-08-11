@@ -85,17 +85,14 @@ object AppRepository {
     fun cached(): List<AppInfo> = cache ?: emptyList()
 
     /**
-     * Case- and diacritic-insensitive fuzzy filter over labels: matches whenever [query]'s
-     * characters appear in order in the label (not necessarily contiguous — a superset of a
-     * plain substring match), ranked so contiguous/word-boundary matches sort first.
+     * Case- and diacritic-insensitive fuzzy filter over labels: [query]'s characters must appear
+     * in order (not necessarily contiguous), ranked so contiguous/word-boundary matches sort first.
      *
-     * An app's user-set [AppInfo.tag], when present, is fuzzy-matched the same way and used
-     * instead of the label score whenever it's the better match — including apps whose real label
-     * wouldn't fuzzy-match the query at all (e.g. a Chinese-labeled app tagged with an English
-     * shortcut), since that's the whole point of a tag: an independent, guaranteed-findable
-     * shortcut. Any tag match (even a partial one, like "gma" against a "gmaps" tag) is boosted
-     * above ordinary label matches, since it's a deliberate shortcut the user typed in themselves.
-     * An exact tag match is pinned above everything, tag or label, regardless of score.
+     * An app's user-set [AppInfo.tag], when present, is fuzzy-matched the same way and used if
+     * it scores better than the label — including apps whose real label wouldn't match at all
+     * (e.g. a Chinese label tagged with an English shortcut), since that's the point of a tag: a
+     * guaranteed-findable alias. Any tag match is boosted above label matches (it's a deliberate
+     * shortcut the user typed themselves); an exact tag match is pinned above everything.
      */
     fun filter(apps: List<AppInfo>, query: String): List<AppInfo> {
         val q = normalize(query)

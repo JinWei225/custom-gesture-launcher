@@ -25,15 +25,13 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 
 /**
- * Settings entry point: a local-only profile name up top (see [ProfileDialog]), with the app's
- * other settings listed below it as sections — Gestures (list/add/edit via
- * [GestureSettingsActivity], sensitivity/test via [GestureSensitivityActivity]) and Backup
- * (export/import, see [BackupManager]). Reached from the app drawer's overflow menu.
+ * Settings entry point: a local-only profile name up top (see [ProfileDialog]), with sections
+ * below for Gestures ([GestureSettingsActivity], sensitivity/test via [GestureSensitivityActivity])
+ * and Backup ([BackupManager]). Reached from the app drawer's overflow menu.
  *
  * Slides in from the right over the drawer and back out on close — same translucent-window +
- * self-driven-animation technique [dev.neffly.gesturelauncher.drawer.AppDrawerActivity] uses for
- * its own slide-up-from-bottom, for the same reason (OEM skins like HyperOS otherwise replace the
- * requested transition with their own "app opening" zoom).
+ * self-driven-animation technique [dev.neffly.gesturelauncher.drawer.AppDrawerActivity] uses (OEM
+ * skins like HyperOS otherwise replace the requested transition with their own "app opening" zoom).
  */
 class SettingsHubActivity : AppCompatActivity() {
 

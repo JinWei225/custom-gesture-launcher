@@ -133,14 +133,12 @@ class AppDrawerActivity : AppCompatActivity() {
             }
         }
 
-        // drawerRoot no longer uses android:fitsSystemWindows — that flag consumes insets via the
-        // legacy combined systemWindowInsets bridge (which folds the keyboard into the same value
-        // as the system bars) before they'd ever reach a listener on a child view, so the IME inset
-        // the list needs below would always read as zero. Applying both here instead: system
-        // bars/cutout as padding on the root (replacing what fitsSystemWindows used to do), and the
-        // keyboard's height as extra bottom padding on the list, so it stays fully scrollable above
-        // the keyboard overlay rather than stopping short of the last few rows (the window no longer
-        // resizes for the keyboard at all — see manifest: adjustNothing).
+        // drawerRoot no longer uses android:fitsSystemWindows — it consumes insets via the legacy
+        // combined systemWindowInsets bridge (folding keyboard into system-bar insets) before a
+        // child listener ever sees them, so the IME inset the list needs would always read zero.
+        // Applied manually instead: system bars/cutout as root padding, keyboard height as extra
+        // list bottom padding, so the list stays scrollable above the keyboard (window no longer
+        // resizes for it at all — see manifest: adjustNothing).
         val listBasePaddingBottom = appList.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(drawerRoot) { v, insets ->
             val bars = insets.getInsets(
