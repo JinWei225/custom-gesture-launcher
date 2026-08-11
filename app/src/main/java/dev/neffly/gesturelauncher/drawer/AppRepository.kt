@@ -29,6 +29,14 @@ object AppRepository {
 
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
 
+    // A-Z first, then the '#' bucket as one block at the end, matching the alphabet index's glyph
+    // order. Sorting by label alone splits '#' in two — digits sort before 'A' and CJK after 'Z' —
+    // which rendered as two separate sections both headed '#'.
+    private val DRAWER_ORDER = compareBy<AppInfo>(
+        { if (it.indexLetter() == '#') 1 else 0 },
+        { it.label.lowercase(Locale.getDefault()) }
+    )
+
     /** Notified (on whichever thread calls [invalidate]) after the cache is dropped. */
     fun addListener(listener: () -> Unit) { listeners.add(listener) }
     fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
@@ -62,7 +70,7 @@ object AppRepository {
                         user = activity.user,
                         tag = AppTagStore.tag(context, activity.componentName)
                     )
-                }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+                }.sortedWith(DRAWER_ORDER)
             cache = apps
             return apps
         }
