@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- clipChildren=false so the card's elevation shadow isn't cut off by the scrim's bounds. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/quickSearchScrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/quick_search_scrim"
+    android:clipChildren="false"
+    android:clickable="true"
+    android:focusable="false">
+
+    <!-- Top margin is set in code to a fraction of the screen height, so the card sits in the upper
+         third with the app underneath still readable around it. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/quickSearchCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginHorizontal="16dp"
+        android:clickable="true"
+        android:focusable="false"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+        app:cardForegroundColor="@android:color/transparent"
+        app:rippleColor="@android:color/transparent"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="16dp"
+        app:strokeWidth="0dp">
+
+        <!-- Asymmetric on purpose: TextInputLayout already reserves room above its box for the
+             floating label to sit on the border, so an equal padding pair reads as bottom-heavy
+             and leaves the field's lower corners crowding the card's 28dp radius. The smaller top
+             value plus that reserved space is what makes the two visual gaps match. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="20dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/searchLayout"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/ic_search">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/searchInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Height ceiling is set in code from the space left above the keyboard; beyond it
+                 the results scroll inside the card instead of growing it. Gone until there's
+                 something to show, so the card stays a bare search bar. -->
+            <dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
+                android:id="@+id/resultList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:clipToPadding="false"
+                android:scrollbars="vertical"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/emptyLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp"
+                android:text="@string/quick_search_no_results"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>

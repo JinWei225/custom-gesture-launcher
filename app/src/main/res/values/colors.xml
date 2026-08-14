@@ -88,4 +88,8 @@
     <!-- Amber is unreadable on a light ground, so light mode gets a darkened variant. -->
     <color name="warning">#B26A00</color>
 
+    <!-- Scrim behind the floating quick-search card. Light enough that the app underneath stays
+         readable, dark enough to give the card's shadow something to read against. -->
+    <color name="quick_search_scrim">#4D000000</color>
+
 </resources>

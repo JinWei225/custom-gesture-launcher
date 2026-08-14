@@ -10,7 +10,7 @@ import android.util.Log
 import android.widget.Toast
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
-import java.text.Normalizer
+import dev.neffly.gesturelauncher.search.SearchScoring
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -201,10 +201,10 @@ object AppRepository {
         }
     }
 
-    private fun normalize(s: String): String =
-        Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-            .trim()
+    private fun normalize(s: String): String = SearchScoring.normalize(s)
+
+    private fun fuzzyScore(text: String, query: String): Int? =
+        SearchScoring.fuzzyScore(text, query)
 
     /** Sort tier for an exact tag match — comfortably above any possible fuzzy score. */
     private const val TAG_EXACT_SCORE = Int.MAX_VALUE
@@ -212,48 +212,4 @@ object AppRepository {
     /** Added to a fuzzy tag match's score so it outranks any ordinary label match, however good —
      *  comfortably larger than a realistic label fuzzy score even for long queries/labels. */
     private const val TAG_MATCH_BONUS = 1000
-
-    private const val MATCH_SCORE = 16
-    private const val CONSECUTIVE_BONUS = 12
-    private const val WORD_BOUNDARY_BONUS = 10
-    private const val GAP_PENALTY = 1
-    private val SEPARATORS = charArrayOf(' ', '-', '_', '.')
-    private const val NO_MATCH = Int.MIN_VALUE / 2
-
-    /**
-     * Best-alignment score for [query] as a subsequence of [text] (both already normalized), or
-     * null if [query]'s characters don't all appear in [text] in order. Rewards contiguous runs
-     * and word-boundary starts so e.g. "gm" ranks "Google Maps" above "Backgammon".
-     */
-    private fun fuzzyScore(text: String, query: String): Int? {
-        if (query.isEmpty()) return 0
-        // dp[p] = best score to match the first i query chars, with the i-th match landing at
-        // text position p (0-indexed); rebuilt one row per query character.
-        var dp = IntArray(text.length) { p ->
-            if (text[p] == query[0]) MATCH_SCORE + boundaryBonus(text, p) - GAP_PENALTY * p
-            else NO_MATCH
-        }
-        for (i in 1 until query.length) {
-            val next = IntArray(text.length) { NO_MATCH }
-            for (p in i until text.length) {
-                if (text[p] != query[i]) continue
-                var best = NO_MATCH
-                for (prevP in i - 1 until p) {
-                    if (dp[prevP] <= NO_MATCH) continue
-                    val gap = p - prevP - 1
-                    val bonus = if (gap == 0) CONSECUTIVE_BONUS else -GAP_PENALTY * gap
-                    best = maxOf(best, dp[prevP] + bonus)
-                }
-                if (best > NO_MATCH) next[p] = best + MATCH_SCORE + boundaryBonus(text, p)
-            }
-            dp = next
-        }
-        val best = dp.maxOrNull() ?: NO_MATCH
-        return if (best <= NO_MATCH) null else best
-    }
-
-    private fun boundaryBonus(text: String, p: Int): Int {
-        if (p == 0 || text[p - 1] in SEPARATORS) return WORD_BOUNDARY_BONUS
-        return 0
-    }
 }

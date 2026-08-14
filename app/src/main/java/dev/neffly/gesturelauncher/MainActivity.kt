@@ -37,6 +37,7 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
+import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
@@ -126,16 +127,41 @@ class MainActivity : BaseActivity() {
             else requestCalendar.launch(Manifest.permission.READ_CALENDAR)
         }
 
-        findViewById<ImageButton>(R.id.drawerButton).setOnClickListener {
-            startActivity(Intent(this, AppDrawerActivity::class.java))
-            // The drawer animates its own content in; suppress the OS's default cross-activity
-            // transition so it can't fight with (or get replaced by an OEM "app open" animation
-            // instead of) that self-driven slide. On Android 14+ the drawer's own
-            // overrideActivityTransition(..., 0, 0) call handles this side of the pair.
-            @Suppress("DEPRECATION")
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                overridePendingTransition(0, 0)
-            }
+        // Tap searches, long-press browses. The compact floating window is the same one the power
+        // button opens, so search behaves identically wherever it's reached from; the full drawer
+        // stays one long-press away for browsing A-Z and for the per-app actions (alias, uninstall,
+        // shortcuts) that only live there. The drawer is also the guaranteed way in when the
+        // overlay is switched off, which is why that case falls back to it rather than doing
+        // nothing — this button must never be a dead end.
+        val searchButton = findViewById<ImageButton>(R.id.drawerButton)
+        searchButton.setOnClickListener {
+            if (Prefs.quickSearchEnabled(this)) openQuickSearch() else openDrawer()
+        }
+        searchButton.setOnLongClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            openDrawer()
+            true
+        }
+    }
+
+    private fun openDrawer() {
+        startActivity(Intent(this, AppDrawerActivity::class.java))
+        // The drawer animates its own content in; suppress the OS's default cross-activity
+        // transition so it can't fight with (or get replaced by an OEM "app open" animation
+        // instead of) that self-driven slide. On Android 14+ the drawer's own
+        // overrideActivityTransition(..., 0, 0) call handles this side of the pair.
+        suppressTransition()
+    }
+
+    private fun openQuickSearch() {
+        startActivity(QuickSearchActivity.intent(this))
+        suppressTransition()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun suppressTransition() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overridePendingTransition(0, 0)
         }
     }
 

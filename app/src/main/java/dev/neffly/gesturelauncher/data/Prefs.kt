@@ -17,6 +17,9 @@ object Prefs {
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_FONT_NAME = "font_name"
     private const val KEY_FONT_SCALE = "font_scale"
+    private const val KEY_SEARCH_FILES = "search_files"
+    private const val KEY_SEARCH_WEB = "search_web"
+    private const val KEY_QUICK_SEARCH = "quick_search_enabled"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -102,5 +105,34 @@ object Prefs {
 
     fun setFontScale(context: Context, value: Float) {
         prefs(context).edit().putFloat(KEY_FONT_SCALE, value).apply()
+    }
+
+    /** Include local files in search results (default OFF — it needs a storage permission the user
+     *  has to grant deliberately, so opting in is the only honest default). Applies to both the
+     *  drawer's search bar and the floating quick-search window. */
+    fun searchFiles(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_SEARCH_FILES, false)
+
+    fun setSearchFiles(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SEARCH_FILES, value).apply()
+    }
+
+    /** Offer a Google search / "open this address" row for the typed query (default ON — it costs
+     *  no permission and nothing is sent anywhere until the row is tapped). */
+    fun searchWeb(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_SEARCH_WEB, true)
+
+    fun setSearchWeb(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SEARCH_WEB, value).apply()
+    }
+
+    /** Master switch for the floating quick-search window (default OFF — turning it on is what
+     *  makes taking the assistant role meaningful, and that has system-wide side effects). The
+     *  window checks this on every launch, since the assistant role outlives the toggle. */
+    fun quickSearchEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_QUICK_SEARCH, false)
+
+    fun setQuickSearchEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_QUICK_SEARCH, value).apply()
     }
 }

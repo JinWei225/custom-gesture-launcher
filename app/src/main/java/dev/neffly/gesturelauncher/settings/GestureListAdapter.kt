@@ -56,6 +56,10 @@ class GestureListAdapter(
                 holder.icon.setImageResource(R.drawable.ic_link)
                 holder.warning.visibility = View.GONE
             }
+            GestureAction.QUICK_SEARCH -> {
+                holder.icon.setImageResource(R.drawable.ic_search)
+                holder.warning.visibility = View.GONE
+            }
         }
 
         val firstStroke = mapping.templates.firstOrNull().orEmpty().map { PointF(it.x, it.y) }

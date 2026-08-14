@@ -83,6 +83,24 @@
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
+    <!-- Floating quick search: shown over whatever app is in front, so the window must be
+         translucent and paint nothing of its own — the scrim and the card in
+         activity_quick_search.xml are the only things drawn. Transparent system bars for the same
+         reason: an opaque bar colour here would frame the app underneath with our palette.
+
+         windowIsTranslucent also keeps OEM skins from swapping in their "app opening" zoom, the
+         same problem the drawer and settings hub work around. -->
+    <style name="Theme.GestureLauncher.QuickSearch" parent="Theme.GestureLauncher">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- The scrim, not the theme, is what sits behind the bars, and it's dark in both themes —
+             so light icons are correct either way. Same bet Theme.GestureLauncher.Home makes. -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
     <!-- Home screen: draw behind system bars and show the wallpaper.
          WallpaperManager is used primarily; windowShowWallpaper is the fallback.
 

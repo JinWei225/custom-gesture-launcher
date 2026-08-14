@@ -55,4 +55,8 @@
     <!-- Full-strength amber reads fine against a dark surface. -->
     <color name="warning">#FFC107</color>
 
+    <!-- Slightly stronger than light mode: a dark card over dark app content needs more separation
+         for its shadow to register at all. -->
+    <color name="quick_search_scrim">#66000000</color>
+
 </resources>

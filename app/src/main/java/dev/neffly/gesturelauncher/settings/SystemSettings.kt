@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.settings
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -11,6 +12,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.search.FilePermissions
 
 /**
  * Deep-links to the system "change default Home app" picker, falling back gracefully by API
@@ -77,6 +79,68 @@ fun Activity.openBatteryOptimizationSettings() {
             )
         )
     }
+    for (intent in candidates) {
+        if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
+    }
+    Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+}
+
+/**
+ * Whether this app currently holds the digital-assistant role — i.e. whether long-pressing the
+ * power button reaches [dev.neffly.gesturelauncher.search.QuickSearchActivity].
+ *
+ * Two sources, because they don't always agree: RoleManager is the modern authority, but the
+ * assistant also lives in a Secure setting that predates it and is what some OEM skins actually
+ * update. Either naming us counts. That setting's key has no public constant, so it's spelled out,
+ * and it holds either a flattened ComponentName or a bare package name depending on the build —
+ * hence comparing only the part before the '/'.
+ */
+fun Context.isAssistantRoleHeld(): Boolean {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val held = runCatching {
+            getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT)
+        }.getOrNull()
+        if (held == true) return true
+    }
+    val current = Settings.Secure.getString(contentResolver, "assistant")
+    return !current.isNullOrEmpty() && current.substringBefore('/') == packageName
+}
+
+/**
+ * Opens the screen where the digital assistant is chosen, so quick search can be bound to the
+ * power-button hold.
+ *
+ * Deliberately NOT RoleManager.createRequestRoleIntent(ROLE_ASSISTANT): the assistant role isn't
+ * user-requestable, so that dialog finishes itself the instant it opens — it logs
+ * "Package name cannot be null or empty" and returns RESULT_CANCELED, with nothing shown. (It also
+ * requires startActivityForResult to populate the calling package at all, which plain
+ * startActivity never does.) The result was a settings row that visibly did nothing. Assistant
+ * selection is a Settings-only choice by design; this deep-links straight to it.
+ *
+ * ACTION_VOICE_INPUT_SETTINGS lands on "Assist & voice input", whose first row is "Digital
+ * assistant app". Same candidate-list-with-runCatching shape as [openDefaultLauncherSettings].
+ */
+fun Activity.openAssistantSettings() {
+    val candidates = buildList {
+        add(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            add(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+        }
+        add(Intent(Settings.ACTION_SETTINGS))
+    }
+    for (intent in candidates) {
+        if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
+    }
+    Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+}
+
+/**
+ * Opens whichever screen grants this app all-files access, needed for local file search on API 30+.
+ * A no-op below that, where the grant is an ordinary runtime permission instead.
+ */
+fun Activity.openAllFilesAccessSettings() {
+    val candidates = FilePermissions.requestIntents(this)
+    if (candidates.isEmpty()) return
     for (intent in candidates) {
         if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
     }

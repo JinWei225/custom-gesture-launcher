@@ -9,7 +9,7 @@ data class SPoint(val x: Float, val y: Float)
 /** What a recognized gesture does. Defaults to [LAUNCH_APP] so gesture files saved before this
  *  field existed still decode as plain app launches, unchanged. */
 @Serializable
-enum class GestureAction { LAUNCH_APP, OPEN_DRAWER, OPEN_URL }
+enum class GestureAction { LAUNCH_APP, OPEN_DRAWER, OPEN_URL, QUICK_SEARCH }
 
 /**
  * One gesture -> action mapping. Stores the raw strokes from the 3x training pass as separate

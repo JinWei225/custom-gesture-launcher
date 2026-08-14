@@ -1,10 +1,13 @@
 <resources>
     <string name="app_name">Gesture Launcher</string>
-    <string name="drawer_title">All apps</string>
+    <string name="drawer_title">Search</string>
     <string name="settings_title">Gestures</string>
     <string name="training_title">Add gesture</string>
 
-    <string name="open_drawer">Open app drawer</string>
+    <string name="open_search">Open search</string>
+    <!-- Safe Mode keeps its own plain wording: it's the post-crash escape hatch and shows a bare
+         app list with no search, so it must not borrow the search screen's label. -->
+    <string name="safe_mode_open_apps">All apps</string>
     <string name="search_apps">Search apps</string>
     <string name="app_info">App info</string>
     <string name="uninstall">Uninstall</string>
@@ -12,6 +15,23 @@
     <string name="app_alias_title">App alias</string>
     <string name="app_alias_hint">e.g. tng</string>
     <string name="remove_alias">Remove alias</string>
+
+    <!-- Search bar hints, picked to match whichever sources are actually switched on. -->
+    <string name="search_apps_and_files">Search apps and files</string>
+    <string name="search_apps_and_web">Search apps and the web</string>
+    <string name="search_everything">Search apps, files, the web</string>
+
+    <string name="search_section_apps">Apps</string>
+    <string name="search_section_files">Files</string>
+    <string name="search_section_web">Web</string>
+    <string name="search_section_launcher">Launcher</string>
+    <string name="search_launcher_settings">Launcher settings</string>
+    <string name="search_launcher_settings_subtitle">Gestures, appearance, search and backup</string>
+    <string name="search_google_subtitle">Search Google in your browser</string>
+    <string name="search_open_url_subtitle">Open this address in your browser</string>
+    <string name="file_open_failed">Nothing on this device can open that file</string>
+    <string name="web_search_failed">No browser found</string>
+    <string name="quick_search_no_results">No results</string>
 
     <string name="menu_gesture_settings">Settings</string>
     <string name="menu_auto_keyboard">Auto keyboard</string>
@@ -43,6 +63,8 @@
     <string name="gesture_action_open_drawer_subtitle">Draw a shape, open the app drawer</string>
     <string name="gesture_action_open_url">Open a URL</string>
     <string name="gesture_action_open_url_subtitle">Draw a shape, open a link in your browser</string>
+    <string name="gesture_action_quick_search">Open quick search</string>
+    <string name="gesture_action_quick_search_subtitle">Draw a shape, open the floating search bar</string>
     <string name="gesture_url_entry_title">Open a URL</string>
     <string name="gesture_url_hint">example.com</string>
     <string name="gesture_url_empty">Enter a URL</string>
@@ -129,4 +151,16 @@
     <string name="keep_launcher_responsive">Keep launcher in memory</string>
     <string name="battery_exempt">Unrestricted — the launcher stays loaded</string>
     <string name="battery_optimized">Restricted — the system may unload the launcher, making the app drawer slow to open</string>
+
+    <string name="section_search">Search</string>
+    <string name="menu_search_files">Search local files</string>
+    <string name="search_files_row_subtitle">Include files from your storage in search results</string>
+    <string name="search_files_permission_denied">Files won\'t be searched until all-files access is granted</string>
+    <string name="menu_search_web">Google search</string>
+    <string name="search_web_row_subtitle">Offer a web search — or a typed address — as the last result</string>
+    <string name="menu_quick_search">Quick search overlay</string>
+    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and finding files</string>
+    <string name="quick_search_trigger">Quick search trigger</string>
+    <string name="quick_search_trigger_granted">Ready — this launcher is your digital assistant. On Android 12+, also set Settings → System → Gestures → Press and hold power button to “Digital assistant”.</string>
+    <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gesture Launcher. Long-pressing the power button will then open quick search.</string>
 </resources>

@@ -63,7 +63,8 @@ class GestureSettingsActivity : BaseActivity() {
             when (mapping.action) {
                 GestureAction.LAUNCH_APP -> menu.add(0, ID_CHANGE, 1, R.string.change_app)
                 GestureAction.OPEN_URL -> menu.add(0, ID_CHANGE, 1, R.string.edit_url)
-                GestureAction.OPEN_DRAWER -> {} // nothing to change beyond redrawing the shape
+                // Nothing to change beyond redrawing the shape.
+                GestureAction.OPEN_DRAWER, GestureAction.QUICK_SEARCH -> {}
             }
             menu.add(0, ID_DELETE, 2, R.string.delete)
             FontEngine.applyTo(menu)

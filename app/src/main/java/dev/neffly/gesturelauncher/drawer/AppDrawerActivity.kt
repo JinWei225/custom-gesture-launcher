@@ -35,9 +35,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.search.FileSearcher
+import dev.neffly.gesturelauncher.search.SearchController
+import dev.neffly.gesturelauncher.search.SearchEngine
+import dev.neffly.gesturelauncher.search.SearchResult
+import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
 import dev.neffly.gesturelauncher.ui.BaseActivity
@@ -57,8 +63,16 @@ class AppDrawerActivity : BaseActivity() {
     private lateinit var appList: RecyclerView
     private lateinit var alphabetIndex: AlphabetIndexView
     private lateinit var letterBubble: TextView
+    private lateinit var searchLayout: TextInputLayout
     private lateinit var searchInput: TextInputEditText
     private var allApps: List<AppInfo> = emptyList()
+
+    private lateinit var search: SearchController
+
+    private var renderedQuery: String? = null
+
+    /** Whether the user has dragged the list since the query last changed — see [renderResults]. */
+    private var userScrolled = false
 
     // May be invoked from the LauncherApps callback thread — hop to the main thread first.
     private val onAppsChanged: () -> Unit = { runOnUiThread { loadApps() } }
@@ -100,27 +114,25 @@ class AppDrawerActivity : BaseActivity() {
         FontEngine.applyTo(toolbar.menu)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_gesture_settings -> {
-                    startActivity(Intent(this, SettingsHubActivity::class.java))
-                    // The hub animates its own slide-in from the right; suppress the OS's default
-                    // cross-activity transition the same way MainActivity does when opening this
-                    // drawer, for the same OEM-zoom-avoidance reason (see SettingsHubActivity).
-                    @Suppress("DEPRECATION")
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        overridePendingTransition(0, 0)
-                    }
-                    true
-                }
+                R.id.action_gesture_settings -> { openSettings(); true }
                 else -> false
             }
         }
 
         appList = findViewById(R.id.appList)
         appList.layoutManager = LinearLayoutManager(this)
+        appList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) userScrolled = true
+            }
+        })
         adapter = AppListAdapter(
             scope = lifecycleScope,
             onClick = { app -> launchAndClearSearch(app) },
-            onLongClick = { app, anchor -> showAppMenu(app, anchor) }
+            onLongClick = { app, anchor -> showAppMenu(app, anchor) },
+            onFileClick = { hit -> FileSearcher.open(this, hit); clearSearch() },
+            onWebClick = { web -> WebSearch.open(this, web.query, web.url); clearSearch() },
+            onSettingsClick = { openSettings(); clearSearch() }
         )
         appList.adapter = adapter
 
@@ -153,15 +165,21 @@ class AppDrawerActivity : BaseActivity() {
             insets
         }
 
+        searchLayout = findViewById(R.id.searchLayout)
         searchInput = findViewById(R.id.searchInput)
+        // Shared with the floating quick-search window, so both rank and group results identically.
+        search = SearchController(this, lifecycleScope) { query, results ->
+            renderResults(query, results)
+        }
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                submitList(AppRepository.filter(allApps, s?.toString().orEmpty()), resetScroll = true)
+                search.onQueryChanged(s?.toString().orEmpty())
             }
             override fun afterTextChanged(s: Editable?) {}
         })
-        // Search-bar Enter/Go launches the top result, same as tapping the first row.
+        // Search-bar Enter/Go opens the top result, same as tapping the first row — whatever kind
+        // of result it is.
         searchInput.setOnEditorActionListener { _, actionId, event ->
             val isSearchAction = actionId == EditorInfo.IME_ACTION_SEARCH ||
                 (actionId == EditorInfo.IME_ACTION_UNSPECIFIED &&
@@ -171,7 +189,7 @@ class AppDrawerActivity : BaseActivity() {
                 // with Enter one keystroke away, so an empty query would launch whichever app
                 // happens to sort first. Still consumed, to keep the keyboard up.
                 if (!searchInput.text.isNullOrBlank()) {
-                    adapter.firstItem()?.let { launchAndClearSearch(it) }
+                    adapter.firstResult()?.let { open(it) }
                 }
                 true
             } else {
@@ -180,6 +198,16 @@ class AppDrawerActivity : BaseActivity() {
         }
 
         if (Prefs.autoKeyboard(this)) showKeyboardOnSearch()
+    }
+
+    /** Opens a result of any kind and clears the box, as tapping its row would. */
+    private fun open(result: SearchResult) {
+        when (result) {
+            is SearchResult.App -> launchAndClearSearch(result.app)
+            is SearchResult.File -> { FileSearcher.open(this, result.hit); clearSearch() }
+            is SearchResult.Web -> { WebSearch.open(this, result.query, result.url); clearSearch() }
+            is SearchResult.Settings -> { openSettings(); clearSearch() }
+        }
     }
 
     override fun onStart() {
@@ -194,6 +222,9 @@ class AppDrawerActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        // The search toggles live in the settings hub, which is opened from this screen — so their
+        // effect (which sources are searched, and what the hint promises) has to be re-read here.
+        searchLayout.hint = getString(SearchEngine.hint(this))
         // Cheap when the cache is warm — LauncherApps callbacks (see App) invalidate it whenever
         // packages change, so no per-open full rescan is needed anymore.
         loadApps()
@@ -204,7 +235,23 @@ class AppDrawerActivity : BaseActivity() {
      *  this activity isn't finished just because another app was launched from it). */
     private fun launchAndClearSearch(app: AppInfo) {
         AppRepository.launch(this, app)
+        clearSearch()
+    }
+
+    private fun clearSearch() {
         searchInput.text = null
+    }
+
+    /** Shared by the toolbar's overflow item and the "Launcher settings" search result. */
+    private fun openSettings() {
+        startActivity(Intent(this, SettingsHubActivity::class.java))
+        // The hub animates its own slide-in from the right; suppress the OS's default
+        // cross-activity transition the same way MainActivity does when opening this
+        // drawer, for the same OEM-zoom-avoidance reason (see SettingsHubActivity).
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overridePendingTransition(0, 0)
+        }
     }
 
     private fun showKeyboardOnSearch() {
@@ -238,7 +285,8 @@ class AppDrawerActivity : BaseActivity() {
         // drawer is closed before it lands.
         AppRepository.cachedOrPrime(this).takeIf { it.isNotEmpty() }?.let { apps ->
             allApps = apps
-            submitList(AppRepository.filter(allApps, searchInput.text?.toString().orEmpty()))
+            search.apps = apps
+            search.refresh()
         }
         // Nothing to reconcile against when the cache is already a scan result. Both onResume and
         // the AppRepository listener call this, so without the check an ordinary open pays two full
@@ -248,22 +296,38 @@ class AppDrawerActivity : BaseActivity() {
         lifecycleScope.launch {
             val apps = withContext(Dispatchers.IO) { AppRepository.load(this@AppDrawerActivity) }
             allApps = apps
-            submitList(AppRepository.filter(allApps, searchInput.text?.toString().orEmpty()))
+            search.apps = apps
+            search.refresh()
         }
     }
 
-    private fun submitList(items: List<AppInfo>, resetScroll: Boolean = false) {
-        // Section headers only make sense over the plain alphabetical order — fuzzy search results
-        // are sorted by relevance, so grouping by letter there would read as arbitrarily jumbled.
-        adapter.submit(items, showHeaders = searchInput.text.isNullOrBlank()) {
-            // Deferred to the diff's commit callback: scrolling right after calling submit() would
-            // race the async DiffUtil dispatch and could land against the still-old row count.
-            // Only done for search-driven updates — a background app-list refresh shouldn't yank
-            // the user back to the top of whatever they were scrolled to.
-            if (resetScroll) appList.scrollToPosition(0)
+    /**
+     * Renders whatever [SearchController] produced. A blank query falls back to the plain
+     * alphabetical browse list — the search sections only exist while something is typed.
+     */
+    private fun renderResults(query: String, results: List<SearchResult>) {
+        if (query.isBlank()) {
+            renderedQuery = null
+            submitBrowseList()
+            return
         }
-        alphabetIndex.setActiveLetters(items.mapTo(sortedSetOf()) { it.indexLetter() })
-        alphabetIndex.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
+        // Keyed on whether the user has dragged, not on whether the query changed: the file section
+        // lands after the apps do, inserting rows *above* whatever LinearLayoutManager is anchored
+        // to, which would otherwise leave the list parked past the best match.
+        if (renderedQuery != query) userScrolled = false
+        renderedQuery = query
+        adapter.submitResults(results) {
+            if (!userScrolled) appList.scrollToPosition(0)
+        }
+        // Relevance-sorted results aren't grouped by letter, so the fast-scroll index is meaningless.
+        alphabetIndex.visibility = View.GONE
+    }
+
+    private fun submitBrowseList() {
+        // Section headers only make sense over the plain alphabetical order.
+        adapter.submit(allApps, showHeaders = true)
+        alphabetIndex.setActiveLetters(allApps.mapTo(sortedSetOf()) { it.indexLetter() })
+        alphabetIndex.visibility = if (allApps.isEmpty()) View.GONE else View.VISIBLE
     }
 
     /** Jumps straight to the first row starting with [letter] (or the closest one after it),

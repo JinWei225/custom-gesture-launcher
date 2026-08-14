@@ -18,7 +18,12 @@ data class BackupData(
     val matchThreshold: Float,
     val autoKeyboard: Boolean,
     val gestures: List<GestureMapping>,
-    val appTags: Map<String, String> = emptyMap()
+    val appTags: Map<String, String> = emptyMap(),
+    /** Search toggles. Defaulted so files written before these existed still decode; the defaults
+     *  match Prefs', so an older backup restores the behaviour it was taken with. */
+    val searchFiles: Boolean = false,
+    val searchWeb: Boolean = true,
+    val quickSearch: Boolean = false
 )
 
 /** Result of applying an imported [BackupData], for the user-facing summary dialog. */
@@ -39,7 +44,10 @@ object BackupManager {
         matchThreshold = Prefs.matchThreshold(context),
         autoKeyboard = Prefs.autoKeyboard(context),
         gestures = GestureStore.all(context),
-        appTags = AppTagStore.allTags(context)
+        appTags = AppTagStore.allTags(context),
+        searchFiles = Prefs.searchFiles(context),
+        searchWeb = Prefs.searchWeb(context),
+        quickSearch = Prefs.quickSearchEnabled(context)
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -64,6 +72,11 @@ object BackupManager {
         }
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)
+        Prefs.setSearchWeb(context, data.searchWeb)
+        Prefs.setQuickSearchEnabled(context, data.quickSearch)
+        // File search is deliberately not restored on: the permission it needs is device-specific
+        // and won't have been granted here, so a restored "on" would just be a broken promise.
+        // The settings row grants it in one tap.
 
         val missingApps = data.gestures.filter {
             runCatching { context.packageManager.getApplicationInfo(it.packageName, 0) }.isFailure

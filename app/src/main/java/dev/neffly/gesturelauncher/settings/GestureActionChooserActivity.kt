@@ -49,6 +49,9 @@ class GestureActionChooserActivity : BaseActivity() {
         findViewById<View>(R.id.openDrawerRow).setOnClickListener {
             goTo(GestureTrainingActivity.newGestureIntent(this, GestureAction.OPEN_DRAWER))
         }
+        findViewById<View>(R.id.quickSearchRow).setOnClickListener {
+            goTo(GestureTrainingActivity.newGestureIntent(this, GestureAction.QUICK_SEARCH))
+        }
         findViewById<View>(R.id.openUrlRow).setOnClickListener {
             goTo(Intent(this, GestureUrlEntryActivity::class.java))
         }

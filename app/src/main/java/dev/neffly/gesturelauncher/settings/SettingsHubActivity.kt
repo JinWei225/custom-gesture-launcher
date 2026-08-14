@@ -25,6 +25,7 @@ import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.FilePermissions
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.showWithFont
@@ -52,7 +53,26 @@ class SettingsHubActivity : BaseActivity() {
     private lateinit var batterySubtitle: TextView
     private lateinit var fontSubtitle: TextView
     private lateinit var fontScaleSubtitle: TextView
+    private lateinit var searchFilesSwitch: MaterialSwitch
+    private lateinit var searchWebSwitch: MaterialSwitch
+    private lateinit var quickSearchSwitch: MaterialSwitch
+    private lateinit var quickSearchTriggerRow: View
+    private lateinit var quickSearchTriggerTitle: TextView
+    private lateinit var quickSearchTriggerSubtitle: TextView
     private var isClosing = false
+
+    /** True while waiting to come back from the all-files-access screen, so onResume knows to turn
+     *  the toggle back off if nothing was granted there. */
+    private var awaitingFilePermission = false
+
+    private val filePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            Prefs.setSearchFiles(this, granted)
+            searchFilesSwitch.isChecked = granted
+            if (!granted) {
+                Toast.makeText(this, R.string.search_files_permission_denied, Toast.LENGTH_LONG).show()
+            }
+        }
 
     private val exportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -126,6 +146,29 @@ class SettingsHubActivity : BaseActivity() {
         fontScaleSubtitle = findViewById(R.id.fontScaleSubtitle)
         findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
 
+        searchFilesSwitch = findViewById(R.id.searchFilesSwitch)
+        findViewById<View>(R.id.searchFilesRow).setOnClickListener { toggleSearchFiles() }
+
+        searchWebSwitch = findViewById(R.id.searchWebSwitch)
+        findViewById<View>(R.id.searchWebRow).setOnClickListener {
+            val enabled = !Prefs.searchWeb(this)
+            Prefs.setSearchWeb(this, enabled)
+            searchWebSwitch.isChecked = enabled
+        }
+
+        quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
+        findViewById<View>(R.id.quickSearchRow).setOnClickListener {
+            val enabled = !Prefs.quickSearchEnabled(this)
+            Prefs.setQuickSearchEnabled(this, enabled)
+            quickSearchSwitch.isChecked = enabled
+            updateQuickSearchTrigger()
+        }
+
+        quickSearchTriggerRow = findViewById(R.id.quickSearchTriggerRow)
+        quickSearchTriggerTitle = findViewById(R.id.quickSearchTriggerTitle)
+        quickSearchTriggerSubtitle = findViewById(R.id.quickSearchTriggerSubtitle)
+        quickSearchTriggerRow.setOnClickListener { openAssistantSettings() }
+
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()
         }
@@ -154,6 +197,63 @@ class SettingsHubActivity : BaseActivity() {
         )
         fontSubtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
         fontScaleSubtitle.text = fontScaleLabel(Prefs.fontScale(this))
+
+        // All-files access is granted on a settings screen we can't get a result from, so the
+        // toggle is reconciled against the real permission state on the way back.
+        if (awaitingFilePermission) {
+            awaitingFilePermission = false
+            val granted = FilePermissions.isGranted(this)
+            Prefs.setSearchFiles(this, granted)
+            if (!granted) {
+                Toast.makeText(this, R.string.search_files_permission_denied, Toast.LENGTH_LONG).show()
+            }
+        }
+        // A permission revoked in system settings has to switch the feature off too, or search
+        // would silently return nothing while the row claims it's on.
+        if (Prefs.searchFiles(this) && !FilePermissions.isGranted(this)) {
+            Prefs.setSearchFiles(this, false)
+        }
+        searchFilesSwitch.isChecked = Prefs.searchFiles(this)
+        searchWebSwitch.isChecked = Prefs.searchWeb(this)
+        quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
+        updateQuickSearchTrigger()
+    }
+
+    /**
+     * Turning file search on has to clear the storage grant first — the toggle is meaningless
+     * without it, so it only sticks once the permission is actually held.
+     */
+    private fun toggleSearchFiles() {
+        if (Prefs.searchFiles(this)) {
+            Prefs.setSearchFiles(this, false)
+            searchFilesSwitch.isChecked = false
+            return
+        }
+        if (FilePermissions.isGranted(this)) {
+            Prefs.setSearchFiles(this, true)
+            searchFilesSwitch.isChecked = true
+            return
+        }
+        val runtimePermission = FilePermissions.runtimePermission
+        if (runtimePermission != null) {
+            filePermissionLauncher.launch(runtimePermission)
+        } else {
+            awaitingFilePermission = true
+            openAllFilesAccessSettings()
+        }
+    }
+
+    /** Greys the trigger row out while the overlay is off, and reports whether the role is held. */
+    private fun updateQuickSearchTrigger() {
+        val enabled = Prefs.quickSearchEnabled(this)
+        quickSearchTriggerRow.isEnabled = enabled
+        quickSearchTriggerTitle.isEnabled = enabled
+        quickSearchTriggerSubtitle.isEnabled = enabled
+        quickSearchTriggerRow.alpha = if (enabled) 1f else DISABLED_ROW_ALPHA
+        quickSearchTriggerSubtitle.setText(
+            if (isAssistantRoleHeld()) R.string.quick_search_trigger_granted
+            else R.string.quick_search_trigger_missing
+        )
     }
 
     /** "Default (100%)" for 1.0, a bare percentage otherwise — the default is worth naming so it's
@@ -356,6 +456,9 @@ class SettingsHubActivity : BaseActivity() {
 
     companion object {
         private const val SLIDE_DURATION_MS = 260L
+
+        /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
+        private const val DISABLED_ROW_ALPHA = 0.4f
 
         /** Offered font-size multipliers. Skewed upward because the reason this setting exists is
          *  imported fonts that render small at a given point size; 0.9 is there so the drawer can

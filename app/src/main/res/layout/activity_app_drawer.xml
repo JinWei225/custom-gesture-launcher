@@ -20,14 +20,16 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="12dp"
         android:layout_marginBottom="4dp"
+        android:hint="@string/search_apps"
         app:endIconMode="clear_text"
         app:startIconDrawable="@drawable/ic_search">
 
+        <!-- The hint lives on the TextInputLayout, not here: it's replaced at runtime with one
+             naming whichever search sources are switched on (see SearchEngine.hint). -->
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/searchInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/search_apps"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:maxLines="1" />

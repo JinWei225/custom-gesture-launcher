@@ -11,9 +11,10 @@ import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.QuickSearchActivity
 
-/** Carries out whatever a recognized [GestureMapping] means — the one place that understands all
- *  three [GestureAction] values, so callers (currently just [MainActivity]) don't need to. */
+/** Carries out whatever a recognized [GestureMapping] means — the one place that understands every
+ *  [GestureAction] value, so callers (currently just [MainActivity]) don't need to. */
 object GestureActionDispatcher {
 
     /** Returns whether the action actually fired — false only for [GestureAction.OPEN_URL] with
@@ -29,6 +30,16 @@ object GestureActionDispatcher {
             context.startActivity(Intent(context, AppDrawerActivity::class.java))
             // Same suppression MainActivity's drawer button uses: the drawer animates its own
             // slide-up, so the OS's default cross-activity transition must not fight it.
+            if (context is Activity && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                @Suppress("DEPRECATION")
+                context.overridePendingTransition(0, 0)
+            }
+            true
+        }
+        GestureAction.QUICK_SEARCH -> {
+            context.startActivity(QuickSearchActivity.intent(context))
+            // The card animates its own fade/rise, so the OS transition must not fight it — same
+            // reasoning as the drawer above.
             if (context is Activity && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 @Suppress("DEPRECATION")
                 context.overridePendingTransition(0, 0)

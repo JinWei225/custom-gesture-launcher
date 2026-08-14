@@ -127,10 +127,10 @@ class GestureTrainingActivity : BaseActivity() {
                 // Nothing to pick for these actions — go straight to drawing the shape.
                 selPackage = ""; selComponent = ""
                 selLabel = intent.getStringExtra(EXTRA_LABEL)
-                    ?: if (pendingAction == GestureAction.OPEN_DRAWER) {
-                        getString(R.string.gesture_action_open_drawer)
-                    } else {
-                        pendingUrl.orEmpty()
+                    ?: when (pendingAction) {
+                        GestureAction.OPEN_DRAWER -> getString(R.string.gesture_action_open_drawer)
+                        GestureAction.QUICK_SEARCH -> getString(R.string.gesture_action_quick_search)
+                        else -> pendingUrl.orEmpty()
                     }
                 showDraw()
             }
