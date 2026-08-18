@@ -73,6 +73,54 @@
     <style name="Theme.GestureLauncher.Drawer" parent="Theme.GestureLauncher">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- Deliberately NOT windowShowWallpaper. The drawer is frosted glass (see ui/Glass.kt)
+             and it is tempting to have it show the wallpaper directly, but that makes this window
+             the wallpaper target: the system then runs its own wallpaper transition when the
+             drawer opens and closes, which lands on top of the drawer's self-driven slide as a
+             second, conflicting animation. What is behind the window shows through the glass
+             anyway — the home screen (and so the wallpaper) when opened from home, whatever app
+             is in front when opened from quick search.
+
+             The bars do go transparent: a bar colour here would draw an opaque band across the
+             glass. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/Animation.GestureLauncher.Drawer</item>
+    </style>
+
+    <!-- How the drawer's window itself is animated.
+
+         Only the exit slots carry an animation: the drawer slides its own root view up on the way
+         in (see AppDrawerActivity.onCreate), and every slot it doesn't drive is pinned to an empty
+         animation so an OEM skin can't fill it with its own app-opening zoom.
+
+         Going out is different, and is why this style exists at all. The slide-down used to be a
+         view animation run from finish(), which covered Back and nothing else — pressing Home has
+         the system remove the window without asking, so the drawer vanished on the spot. Declaring
+         it as the window's close animation makes the same motion play however the drawer is
+         closed. Home lands on the wallpaper* slots rather than the activity* ones, because the
+         window being revealed (the home screen) draws the wallpaper — hence both sets. -->
+    <style name="Animation.GestureLauncher.Drawer" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/nothing</item>
+        <item name="android:activityOpenExitAnimation">@anim/nothing</item>
+        <item name="android:activityCloseEnterAnimation">@anim/nothing</item>
+        <item name="android:activityCloseExitAnimation">@anim/drawer_slide_out</item>
+        <item name="android:taskOpenEnterAnimation">@anim/nothing</item>
+        <item name="android:taskOpenExitAnimation">@anim/nothing</item>
+        <item name="android:taskCloseEnterAnimation">@anim/nothing</item>
+        <item name="android:taskCloseExitAnimation">@anim/drawer_slide_out</item>
+        <item name="android:taskToFrontEnterAnimation">@anim/nothing</item>
+        <item name="android:taskToFrontExitAnimation">@anim/nothing</item>
+        <item name="android:taskToBackEnterAnimation">@anim/nothing</item>
+        <item name="android:taskToBackExitAnimation">@anim/drawer_slide_out</item>
+        <item name="android:wallpaperOpenEnterAnimation">@anim/nothing</item>
+        <item name="android:wallpaperOpenExitAnimation">@anim/drawer_slide_out</item>
+        <item name="android:wallpaperIntraOpenEnterAnimation">@anim/nothing</item>
+        <item name="android:wallpaperIntraOpenExitAnimation">@anim/drawer_slide_out</item>
+        <item name="android:wallpaperCloseEnterAnimation">@anim/nothing</item>
+        <item name="android:wallpaperCloseExitAnimation">@anim/nothing</item>
+        <item name="android:wallpaperIntraCloseEnterAnimation">@anim/nothing</item>
+        <item name="android:wallpaperIntraCloseExitAnimation">@anim/nothing</item>
     </style>
 
     <!-- Settings hub: same translucent/self-animated-slide technique as the drawer above, but
@@ -124,6 +172,26 @@
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Search field, borderless.
+
+         The design drops the outlined box entirely: the field is just an icon, a placeholder and
+         a caret sitting on the glass, with the surrounding surface doing the work the box used to
+         do. This keeps TextInputLayout (and so the clear-text end icon and its IME plumbing) and
+         removes only the box and the floating label — with hintEnabled off, the hint is set on the
+         EditText instead, which is why AppDrawerActivity/QuickSearchActivity assign
+         searchInput.hint rather than searchLayout.hint. -->
+    <style name="Widget.GestureLauncher.SearchField" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <!-- `none` rather than an outlined box painted transparent: with a box mode set,
+             TextInputLayout still draws its box shape, and over a busy wallpaper that shape was
+             visible inside the glass as a faint square-cornered rectangle behind the text. -->
+        <item name="boxBackgroundMode">none</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeWidthFocused">0dp</item>
+        <item name="boxBackgroundColor">@android:color/transparent</item>
+        <item name="hintEnabled">false</item>
+        <item name="hintAnimationEnabled">false</item>
     </style>
 
 </resources>

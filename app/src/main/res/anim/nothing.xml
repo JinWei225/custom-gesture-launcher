@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Explicitly "no window animation", for the transition slots the drawer drives itself (its
+     entry is a view animation inside the activity — see AppDrawerActivity.onCreate). An empty
+     animation is what keeps an OEM skin from filling the slot with its own app-opening zoom. -->
+<translate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="0"
+    android:fromYDelta="0%p"
+    android:toYDelta="0%p" />

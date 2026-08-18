@@ -1,12 +1,16 @@
 package dev.neffly.gesturelauncher
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.ContentUris
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.AlarmClock
@@ -16,6 +20,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -46,6 +51,7 @@ import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
 import dev.neffly.gesturelauncher.unistroke.Pt
 import java.util.Calendar
 import java.util.Date
+import kotlin.math.roundToInt
 
 /**
  * Home screen: the system wallpaper behind a gesture canvas that is confined to the lower ~70% of
@@ -60,6 +66,8 @@ class MainActivity : BaseActivity() {
     private lateinit var eventsContainer: LinearLayout
     private lateinit var emptyHint: TextView
     private lateinit var recognitionHint: TextView
+    private lateinit var batteryIcon: ImageView
+    private lateinit var batteryLevel: TextView
 
     /** Preprocessed templates + id->mapping lookup, rebuilt whenever gestures may have changed. */
     private var templates: List<GestureTemplate> = emptyList()
@@ -81,6 +89,12 @@ class MainActivity : BaseActivity() {
     private var eventsCache: List<DayEvent>? = null
     private var eventsCacheAtMillis = 0L
     private var eventsCacheDay = -1L
+
+    /** ACTION_BATTERY_CHANGED is only delivered to receivers registered at runtime, so the
+     *  indicator beside the date is driven from here rather than from the manifest. */
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = showBattery(intent)
+    }
 
     private val calendarObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
@@ -112,6 +126,8 @@ class MainActivity : BaseActivity() {
         emptyHint = findViewById(R.id.emptyHint)
         recognitionHint = findViewById(R.id.recognitionHint)
         eventsContainer = findViewById(R.id.eventsContainer)
+        batteryIcon = findViewById(R.id.batteryIcon)
+        batteryLevel = findViewById(R.id.batteryLevel)
 
         // Keep widgets below the status bar and the canvas above the navigation bar.
         val column = findViewById<View>(R.id.contentColumn)
@@ -167,6 +183,10 @@ class MainActivity : BaseActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Sticky broadcast: registering hands back the current battery state immediately, so the
+        // indicator is already correct on the first frame instead of blank until the next change.
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            ?.let { showBattery(it) }
         if (hasCalendarPermission()) {
             // Refresh when an event is added/changed from another app while home is visible.
             contentResolver.registerContentObserver(
@@ -178,6 +198,7 @@ class MainActivity : BaseActivity() {
     override fun onStop() {
         super.onStop()
         runCatching { contentResolver.unregisterContentObserver(calendarObserver) }
+        runCatching { unregisterReceiver(batteryReceiver) }
     }
 
     override fun onResume() {
@@ -313,9 +334,26 @@ class MainActivity : BaseActivity() {
         renderRows(rows)
     }
 
+    /**
+     * Builds the today's-events rows: an accent tick, then the line itself. The first row is the
+     * next thing happening and is drawn brightest, with the rest stepped back — the same ordering
+     * cue the clock design uses, and cheaper to read at a glance than three identical lines.
+     */
     private fun renderRows(lines: List<String>) {
         eventsContainer.removeAllViews()
-        for (line in lines) {
+        lines.forEachIndexed { index, line ->
+            val leading = index == 0
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(3), 0, dp(3))
+            }
+            val tick = View(this).apply {
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_event_bar)
+                alpha = if (leading) 0.7f else 0.4f
+            }
+            row.addView(tick, LinearLayout.LayoutParams(dp(3), dp(14)))
+
             val tv = TextView(this).apply {
                 text = line
                 // White-on-shadow in both themes, matching the clock above — these rows are
@@ -324,28 +362,74 @@ class MainActivity : BaseActivity() {
                 setTextColor(
                     ContextCompat.getColor(this@MainActivity, R.color.wallpaper_overlay_text)
                 )
-                textSize = 14f
+                alpha = if (leading) 0.82f else 0.62f
+                textSize = 13f
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 setShadowLayer(
                     10f, 0f, 0f,
                     ContextCompat.getColor(this@MainActivity, R.color.wallpaper_overlay_shadow)
                 )
-                setPadding(0, 6, 0, 6)
                 gravity = Gravity.CENTER_VERTICAL
                 // Built in code, so it never passes through the activity's pass over its content
                 // view — without this the event rows keep the system font while the clock above
                 // them changes.
                 FontEngine.applyToSelf(this)
             }
-            eventsContainer.addView(
+            row.addView(
                 tv,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginStart = dp(10) }
+            )
+
+            eventsContainer.addView(
+                row,
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             )
         }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    // --- battery indicator ------------------------------------------------
+
+    /** Renders the charge from an ACTION_BATTERY_CHANGED intent; hides the pair if it has none. */
+    private fun showBattery(intent: Intent) {
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) {
+            batteryIcon.visibility = View.GONE
+            batteryLevel.visibility = View.GONE
+            return
+        }
+        val percent = (level * 100f / scale).roundToInt().coerceIn(0, 100)
+        // EXTRA_STATUS rather than EXTRA_PLUGGED: a phone can be plugged in and not charging
+        // (dock, full battery, charge-limit modes), and the bolt should mean "current is going
+        // in". FULL counts — that is what a charger reports once it stops topping up.
+        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+            status == BatteryManager.BATTERY_STATUS_FULL
+
+        batteryIcon.visibility = View.VISIBLE
+        batteryLevel.visibility = View.VISIBLE
+        // The fill layer is clipped horizontally over the battery's cavity: level 10000 = full.
+        // setImageResource is a no-op when the drawable is already the one asked for, so this
+        // runs on every battery broadcast without re-inflating anything. The level goes on after,
+        // since swapping the drawable is what the level applies to.
+        batteryIcon.setImageResource(
+            if (charging) R.drawable.battery_indicator_charging else R.drawable.battery_indicator
+        )
+        batteryIcon.setImageLevel(percent * 100)
+        batteryLevel.text = getString(R.string.battery_level, percent)
+        // The icon is decorative (see the layout), so the state it carries has to reach a screen
+        // reader through the label beside it.
+        batteryLevel.contentDescription =
+            if (charging) getString(R.string.battery_level_charging, percent) else null
     }
 
     private fun openClock() {

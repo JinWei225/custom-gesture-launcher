@@ -16,6 +16,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,6 +31,7 @@ import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,6 +58,8 @@ class QuickSearchActivity : BaseActivity() {
     private lateinit var searchLayout: TextInputLayout
     private lateinit var searchInput: TextInputEditText
     private lateinit var resultList: MaxHeightRecyclerView
+    private lateinit var cardDivider: View
+    private lateinit var cardGlow: View
     private lateinit var emptyLabel: TextView
     private lateinit var adapter: AppListAdapter
     private lateinit var search: SearchController
@@ -83,20 +87,19 @@ class QuickSearchActivity : BaseActivity() {
         setContentView(R.layout.activity_quick_search)
 
         card = findViewById(R.id.quickSearchCard)
+        cardGlow = findViewById(R.id.quickSearchCardGlow)
+        // The card is the glass here, not the window: setCardBackgroundColor rather than a
+        // background, so its corners and hairline stroke survive.
+        Glass.frost(window, card) { veil -> card.setCardBackgroundColor(veil) }
         searchLayout = findViewById(R.id.searchLayout)
         searchInput = findViewById(R.id.searchInput)
         resultList = findViewById(R.id.resultList)
+        cardDivider = findViewById(R.id.cardDivider)
         emptyLabel = findViewById(R.id.emptyLabel)
 
         findViewById<View>(R.id.quickSearchScrim).setOnClickListener { finish() }
-        searchLayout.hint = getString(SearchEngine.hint(this))
-
-        // Deeper, softer shadow than the platform default — the card floats over arbitrary app
-        // content, so the default grey spot shadow reads as a smudge on busy backgrounds.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            card.outlineSpotShadowColor = SHADOW_COLOR
-            card.outlineAmbientShadowColor = SHADOW_COLOR
-        }
+        // On the EditText, not the layout — the borderless field style has no floating label.
+        searchInput.hint = getString(SearchEngine.hint(this))
 
         resultList.layoutManager = LinearLayoutManager(this)
         resultList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -147,7 +150,9 @@ class QuickSearchActivity : BaseActivity() {
     /** Sits the card in the upper third, above where the keyboard will come up. */
     private fun positionCard() {
         val top = (resources.displayMetrics.heightPixels * CARD_TOP_FRACTION).toInt()
-        card.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = top }
+        // The glow wrapper is what is positioned and animated: the card rides inside it, so its
+        // shadow can never drift out of step with it.
+        cardGlow.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = top }
     }
 
     /**
@@ -177,9 +182,9 @@ class QuickSearchActivity : BaseActivity() {
     }
 
     private fun animateIn() {
-        card.alpha = 0f
-        card.translationY = entryOffsetPx(this).toFloat()
-        card.animate()
+        cardGlow.alpha = 0f
+        cardGlow.translationY = entryOffsetPx(this).toFloat()
+        cardGlow.animate()
             .alpha(1f)
             .translationY(0f)
             .setDuration(ENTRY_DURATION_MS)
@@ -224,6 +229,9 @@ class QuickSearchActivity : BaseActivity() {
         // not an empty state.
         emptyLabel.visibility =
             if (results.isEmpty() && query.isNotBlank()) View.VISIBLE else View.GONE
+        // The hairline only earns its place once there are two things to separate.
+        cardDivider.visibility =
+            if (resultList.isVisible || emptyLabel.isVisible) View.VISIBLE else View.GONE
     }
 
     private fun open(result: SearchResult) {
@@ -268,13 +276,11 @@ class QuickSearchActivity : BaseActivity() {
         private const val ENTRY_DURATION_MS = 180L
 
         /** Black shadow instead of the platform's grey, for a deeper edge against app content. */
-        private const val SHADOW_COLOR = 0xFF000000.toInt()
-
         private fun dp(context: Context, value: Int): Int =
             (value * context.resources.displayMetrics.density).toInt()
 
         /** The card's own vertical padding plus a breathing gap above the keyboard. */
-        private fun cardChromePx(context: Context) = dp(context, 40)
+        private fun cardChromePx(context: Context) = dp(context, 64)
 
         /** Below this the list is too short to be worth showing; it scrolls instead of vanishing. */
         private fun minListPx(context: Context) = dp(context, 120)

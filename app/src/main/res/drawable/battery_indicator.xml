@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen battery indicator: rounded shell plus a level-driven fill.
+     Set the charge with setImageLevel(percent * 100).
+
+     The fill is positioned with <inset> rather than with per-item width/gravity on the layer:
+     those attributes were silently ignored on device, which collapsed every layer onto the full
+     24dp box and left the icon reading as a solid pill. Insets are honoured everywhere, and the
+     inset box here is exactly the shell's cavity, so a level of 5000 is visually half full.
+
+     While charging, MainActivity shows battery_indicator_charging in place of this one. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:drawable="@drawable/ic_battery_frame" />
+
+    <item>
+        <inset
+            android:insetLeft="3.5dp"
+            android:insetTop="9.5dp"
+            android:insetRight="7.5dp"
+            android:insetBottom="9.5dp">
+            <clip
+                android:clipOrientation="horizontal"
+                android:gravity="left">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/white" />
+                    <corners android:radius="1.5dp" />
+                </shape>
+            </clip>
+        </inset>
+    </item>
+
+</layer-list>

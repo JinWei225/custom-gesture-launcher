@@ -1,39 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Frosted glass over the wallpaper. The root's veil colour is not set here: ui/Glass.kt picks
+     it at runtime from whether the platform actually granted the blur behind this window. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurfaceContainer"
     android:orientation="vertical">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:title="@string/drawer_title" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/searchLayout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+    <!-- Toolbar and search field share one header slab, so they solidify together as the list
+         scrolls under them (see AppDrawerActivity.bindHeaderFade). Its background is a plain
+         colour applied in code — the alpha is what animates. -->
+    <LinearLayout
+        android:id="@+id/headerPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginBottom="4dp"
-        android:hint="@string/search_apps"
-        app:endIconMode="clear_text"
-        app:startIconDrawable="@drawable/ic_search">
+        android:orientation="vertical">
 
-        <!-- The hint lives on the TextInputLayout, not here: it's replaced at runtime with one
-             naming whichever search sources are switched on (see SearchEngine.hint). -->
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/searchInput"
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
+            app:title="@string/drawer_title" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/searchLayout"
+            style="@style/Widget.GestureLauncher.SearchField"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginHorizontal="8dp"
+            app:endIconMode="clear_text"
+            app:startIconDrawable="@drawable/ic_search">
+
+            <!-- The hint is set at runtime (see AppDrawerActivity), naming whichever search
+                 sources are switched on — and it lands on the EditText rather than on the layout,
+                 because the borderless style turns the floating label off. -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/searchInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <View
+            android:id="@+id/headerDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/glass_divider" />
+    </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -45,19 +63,24 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingEnd="36dp"
+            android:paddingEnd="44dp"
             android:paddingBottom="16dp"
             android:scrollbars="vertical" />
 
         <!-- marginEnd centers the index's letters (self-centered within this 28dp column) under
              the toolbar's overflow ("more options") button above, instead of sitting flush
-             against the screen edge. -->
+             against the screen edge. The vertical margins keep its glass rail clear of the
+             header and the navigation bar. -->
         <dev.neffly.gesturelauncher.ui.AlphabetIndexView
             android:id="@+id/alphabetIndex"
             android:layout_width="28dp"
             android:layout_height="match_parent"
             android:layout_gravity="end"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_index_rail"
+            android:paddingVertical="8dp" />
 
         <!-- Big "you are here" letter feedback while dragging the index, hidden otherwise. -->
         <TextView

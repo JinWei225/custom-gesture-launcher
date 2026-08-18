@@ -88,6 +88,35 @@
     <!-- Amber is unreadable on a light ground, so light mode gets a darkened variant. -->
     <color name="warning">#B26A00</color>
 
+    <!-- ============================================================================
+         Glass surfaces (design: "Glass theme — balanced frost, wallpaper-tinted").
+
+         The drawer and the quick-search card float over the wallpaper instead of sitting on an
+         opaque sheet, so their backgrounds are translucent and lean on a blur behind the window.
+         Two veils per theme, picked at runtime by ui/Glass.kt: `glass_veil` when the platform
+         can actually blur what's behind us (API 31+, cross-window blur enabled), and
+         `glass_veil_flat` when it can't — an unblurred wallpaper needs far more cover before
+         list text stays readable over it.
+
+         Both are deliberately more opaque than the mock, which assumed a light wallpaper under
+         the light theme. These have to hold over any wallpaper in either theme.
+
+         The wallpaper_glass_* pair is theme-invariant for the same reason as
+         wallpaper_overlay_* above: it styles the home screen's search button, which is drawn
+         straight over the wallpaper.
+         ============================================================================ -->
+    <color name="wallpaper_glass_fill">#33FFFFFF</color>
+    <color name="wallpaper_glass_stroke">#59FFFFFF</color>
+
+    <color name="glass_veil">#8CFCF8F0</color>
+    <color name="glass_veil_flat">#DBFCF8F0</color>
+    <!-- Opaque on purpose: the header's alpha is driven in code, from translucent at rest to
+         mostly solid once the list has scrolled under it. -->
+    <color name="glass_header">#FFFFFDF8</color>
+    <color name="glass_fill">#99FFFFFF</color>
+    <color name="glass_stroke">#B3FFFFFF</color>
+    <color name="glass_divider">#243C3223</color>
+
     <!-- Scrim behind the floating quick-search card. Light enough that the app underneath stays
          readable, dark enough to give the card's shadow something to read against. -->
     <color name="quick_search_scrim">#4D000000</color>

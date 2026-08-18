@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- clipChildren=false so the card's elevation shadow isn't cut off by the scrim's bounds. -->
+<!-- clipChildren=false so the glow around the card isn't cut off by the scrim's bounds. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/quickSearchScrim"
@@ -10,40 +10,52 @@
     android:clickable="true"
     android:focusable="false">
 
-    <!-- Top margin is set in code to a fraction of the screen height, so the card sits in the upper
-         third with the app underneath still readable around it. -->
+    <!-- The card's shadow is drawn by this wrapper's background rather than by elevation: a
+         translucent card shows the framework's shadow through itself as a hard rectangle. The
+         12dp padding is the room those rings need, so the card's own edges still land 16dp from
+         the screen. Top margin is set in code to a fraction of the screen height, so the card sits
+         in the upper third with the app underneath still readable around it. -->
+    <FrameLayout
+        android:id="@+id/quickSearchCardGlow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginHorizontal="4dp"
+        android:background="@drawable/bg_card_glow"
+        android:clipChildren="false"
+        android:padding="12dp">
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/quickSearchCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginHorizontal="16dp"
         android:clickable="true"
         android:focusable="false"
-        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+        app:cardBackgroundColor="@color/glass_veil"
         app:cardForegroundColor="@android:color/transparent"
         app:rippleColor="@android:color/transparent"
         app:cardCornerRadius="28dp"
-        app:cardElevation="16dp"
-        app:strokeWidth="0dp">
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_stroke"
+        app:strokeWidth="1dp">
 
-        <!-- Asymmetric on purpose: TextInputLayout already reserves room above its box for the
-             floating label to sit on the border, so an equal padding pair reads as bottom-heavy
-             and leaves the field's lower corners crowding the card's 28dp radius. The smaller top
-             value plus that reserved space is what makes the two visual gaps match. -->
+        <!-- Symmetric now that the field is borderless: with the floating label off,
+             TextInputLayout no longer reserves the band above its box that the old asymmetric
+             pair was compensating for. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="12dp"
-            android:paddingBottom="20dp">
+            android:paddingTop="8dp"
+            android:paddingBottom="12dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/searchLayout"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                style="@style/Widget.GestureLauncher.SearchField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
+                android:layout_marginHorizontal="10dp"
                 app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/ic_search">
 
@@ -51,6 +63,7 @@
                     android:id="@+id/searchInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
                     android:imeOptions="actionSearch"
                     android:inputType="text"
                     android:maxLines="1" />
@@ -59,6 +72,16 @@
             <!-- Height ceiling is set in code from the space left above the keyboard; beyond it
                  the results scroll inside the card instead of growing it. Gone until there's
                  something to show, so the card stays a bare search bar. -->
+            <!-- Hairline between the field and the results, in place of the box outline the
+                 field used to draw around itself. -->
+            <View
+                android:id="@+id/cardDivider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="6dp"
+                android:background="@color/glass_divider"
+                android:visibility="gone" />
+
             <dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
                 android:id="@+id/resultList"
                 android:layout_width="match_parent"
@@ -82,5 +105,7 @@
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
+
+    </FrameLayout>
 
 </FrameLayout>

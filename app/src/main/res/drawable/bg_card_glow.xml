@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft outward shadow for the quick-search slab.
+
+     The platform's own elevation shadow can't be used here: the card is translucent glass, so the
+     shadow the framework draws underneath it is visible *through* it as a hard-edged rectangle
+     sitting inside the card — the artifact this replaces. Drawn instead as concentric rounded
+     strokes that fade outwards, which puts ink only outside the card's silhouette and so leaves
+     nothing to show through the glass.
+
+     Each ring is inset 2dp further than the last, and the innermost one lands on the card's own
+     28dp corner radius. Keep the two in step if either changes. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="40dp" />
+            <stroke android:width="2dp" android:color="#08000000" />
+        </shape>
+    </item>
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="38dp" />
+            <stroke android:width="2dp" android:color="#0E000000" />
+        </shape>
+    </item>
+    <item android:left="4dp" android:top="4dp" android:right="4dp" android:bottom="4dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="36dp" />
+            <stroke android:width="2dp" android:color="#16000000" />
+        </shape>
+    </item>
+    <item android:left="6dp" android:top="6dp" android:right="6dp" android:bottom="6dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="34dp" />
+            <stroke android:width="2dp" android:color="#20000000" />
+        </shape>
+    </item>
+    <item android:left="8dp" android:top="8dp" android:right="8dp" android:bottom="8dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="32dp" />
+            <stroke android:width="2dp" android:color="#2C000000" />
+        </shape>
+    </item>
+    <item android:left="10dp" android:top="10dp" android:right="10dp" android:bottom="10dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="30dp" />
+            <stroke android:width="2dp" android:color="#3A000000" />
+        </shape>
+    </item>
+
+</layer-list>

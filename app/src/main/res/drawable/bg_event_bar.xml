@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accent tick beside a calendar row on the home screen. White like the text next to it (see
+     wallpaper_overlay_text) and dimmed per row in code, so the first event of the day reads as
+     the live one and the ones after it recede. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/wallpaper_overlay_text" />
+    <corners android:radius="2dp" />
+</shape>

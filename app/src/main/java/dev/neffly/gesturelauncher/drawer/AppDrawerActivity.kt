@@ -16,7 +16,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
-import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
@@ -25,6 +24,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -35,7 +35,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
@@ -48,6 +47,7 @@ import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,7 +63,6 @@ class AppDrawerActivity : BaseActivity() {
     private lateinit var appList: RecyclerView
     private lateinit var alphabetIndex: AlphabetIndexView
     private lateinit var letterBubble: TextView
-    private lateinit var searchLayout: TextInputLayout
     private lateinit var searchInput: TextInputEditText
     private var allApps: List<AppInfo> = emptyList()
 
@@ -78,18 +77,22 @@ class AppDrawerActivity : BaseActivity() {
     private val onAppsChanged: () -> Unit = { runOnUiThread { loadApps() } }
 
     private lateinit var drawerRoot: View
-    private var isClosing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Suppress the OS's cross-activity transition: on some OEM skins (e.g. HyperOS) it gets
-        // replaced with the device's own "app opening" zoom regardless of what's requested here,
-        // which reads as popping open from the middle of the screen rather than a drawer sliding
-        // up. Animating the drawer's own root view below happens purely inside this activity's
-        // view hierarchy, so no OEM transition override can intercept or replace it.
+        // Opening: suppress the OS's cross-activity transition. On some OEM skins (e.g. HyperOS)
+        // it gets replaced with the device's own "app opening" zoom regardless of what's requested
+        // here, which reads as popping open from the middle of the screen rather than a drawer
+        // sliding up. Animating the drawer's own root view below happens purely inside this
+        // activity's view hierarchy, so no OEM transition override can intercept or replace it.
+        //
+        // Closing is the opposite call: the slide-out is handed to the window (here and in
+        // Animation.GestureLauncher.Drawer) rather than driven from finish(), because Home never
+        // reaches finish() — the system just removes the window, and the drawer used to vanish on
+        // the spot. As a window animation the same slide plays for Back and Home alike.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, R.anim.drawer_slide_out)
         }
         // Edge-to-edge is what makes IME WindowInsets dispatch reliable — adjustNothing alone
         // (see manifest) doesn't guarantee the keyboard's height is actually delivered to an
@@ -98,6 +101,8 @@ class AppDrawerActivity : BaseActivity() {
         setContentView(R.layout.activity_app_drawer)
 
         drawerRoot = findViewById(R.id.drawerRoot)
+        // Paints the root's veil too — the drawer's layout deliberately declares no background.
+        Glass.frost(window, drawerRoot) { veil -> drawerRoot.setBackgroundColor(veil) }
         // Only slide up on a genuine open, not on a recreate (e.g. a theme change), where
         // replaying the entry animation would look like the drawer re-opening itself.
         if (savedInstanceState == null) {
@@ -121,11 +126,18 @@ class AppDrawerActivity : BaseActivity() {
 
         appList = findViewById(R.id.appList)
         appList.layoutManager = LinearLayoutManager(this)
+        val headerPanel = findViewById<View>(R.id.headerPanel)
+        val headerDivider = findViewById<View>(R.id.headerDivider)
         appList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING) userScrolled = true
             }
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                fadeHeader(headerPanel, headerDivider)
+            }
         })
+        fadeHeader(headerPanel, headerDivider)
         adapter = AppListAdapter(
             scope = lifecycleScope,
             onClick = { app -> launchAndClearSearch(app) },
@@ -165,7 +177,6 @@ class AppDrawerActivity : BaseActivity() {
             insets
         }
 
-        searchLayout = findViewById(R.id.searchLayout)
         searchInput = findViewById(R.id.searchInput)
         // Shared with the floating quick-search window, so both rank and group results identically.
         search = SearchController(this, lifecycleScope) { query, results ->
@@ -224,10 +235,28 @@ class AppDrawerActivity : BaseActivity() {
         super.onResume()
         // The search toggles live in the settings hub, which is opened from this screen — so their
         // effect (which sources are searched, and what the hint promises) has to be re-read here.
-        searchLayout.hint = getString(SearchEngine.hint(this))
+        // On the EditText, not the layout: the borderless field style turns the floating label
+        // off, and a hint set on the layout would then never be shown.
+        searchInput.hint = getString(SearchEngine.hint(this))
         // Cheap when the cache is warm — LauncherApps callbacks (see App) invalidate it whenever
         // packages change, so no per-open full rescan is needed anymore.
         loadApps()
+    }
+
+    /**
+     * Solidifies the header slab as the list travels under it: translucent while the list is at
+     * rest at the top, mostly opaque once roughly a row has scrolled past. Without this the glass
+     * header and the glass rows behind it blend into one another and the search field stops
+     * reading as a fixed surface.
+     */
+    private fun fadeHeader(header: View, divider: View) {
+        val travelled = appList.computeVerticalScrollOffset().toFloat()
+        val t = (travelled / (HEADER_FADE_SPAN_DP * resources.displayMetrics.density))
+            .coerceIn(0f, 1f)
+        val base = ContextCompat.getColor(this, R.color.glass_header)
+        val alpha = (HEADER_ALPHA_AT_REST + (HEADER_ALPHA_SCROLLED - HEADER_ALPHA_AT_REST) * t)
+        header.setBackgroundColor(ColorUtils.setAlphaComponent(base, alpha.toInt()))
+        divider.alpha = 0.35f + 0.65f * t
     }
 
     /** Launches [app] and clears the search bar, so a leftover query from this search doesn't
@@ -263,17 +292,13 @@ class AppDrawerActivity : BaseActivity() {
     }
 
     override fun finish() {
-        if (isClosing || isFinishing) { super.finish(); return }
-        isClosing = true
-        drawerRoot.animate()
-            .translationY(resources.displayMetrics.heightPixels.toFloat())
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
-            .withEndAction { super.finish() }
-            .start()
+        super.finish()
+        // Pre-34 has no overrideActivityTransition; ask for the same slide per-call. The theme's
+        // windowAnimationStyle covers the closes that never come through here (Home), so this is
+        // belt and braces rather than the only route.
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
+            overridePendingTransition(0, R.anim.drawer_slide_out)
         }
     }
 
@@ -462,7 +487,14 @@ class AppDrawerActivity : BaseActivity() {
         private const val ID_UNINSTALL = 2
         private const val ID_LABEL = 3
         private const val ID_SHORTCUT_BASE = 100
+        /** Drives the slide *in*. The slide out is @anim/drawer_slide_out, whose duration this
+         *  is kept equal to. */
         private const val SLIDE_DURATION_MS = 260L
         private const val MENU_ICON_DP = 24
+
+        /** Scroll distance, in dp, over which the header goes from translucent to near-solid. */
+        private const val HEADER_FADE_SPAN_DP = 90f
+        private const val HEADER_ALPHA_AT_REST = 28f
+        private const val HEADER_ALPHA_SCROLLED = 168f
     }
 }

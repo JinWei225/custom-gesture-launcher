@@ -59,4 +59,14 @@
          for its shadow to register at all. -->
     <color name="quick_search_scrim">#66000000</color>
 
+
+    <!-- Dark half of the glass surfaces. See the long note in values/colors.xml; the
+         wallpaper_glass_* pair is intentionally absent here, being theme-invariant. -->
+    <color name="glass_veil">#730E1218</color>
+    <color name="glass_veil_flat">#D10E1218</color>
+    <color name="glass_header">#FF141A21</color>
+    <color name="glass_fill">#24FFFFFF</color>
+    <color name="glass_stroke">#47FFFFFF</color>
+    <color name="glass_divider">#1FFFFFFF</color>
+
 </resources>

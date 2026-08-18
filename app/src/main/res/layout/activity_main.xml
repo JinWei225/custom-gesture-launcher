@@ -2,6 +2,7 @@
 <!-- Home: top 30% = clock + today's events (non-drawable); lower 70% = gesture canvas. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -20,7 +21,7 @@
             android:layout_weight="30"
             android:orientation="vertical"
             android:paddingHorizontal="24dp"
-            android:paddingTop="12dp">
+            android:paddingTop="32dp">
 
             <!-- Date above the time, not beside it.
                  Font padding is deliberately left ON here despite the gap it leaves between the
@@ -36,31 +37,67 @@
                 android:focusable="true"
                 android:orientation="vertical">
 
-                <TextClock
-                    android:id="@+id/clockDate"
+                <LinearLayout
+                    android:id="@+id/dateRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:format12Hour="EEE, MMM d"
-                    android:format24Hour="EEE, MMM d"
-                    android:shadowColor="@color/wallpaper_overlay_shadow"
-                    android:shadowDx="0"
-                    android:shadowDy="0"
-                    android:shadowRadius="10"
-                    android:textColor="@color/wallpaper_overlay_text"
-                    android:textSize="15sp" />
+                    android:alpha="0.85"
+                    android:baselineAligned="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextClock
+                        android:id="@+id/clockDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:format12Hour="EEE, MMM d"
+                        android:format24Hour="EEE, MMM d"
+                        android:shadowColor="@color/wallpaper_overlay_shadow"
+                        android:shadowDx="0"
+                        android:shadowDy="0"
+                        android:shadowRadius="10"
+                        android:textColor="@color/wallpaper_overlay_text"
+                        android:textSize="15sp" />
+
+                    <!-- Level set from ACTION_BATTERY_CHANGED; the percentage beside it carries
+                         the accessibility text, so the icon itself stays decorative. -->
+                    <ImageView
+                        android:id="@+id/batteryIcon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="14dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/battery_indicator"
+                        app:tint="@color/wallpaper_overlay_text" />
+
+                    <TextView
+                        android:id="@+id/batteryLevel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="3dp"
+                        android:shadowColor="@color/wallpaper_overlay_shadow"
+                        android:shadowDx="0"
+                        android:shadowDy="0"
+                        android:shadowRadius="10"
+                        android:textColor="@color/wallpaper_overlay_text"
+                        android:textSize="15sp"
+                        tools:text="99%" />
+                </LinearLayout>
 
                 <TextClock
                     android:id="@+id/clockTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
                     android:format12Hour="h:mm"
                     android:format24Hour="HH:mm"
                     android:shadowColor="@color/wallpaper_overlay_shadow"
                     android:shadowDx="0"
                     android:shadowDy="0"
                     android:shadowRadius="10"
+                    android:letterSpacing="-0.03"
                     android:textColor="@color/wallpaper_overlay_text"
-                    android:textSize="46sp"
+                    android:textSize="64sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -96,7 +133,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_margin="32dp"
-                android:alpha="0.75"
+                android:alpha="0.62"
                 android:gravity="center"
                 android:shadowColor="@color/wallpaper_overlay_shadow"
                 android:shadowDx="0"
@@ -136,7 +173,7 @@
         android:layout_height="56dp"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="20dp"
-        android:layout_marginBottom="28dp"
+        android:layout_marginBottom="36dp"
         android:background="@drawable/bg_drawer_button"
         android:contentDescription="@string/open_search"
         android:scaleType="center"

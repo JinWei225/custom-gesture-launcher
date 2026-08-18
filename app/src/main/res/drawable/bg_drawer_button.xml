@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Frosted disc behind the home screen's search glyph. Sits over the wallpaper, so like the
+     wallpaper_overlay_* colours it is theme-invariant: a translucent white fill plus a brighter
+     rim, which is what reads as "glass" against both a dark and a light wallpaper. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
-    <solid android:color="@color/scrim" />
+    <solid android:color="@color/wallpaper_glass_fill" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/wallpaper_glass_stroke" />
     <size android:width="56dp" android:height="56dp" />
 </shape>

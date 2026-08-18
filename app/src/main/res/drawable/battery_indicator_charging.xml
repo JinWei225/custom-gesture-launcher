@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The charging counterpart of battery_indicator.xml: same shell, with a bolt in the cavity
+     instead of the level fill. Swapped in by MainActivity while the battery is charging.
+
+     The two are mutually exclusive rather than layered, because both are painted in the same tint
+     — a bolt drawn over a nearly-full battery would simply disappear into the fill. The percentage
+     beside the icon carries the level in the meantime.
+
+     Kept as a second drawable rather than as a bolt layer toggled by alpha: doing that needs
+     mutate() on the shared layer drawable, and mutating this one drops the fill layer's insets on
+     device, which collapses the fill onto the full 24dp box. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_battery_frame" />
+    <item android:drawable="@drawable/ic_battery_bolt" />
+</layer-list>

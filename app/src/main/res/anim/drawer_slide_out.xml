@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The drawer sliding back down off the bottom of the screen.
+
+     This is a window animation rather than a view animation on purpose: the drawer used to
+     animate its own root view on the way out, which only ever covered the paths that go through
+     finish() — pressing Home had the system remove the window from under it, so the drawer just
+     vanished. As an activity transition, the same slide plays however the drawer is closed.
+
+     Duration matches AppDrawerActivity.SLIDE_DURATION_MS, which drives the slide *in*; keep the
+     two in step. -->
+<translate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="260"
+    android:fromYDelta="0%p"
+    android:interpolator="@android:anim/accelerate_interpolator"
+    android:toYDelta="100%p" />
