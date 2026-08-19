@@ -1,8 +1,6 @@
 package dev.neffly.gesturelauncher.settings
 
-import android.app.Activity
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
@@ -11,6 +9,8 @@ import com.google.android.material.appbar.MaterialToolbar
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
+import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 
 /**
  * First step when adding a brand-new gesture: "what should this gesture do?" Reached from
@@ -27,10 +27,7 @@ class GestureActionChooserActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        }
+        overrideOwnTransitions()
         setContentView(R.layout.activity_gesture_action_chooser)
 
         chooserRoot = findViewById(R.id.chooserRoot)
@@ -62,10 +59,7 @@ class GestureActionChooserActivity : BaseActivity() {
      *  activity's own onCreate handles that side on U+, this call covers pre-U+). */
     private fun goTo(intent: Intent) {
         startActivity(intent)
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     override fun finish() {
@@ -77,10 +71,7 @@ class GestureActionChooserActivity : BaseActivity() {
             .setInterpolator(AccelerateInterpolator())
             .withEndAction { super.finish() }
             .start()
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     companion object {

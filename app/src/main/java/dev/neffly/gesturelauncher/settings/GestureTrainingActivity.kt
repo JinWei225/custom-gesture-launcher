@@ -27,16 +27,17 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.data.SPoint
+import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.SearchScoring
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.ui.StrokePreviewView
 import dev.neffly.gesturelauncher.ui.showWithFont
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
-import dev.neffly.gesturelauncher.unistroke.Pt
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -147,7 +148,7 @@ class GestureTrainingActivity : BaseActivity() {
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                appAdapter.submit(AppRepository.filter(allApps, s?.toString().orEmpty()))
+                appAdapter.submit(SearchScoring.rankApps(allApps, s?.toString().orEmpty()))
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -159,7 +160,7 @@ class GestureTrainingActivity : BaseActivity() {
         // personal-profile apps — a work-profile pick couldn't be launched later.
         fun show(apps: List<AppInfo>) {
             allApps = apps.filter { it.user == Process.myUserHandle() }
-            appAdapter.submit(AppRepository.filter(allApps, searchInput.text?.toString().orEmpty()))
+            appAdapter.submit(SearchScoring.rankApps(allApps, searchInput.text?.toString().orEmpty()))
         }
         // Same instant-then-reconcile shape as the drawer: render the cache (or the disk snapshot
         // after a process kill) immediately, and only pay for a scan when one is actually needed.
@@ -360,11 +361,6 @@ class GestureTrainingActivity : BaseActivity() {
     }
 
     private fun toast(resId: Int) = Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
-
-    private fun List<PointF>.toPt(): List<Pt> = map { Pt(it.x.toDouble(), it.y.toDouble()) }
-
-    @JvmName("spointToPt")
-    private fun List<SPoint>.toPt(): List<Pt> = map { Pt(it.x.toDouble(), it.y.toDouble()) }
 
     companion object {
         private const val REQUIRED = 3

@@ -129,7 +129,34 @@ class AppListAdapter(
     fun firstItem(): AppInfo? = currentList.firstNotNullOfOrNull { (it as? Row.Item)?.app }
 
     /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
-    fun firstResult(): SearchResult? = currentList.firstNotNullOfOrNull { row ->
+    /** The openable thing at [position], or null when that row is a header, a section label, or
+     *  out of range. Used by the swipe-to-float gesture, which works off adapter positions. */
+    fun resultAt(position: Int): SearchResult? =
+        currentList.getOrNull(position)?.let { row -> asResult(row) }
+
+    /**
+     * Splits the leading slice of the list that covers its first [count] openable results into
+     * (openable rows, section/header rows). The floating window uses it to size itself so that
+     * many results really are visible — counting only the results would leave the last one hidden
+     * behind the section labels sitting above them.
+     */
+    fun leadingRowCounts(count: Int): Pair<Int, Int> {
+        var results = 0
+        var chrome = 0
+        for (row in currentList) {
+            if (asResult(row) != null) {
+                results++
+                if (results == count) break
+            } else {
+                chrome++
+            }
+        }
+        return results to chrome
+    }
+
+    fun firstResult(): SearchResult? = currentList.firstNotNullOfOrNull { row -> asResult(row) }
+
+    private fun asResult(row: Row): SearchResult? =
         when (row) {
             is Row.Item -> SearchResult.App(row.app)
             is Row.FileRow -> SearchResult.File(row.hit)
@@ -137,7 +164,6 @@ class AppListAdapter(
             is Row.SettingsRow -> SearchResult.Settings
             is Row.Header, is Row.Section -> null
         }
-    }
 
     /** Row for the alphabet fast-scroll index's [letter]. When headers are shown, this is always
      *  the section header itself (guaranteed to exist for any letter the index allows selecting —

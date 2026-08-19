@@ -1,7 +1,6 @@
 package dev.neffly.gesturelauncher.drawer
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
@@ -9,7 +8,6 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
@@ -22,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.menu.MenuBuilder
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -31,6 +30,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
@@ -38,6 +38,7 @@ import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchController
 import dev.neffly.gesturelauncher.search.SearchEngine
@@ -48,6 +49,9 @@ import dev.neffly.gesturelauncher.ui.AlphabetIndexView
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.Glass
+import dev.neffly.gesturelauncher.ui.SwipeToFloat
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
+import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,10 +94,7 @@ class AppDrawerActivity : BaseActivity() {
         // Animation.GestureLauncher.Drawer) rather than driven from finish(), because Home never
         // reaches finish() — the system just removes the window, and the drawer used to vanish on
         // the spot. As a window animation the same slide plays for Back and Home alike.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, R.anim.drawer_slide_out)
-        }
+        overrideOwnTransitions(closeExit = R.anim.drawer_slide_out)
         // Edge-to-edge is what makes IME WindowInsets dispatch reliable — adjustNothing alone
         // (see manifest) doesn't guarantee the keyboard's height is actually delivered to an
         // insets listener while decorFitsSystemWindows is left at its non-edge-to-edge default.
@@ -147,6 +148,16 @@ class AppDrawerActivity : BaseActivity() {
             onSettingsClick = { openSettings(); clearSearch() }
         )
         appList.adapter = adapter
+        // Swipe a row right to open it floating instead of full screen. Closing the drawer after
+        // is what makes the float visible: leaving it up would put the glass straight back over
+        // the window that was just opened.
+        ItemTouchHelper(
+            SwipeToFloat(adapter) { result ->
+                FloatingWindow.open(this, result)
+                clearSearch()
+                finish()
+            }
+        ).attachToRecyclerView(appList)
 
         alphabetIndex = findViewById(R.id.alphabetIndex)
         alphabetIndex.onLetterSelected = { letter -> scrollToLetter(letter) }
@@ -277,10 +288,7 @@ class AppDrawerActivity : BaseActivity() {
         // The hub animates its own slide-in from the right; suppress the OS's default
         // cross-activity transition the same way MainActivity does when opening this
         // drawer, for the same OEM-zoom-avoidance reason (see SettingsHubActivity).
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     private fun showKeyboardOnSearch() {
@@ -293,13 +301,9 @@ class AppDrawerActivity : BaseActivity() {
 
     override fun finish() {
         super.finish()
-        // Pre-34 has no overrideActivityTransition; ask for the same slide per-call. The theme's
-        // windowAnimationStyle covers the closes that never come through here (Home), so this is
-        // belt and braces rather than the only route.
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, R.anim.drawer_slide_out)
-        }
+        // The theme's windowAnimationStyle covers the closes that never come through here
+        // (Home), so this is belt and braces rather than the only route.
+        overrideNextTransition(exit = R.anim.drawer_slide_out)
     }
 
     private fun loadApps() {
@@ -373,7 +377,10 @@ class AppDrawerActivity : BaseActivity() {
         }.getOrDefault(false)
         val shortcuts = AppShortcutHelper.queryShortcuts(this, app.packageName)
 
-        PopupMenu(this, anchor).apply {
+        // Wrapped rather than styled on the activity's theme: the overlay carries the glass
+        // background and must not leak to the toolbar overflow (see the note in themes.xml).
+        val glass = ContextThemeWrapper(this, R.style.ThemeOverlay_GestureLauncher_GlassPopup)
+        PopupMenu(glass, anchor).apply {
             menu.add(0, ID_APP_INFO, 0, R.string.app_info).icon = menuIcon(R.drawable.ic_info)
             menu.add(0, ID_LABEL, 1, R.string.add_alias).icon = menuIcon(R.drawable.ic_label)
             if (!isSystemApp) {
@@ -422,24 +429,13 @@ class AppDrawerActivity : BaseActivity() {
         return BitmapDrawable(resources, bitmap)
     }
 
-    /** AppCompat's PopupMenu never renders MenuItem icons unless this (unfortunately internal-only)
-     *  flag is set — there's no public API for it. Preferred path: MenuBuilder's restricted-API
-     *  setter (stable across AppCompat releases, no reflection). Fallback: the old reflection into
-     *  mPopup. On any failure the menu still works fine, just without icons. */
+    /** AppCompat's PopupMenu never renders MenuItem icons unless this (unfortunately
+     *  restricted-API) flag is set — there is no public API for it. Its getMenu() always hands
+     *  back the MenuBuilder it built internally, so the cast is the whole story; the icons are
+     *  cosmetic anyway, and the menu works either way. */
     @SuppressLint("RestrictedApi")
     private fun PopupMenu.forceShowIcons() {
-        (menu as? MenuBuilder)?.let {
-            it.setOptionalIconsVisible(true)
-            return
-        }
-        runCatching {
-            val field = PopupMenu::class.java.getDeclaredField("mPopup")
-            field.isAccessible = true
-            val menuPopupHelper = field.get(this)
-            menuPopupHelper.javaClass
-                .getDeclaredMethod("setForceShowIcon", Boolean::class.javaPrimitiveType)
-                .invoke(menuPopupHelper, true)
-        }
+        (menu as? MenuBuilder)?.setOptionalIconsVisible(true)
     }
 
     private fun editLabel(app: AppInfo) {

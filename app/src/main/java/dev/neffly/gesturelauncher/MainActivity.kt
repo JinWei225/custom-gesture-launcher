@@ -44,11 +44,14 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.data.anyMultiStroke
+import dev.neffly.gesturelauncher.data.toPt
+import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
-import dev.neffly.gesturelauncher.unistroke.Pt
 import java.util.Calendar
 import java.util.Date
 import kotlin.math.roundToInt
@@ -166,19 +169,12 @@ class MainActivity : BaseActivity() {
         // transition so it can't fight with (or get replaced by an OEM "app open" animation
         // instead of) that self-driven slide. On Android 14+ the drawer's own
         // overrideActivityTransition(..., 0, 0) call handles this side of the pair.
-        suppressTransition()
+        overrideNextTransition()
     }
 
     private fun openQuickSearch() {
         startActivity(QuickSearchActivity.intent(this))
-        suppressTransition()
-    }
-
-    @Suppress("DEPRECATION")
-    private fun suppressTransition() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     override fun onStart() {
@@ -220,20 +216,12 @@ class MainActivity : BaseActivity() {
     private fun rebuildTemplates() {
         val mappings = GestureStore.all(this)
         mappingsById = mappings.associateBy { it.id }
-        templates = mappings.flatMap { m ->
-            m.templates.mapIndexed { idx, stroke ->
-                GestureTemplate(
-                    m.id,
-                    stroke.map { Pt(it.x.toDouble(), it.y.toDouble()) },
-                    m.subStrokeLengths.getOrNull(idx)?.size?.coerceAtLeast(1) ?: 1
-                )
-            }
-        }
+        templates = mappings.toTemplates()
         // Only pay the pen-lift gap-timeout once a multi-stroke gesture actually exists, and
         // finalize early once a session reaches the largest trained sub-stroke count — there's
         // nothing more to wait for beyond it.
         canvas.multiStrokeGapMillis =
-            if (mappings.any { it.isMultiStroke }) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
+            if (mappings.anyMultiStroke()) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
         canvas.maxExpectedSubStrokes = mappings.maxOfOrNull { m ->
             m.subStrokeLengths.maxOfOrNull { it.size } ?: 1
         } ?: 0
@@ -242,7 +230,7 @@ class MainActivity : BaseActivity() {
 
     private fun onHomeStroke(points: List<android.graphics.PointF>, subStrokeCount: Int) {
         if (templates.isEmpty()) return
-        val pts = points.map { Pt(it.x.toDouble(), it.y.toDouble()) }
+        val pts = points.toPt()
         // Not long/deliberate enough to be a real attempt — stay silent (no hint, no haptic), the
         // trail just auto-clears. Only strokes past this floor are treated as "the user tried to
         // draw something" for the purposes of the not-recognized hint below.

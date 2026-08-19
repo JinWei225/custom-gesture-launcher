@@ -1,10 +1,8 @@
 package dev.neffly.gesturelauncher.settings
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
@@ -28,6 +26,8 @@ import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.FilePermissions
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
+import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -61,6 +61,10 @@ class SettingsHubActivity : BaseActivity() {
     private lateinit var quickSearchTriggerSubtitle: TextView
     private var isClosing = false
 
+    /** The font scale in force when an import started, so [applyImportedAppearance] can tell
+     *  whether the imported one is actually different before rebuilding the screen. */
+    private var importedFromScale = 1f
+
     /** True while waiting to come back from the all-files-access screen, so onResume knows to turn
      *  the toggle back off if nothing was granted there. */
     private var awaitingFilePermission = false
@@ -89,10 +93,7 @@ class SettingsHubActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        }
+        overrideOwnTransitions()
         setContentView(R.layout.activity_settings_hub)
 
         hubRoot = findViewById(R.id.settingsHubRoot)
@@ -396,10 +397,7 @@ class SettingsHubActivity : BaseActivity() {
             .setInterpolator(AccelerateInterpolator())
             .withEndAction { super.finish() }
             .start()
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     private fun doExport(uri: Uri) {
@@ -433,6 +431,7 @@ class SettingsHubActivity : BaseActivity() {
     }
 
     private fun applyImport(data: BackupData, replace: Boolean) {
+        importedFromScale = Prefs.fontScale(this)
         val result = BackupManager.apply(this, data, replace)
         AppRepository.invalidate()
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
@@ -447,11 +446,30 @@ class SettingsHubActivity : BaseActivity() {
                 result.missingApps.joinToString("\n") { "• $it" }
             )
         }
+        // Theme and font size land last, once the summary has been read: applying either recreates
+        // this activity, which would tear the dialog down with it (the same leak the theme and
+        // font-size dialogs above dismiss themselves to avoid). Cancel is covered as well as the
+        // button — the dismiss slot belongs to showWithFont.
         AlertDialog.Builder(this)
             .setTitle(R.string.import_result_title)
             .setMessage(message)
-            .setPositiveButton(R.string.ok, null)
+            .setPositiveButton(R.string.ok) { _, _ -> applyImportedAppearance() }
+            .setOnCancelListener { applyImportedAppearance() }
             .showWithFont()
+    }
+
+    /**
+     * Makes an imported theme and font size visible.
+     *
+     * setDefaultNightMode recreates this activity by itself, but only when the mode actually
+     * changed — so the font-size branch has to ask for its own recreate, and does it only when the
+     * scale really moved, to avoid a pointless rebuild on every import.
+     */
+    private fun applyImportedAppearance() {
+        val scaleChanged = Prefs.fontScale(this) != importedFromScale
+        if (scaleChanged) FontEngine.notifyScaleChanged()
+        AppCompatDelegate.setDefaultNightMode(Prefs.themeMode(this))
+        if (scaleChanged) recreate()
     }
 
     companion object {

@@ -29,12 +29,17 @@ object WebSearch {
         return "https://$q"
     }
 
+    /** The browser intent for [query] — a search, or the address it names. Split out from [open]
+     *  so a floating-window launch can attach its own ActivityOptions to the same intent. */
+    fun intentFor(query: String, url: String?): Intent {
+        val target = url ?: (SEARCH_BASE + Uri.encode(query.trim()))
+        return Intent(Intent.ACTION_VIEW, Uri.parse(target))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
     /** Opens [query] in the default browser, as a search or as the address it names. */
     fun open(context: Context, query: String, url: String?) {
-        val target = url ?: (SEARCH_BASE + Uri.encode(query.trim()))
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (runCatching { context.startActivity(intent) }.isFailure) {
+        if (runCatching { context.startActivity(intentFor(query, url)) }.isFailure) {
             Toast.makeText(context, R.string.web_search_failed, Toast.LENGTH_SHORT).show()
         }
     }

@@ -1,9 +1,7 @@
 package dev.neffly.gesturelauncher.search
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -19,6 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
@@ -29,10 +28,13 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
+import dev.neffly.gesturelauncher.ui.SwipeToFloat
+import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +71,9 @@ class QuickSearchActivity : BaseActivity() {
     /** Whether the user has dragged the list since the query last changed — see [renderResults]. */
     private var userScrolled = false
 
+    /** Vertical space between the card's field and the keyboard, from the last insets pass. */
+    private var availableListPx = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The assistant role outlives the toggle — someone who turns the feature off but leaves us
@@ -77,10 +82,7 @@ class QuickSearchActivity : BaseActivity() {
             finish()
             return
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        }
+        overrideOwnTransitions()
         // Edge-to-edge is what makes the IME inset actually reach the listener below — the same
         // reason AppDrawerActivity sets it (see the note there).
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -115,6 +117,11 @@ class QuickSearchActivity : BaseActivity() {
             onSettingsClick = { openSettings() }
         )
         resultList.adapter = adapter
+        // Same gesture as the drawer's list: swipe a result right to open it floating. This window
+        // closes itself either way, so there is no extra teardown beyond finish().
+        ItemTouchHelper(
+            SwipeToFloat(adapter) { result -> FloatingWindow.open(this, result); finish() }
+        ).attachToRecyclerView(resultList)
 
         search = SearchController(this, lifecycleScope) { query, results ->
             renderResults(query, results)
@@ -161,7 +168,8 @@ class QuickSearchActivity : BaseActivity() {
      * The window doesn't resize for the IME, so the result list's own ceiling is what stops it
      * growing underneath the keyboard: whatever vertical space is left between the card's top edge
      * and the top of the IME, capped at a fraction of the screen so it never dominates the app
-     * behind it either.
+     * behind it either. The space is remembered rather than applied here, because the floor the
+     * ceiling is raised to depends on what is currently in the list — see [applyListCeiling].
      */
     private fun applyInsets() {
         val scrim = findViewById<View>(R.id.quickSearchScrim)
@@ -174,11 +182,48 @@ class QuickSearchActivity : BaseActivity() {
             // The field may not have been measured yet the first time insets land; a dp estimate
             // is close enough for one frame, and the next pass corrects it.
             val fieldHeight = searchLayout.height.takeIf { it > 0 } ?: dp(this, 64)
-            val available = obstructionTop - cardTop - fieldHeight - cardChromePx(this)
-            resultList.maxHeightPx = minOf((screenHeight * MAX_CARD_FRACTION).toInt(), available)
-                .coerceAtLeast(minListPx(this))
+            availableListPx = obstructionTop - cardTop - fieldHeight - cardChromePx(this)
+            applyListCeiling()
             insets
         }
+    }
+
+    /** Fits the list into whatever the keyboard leaves, but never below [minListPx]. */
+    private fun applyListCeiling() {
+        val ceiling = minOf(
+            (resources.displayMetrics.heightPixels * MAX_CARD_FRACTION).toInt(),
+            availableListPx
+        )
+        resultList.maxHeightPx = ceiling.coerceAtLeast(minListPx())
+    }
+
+    /**
+     * Height the first [MIN_RESULTS] results need, section labels above them included.
+     *
+     * Measured from the rows on screen rather than assumed from the layouts' dp, because
+     * BaseActivity applies the user's font-size multiplier: a row declared at 60dp comes out
+     * noticeably taller once that is turned up, and a floor computed from the declared value
+     * clips the last row it was supposed to guarantee.
+     *
+     * Before anything is laid out there is nothing to measure and this is zero, which is correct
+     * rather than merely safe: with no rows on screen the ceiling is whatever the keyboard leaves,
+     * and [renderResults] runs this again once the rows it just submitted have been laid out.
+     */
+    private fun minListPx(): Int {
+        val (results, chrome) = adapter.leadingRowCounts(MIN_RESULTS)
+        var rowHeight = 0
+        var chromeHeight = 0
+        for (i in 0 until resultList.childCount) {
+            val child = resultList.getChildAt(i) ?: continue
+            if (child.height <= 0) continue
+            val holder = resultList.getChildViewHolder(child)
+            if (holder is AppListAdapter.SectionVH || holder is AppListAdapter.HeaderVH) {
+                chromeHeight = maxOf(chromeHeight, child.height)
+            } else {
+                rowHeight = maxOf(rowHeight, child.height)
+            }
+        }
+        return results * rowHeight + chrome * chromeHeight
     }
 
     private fun animateIn() {
@@ -223,6 +268,9 @@ class QuickSearchActivity : BaseActivity() {
         renderedQuery = query
         adapter.submitResults(results) {
             if (!userScrolled) resultList.scrollToPosition(0)
+            // The floor is measured off the rows themselves, so it can only be recomputed once
+            // this batch has been laid out.
+            resultList.post { applyListCeiling() }
         }
         resultList.visibility = if (results.isEmpty()) View.GONE else View.VISIBLE
         // "No results" only once something has been typed — an untouched box is a bare search bar,
@@ -282,8 +330,11 @@ class QuickSearchActivity : BaseActivity() {
         /** The card's own vertical padding plus a breathing gap above the keyboard. */
         private fun cardChromePx(context: Context) = dp(context, 64)
 
-        /** Below this the list is too short to be worth showing; it scrolls instead of vanishing. */
-        private fun minListPx(context: Context) = dp(context, 120)
+        /** Results the card is guaranteed to show, however little room the keyboard leaves. The
+         *  space above the IME on a tall phone works out at barely two rows, and two is not enough
+         *  to choose from — the third is usually where the file or web hit lands. Below this floor
+         *  the list scrolls inside the card rather than shrinking further. */
+        private const val MIN_RESULTS = 3
 
         private fun entryOffsetPx(context: Context) = dp(context, 12)
 

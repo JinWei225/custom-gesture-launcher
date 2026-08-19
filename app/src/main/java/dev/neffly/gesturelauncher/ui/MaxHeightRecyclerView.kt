@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
  *
  * RecyclerView ignores android:maxHeight, so `wrap_content` alone would let the floating quick
  * search card grow past the screen. Clamping the height spec to AT_MOST here is what lets the card
- * hug two results and cap out on twenty.
+ * hug a short result list and cap out on a long one.
  */
 class MaxHeightRecyclerView @JvmOverloads constructor(
     context: Context,

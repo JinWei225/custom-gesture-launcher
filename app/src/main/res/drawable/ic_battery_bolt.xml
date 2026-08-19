@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Charging bolt for the home-screen battery indicator, sized to sit inside the shell's cavity
-     (see battery_indicator.xml). Drawn white and tinted at the call site, like the shell. -->
+     (see battery_indicator.xml). Drawn white and tinted at the call site, like the shell.
+
+     The path is centred on the cavity, not on the 24dp box, and scaled to sit inside it. The
+     shell is left-heavy — its body runs x 1.25..18.25 with the terminal nub outside that — so the
+     hollow the bolt fills spans 2..17.5 horizontally and 7.5..16.5 vertically once the 1.5 stroke
+     is taken off. A glyph centred on the box therefore sits visibly right of the hollow, which is
+     what this used to do.
+
+     These coordinates put the glyph's bounding box on (9.75, 12), the hollow's centre, at 0.8 of
+     its drawn size: the source outline is exactly as tall as the cavity, so at full size it grazes
+     the stroke top and bottom and reads as a bolt jammed into the shell rather than sitting in it.
+
+     Note the cavity is NOT the inset box battery_indicator.xml uses for the level fill — that one
+     stops short on the right so a full bar doesn't run into the shell's end. Centring on it leaves
+     the bolt a quarter-unit off. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -8,5 +22,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="@color/white"
-        android:pathData="M12.4,8 L7.6,13.4 h2.9 l-0.9,3.6 4.8,-5.4 h-2.9 z" />
+        android:pathData="M10.87,8.4 L7.03,12.72 L9.35,12.72 L8.63,15.6 L12.47,11.28 L10.15,11.28 Z" />
 </vector>

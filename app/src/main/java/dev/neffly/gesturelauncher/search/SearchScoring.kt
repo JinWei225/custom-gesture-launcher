@@ -1,11 +1,15 @@
 package dev.neffly.gesturelauncher.search
 
+import dev.neffly.gesturelauncher.drawer.AppInfo
 import java.text.Normalizer
 import java.util.Locale
 
 /**
- * The drawer's fuzzy matcher, lifted out of AppRepository so file names are ranked by exactly the
- * same rules as app labels. Behaviour is unchanged from when it lived there.
+ * How this app ranks anything against a typed query: app labels, their user-set aliases, and file
+ * names, all by the same rules — so a change made for one can't quietly reorder another.
+ *
+ * Kept apart from [dev.neffly.gesturelauncher.drawer.AppRepository], which loads and caches the
+ * app list; what that list is *sorted by* for a given query is this file's business.
  */
 internal object SearchScoring {
 
@@ -47,10 +51,45 @@ internal object SearchScoring {
         return if (best <= NO_MATCH) null else best
     }
 
+    /**
+     * Case- and diacritic-insensitive fuzzy filter over labels: [query]'s characters must appear
+     * in order (not necessarily contiguous), ranked so contiguous/word-boundary matches sort first.
+     *
+     * An app's user-set [AppInfo.tag], when present, is fuzzy-matched the same way and used if
+     * it scores better than the label — including apps whose real label wouldn't match at all
+     * (e.g. a Chinese label tagged with an English shortcut), since that's the point of a tag: a
+     * guaranteed-findable alias. Any tag match is boosted above label matches (it's a deliberate
+     * shortcut the user typed themselves); an exact tag match is pinned above everything.
+     */
+    fun rankApps(apps: List<AppInfo>, query: String): List<AppInfo> {
+        val q = normalize(query)
+        if (q.isEmpty()) return apps
+        return apps.mapNotNull { app ->
+            val tagNorm = app.tag?.let { normalize(it) }
+            val score = if (tagNorm != null && tagNorm == q) {
+                TAG_EXACT_SCORE
+            } else {
+                val tagScore = tagNorm?.let { fuzzyScore(it, q) }?.plus(TAG_MATCH_BONUS)
+                val labelScore = fuzzyScore(normalize(app.label), q)
+                listOfNotNull(tagScore, labelScore).maxOrNull()
+            }
+            score?.let { app to it }
+        }.sortedWith(compareByDescending<Pair<AppInfo, Int>> { it.second }
+            .thenBy { normalize(it.first.label) })
+            .map { it.first }
+    }
+
     private fun boundaryBonus(text: String, p: Int): Int {
         if (p == 0 || text[p - 1] in SEPARATORS) return WORD_BOUNDARY_BONUS
         return 0
     }
+
+    /** Sort tier for an exact alias match — comfortably above any possible fuzzy score. */
+    private const val TAG_EXACT_SCORE = Int.MAX_VALUE
+
+    /** Added to a fuzzy alias match's score so it outranks any ordinary label match, however good
+     *  — comfortably larger than a realistic label fuzzy score even for long queries/labels. */
+    private const val TAG_MATCH_BONUS = 1000
 
     private const val MATCH_SCORE = 16
     private const val CONSECUTIVE_BONUS = 12

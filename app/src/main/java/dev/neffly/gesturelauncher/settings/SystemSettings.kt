@@ -15,8 +15,7 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.search.FilePermissions
 
 /**
- * Deep-links to the system "change default Home app" picker, falling back gracefully by API
- * level/OEM. No app can force-unset itself as the default launcher (Android security) — this is
+ * Deep-links to the system "change default Home app" picker. No app can force-unset itself as the default launcher (Android security) — this is
  * the best available shortcut to the picker. Shared by [SettingsHubActivity] and
  * [dev.neffly.gesturelauncher.crash.SafeModeActivity].
  */
@@ -28,10 +27,7 @@ fun Activity.openDefaultLauncherSettings() {
         }
         add(Intent(Settings.ACTION_SETTINGS))
     }
-    for (intent in candidates) {
-        if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
-    }
-    Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+    startFirstThatOpens(candidates)
 }
 
 /** Whether the OS has been told to leave this app alone. Drives the settings row's subtitle. */
@@ -48,11 +44,7 @@ fun Context.isBatteryOptimizationExempt(): Boolean {
  * app-list cache, the icon cache, and the LauncherApps callback registration. The disk snapshot
  * (see AppListSnapshot) makes that cheap to recover from; this makes it stop happening.
  *
- * Same shape as [openDefaultLauncherSettings]: a candidate list tried in order. It uses
- * `runCatching { startActivity }` rather than `resolveActivity` on purpose — declaring five OEM
- * packages in <queries> just to probe for them is worse than catching the failure, and MIUI throws
- * SecurityException (not ActivityNotFoundException) for some of these, which a resolve check
- * wouldn't predict anyway.
+ * Same shape as the other deep links here — see [startFirstThatOpens].
  */
 // BatteryLife flags ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS as an abused API. Here the app
 // being killed IS the user-visible bug the setting exists to fix, and it's a launcher, not
@@ -79,10 +71,7 @@ fun Activity.openBatteryOptimizationSettings() {
             )
         )
     }
-    for (intent in candidates) {
-        if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
-    }
-    Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+    startFirstThatOpens(candidates)
 }
 
 /**
@@ -118,7 +107,7 @@ fun Context.isAssistantRoleHeld(): Boolean {
  * selection is a Settings-only choice by design; this deep-links straight to it.
  *
  * ACTION_VOICE_INPUT_SETTINGS lands on "Assist & voice input", whose first row is "Digital
- * assistant app". Same candidate-list-with-runCatching shape as [openDefaultLauncherSettings].
+ * assistant app".
  */
 fun Activity.openAssistantSettings() {
     val candidates = buildList {
@@ -128,10 +117,7 @@ fun Activity.openAssistantSettings() {
         }
         add(Intent(Settings.ACTION_SETTINGS))
     }
-    for (intent in candidates) {
-        if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
-    }
-    Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+    startFirstThatOpens(candidates)
 }
 
 /**
@@ -140,7 +126,22 @@ fun Activity.openAssistantSettings() {
  */
 fun Activity.openAllFilesAccessSettings() {
     val candidates = FilePermissions.requestIntents(this)
-    if (candidates.isEmpty()) return
+    // Empty means the grant doesn't exist on this API level, which is not a failure to report.
+    if (candidates.isNotEmpty()) startFirstThatOpens(candidates)
+}
+
+/**
+ * Starts the first of [candidates] that opens, and tells the user if none do.
+ *
+ * Every deep link here is a best guess at where a given build keeps a setting, so each is a list
+ * tried in order — the AOSP intent first, then OEM-specific screens, then a broad fallback that at
+ * least lands the user somewhere useful.
+ *
+ * `runCatching { startActivity }` rather than `resolveActivity`: probing would mean declaring every
+ * OEM package in <queries> just to ask about it, and MIUI throws SecurityException (not
+ * ActivityNotFoundException) for some of these, which a resolve check wouldn't predict anyway.
+ */
+private fun Activity.startFirstThatOpens(candidates: List<Intent>) {
     for (intent in candidates) {
         if (runCatching { startActivity(intent); true }.getOrDefault(false)) return
     }

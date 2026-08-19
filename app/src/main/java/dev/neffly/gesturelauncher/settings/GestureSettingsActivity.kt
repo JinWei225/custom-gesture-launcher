@@ -1,7 +1,6 @@
 package dev.neffly.gesturelauncher.settings
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
@@ -16,6 +15,7 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
 /** Management hub: list existing gestures, add new ones, edit (redraw / change app) and delete. */
 class GestureSettingsActivity : BaseActivity() {
@@ -39,10 +39,7 @@ class GestureSettingsActivity : BaseActivity() {
             startActivity(Intent(this, GestureActionChooserActivity::class.java))
             // The chooser animates its own slide-in; suppress the OS's default cross-activity
             // transition the same way MainActivity does when opening the drawer.
-            @Suppress("DEPRECATION")
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                overridePendingTransition(0, 0)
-            }
+            overrideNextTransition()
         }
     }
 

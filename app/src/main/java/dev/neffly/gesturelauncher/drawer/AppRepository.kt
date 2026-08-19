@@ -10,7 +10,6 @@ import android.util.Log
 import android.widget.Toast
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
-import dev.neffly.gesturelauncher.search.SearchScoring
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -142,74 +141,44 @@ object AppRepository {
     fun cached(): List<AppInfo> = cache ?: emptyList()
 
     /**
-     * Case- and diacritic-insensitive fuzzy filter over labels: [query]'s characters must appear
-     * in order (not necessarily contiguous), ranked so contiguous/word-boundary matches sort first.
+     * The intent that opens [componentName], or null when the package offers none.
      *
-     * An app's user-set [AppInfo.tag], when present, is fuzzy-matched the same way and used if
-     * it scores better than the label — including apps whose real label wouldn't match at all
-     * (e.g. a Chinese label tagged with an English shortcut), since that's the point of a tag: a
-     * guaranteed-findable alias. Any tag match is boosted above label matches (it's a deliberate
-     * shortcut the user typed themselves); an exact tag match is pinned above everything.
-     */
-    fun filter(apps: List<AppInfo>, query: String): List<AppInfo> {
-        val q = normalize(query)
-        if (q.isEmpty()) return apps
-        return apps.mapNotNull { app ->
-            val tagNorm = app.tag?.let { normalize(it) }
-            val score = if (tagNorm != null && tagNorm == q) {
-                TAG_EXACT_SCORE
-            } else {
-                val tagScore = tagNorm?.let { fuzzyScore(it, q) }?.plus(TAG_MATCH_BONUS)
-                val labelScore = fuzzyScore(normalize(app.label), q)
-                listOfNotNull(tagScore, labelScore).maxOrNull()
-            }
-            score?.let { app to it }
-        }.sortedWith(compareByDescending<Pair<AppInfo, Int>> { it.second }
-            .thenBy { normalize(it.first.label) })
-            .map { it.first }
-    }
-
-    /**
      * Some apps (e.g. Duolingo) toggle which launcher-activity alias is enabled over time for
      * seasonal/promotional icon swapping. A [componentName] captured at gesture-training time can
      * go stale once the app disables that alias in favor of another, so a direct launch by the
-     * exact stored component can throw ActivityNotFoundException indefinitely afterward. Falls
-     * back to whatever launcher activity is currently enabled for the package in that case.
+     * exact stored component can throw ActivityNotFoundException indefinitely afterward. Hence the
+     * resolve check: when the stored component no longer resolves, this falls back to whatever
+     * launcher activity is currently enabled for the package.
      *
-     * The other way a component goes stale is the drawer rendering a disk snapshot (see
-     * [AppListSnapshot]) that was written before an app was uninstalled while this process was
-     * dead. When neither intent works, the list is invalidated so it self-heals immediately rather
-     * than waiting for a LauncherApps callback that already fired while nothing was listening.
+     * Separate from [launch] because a floating-window launch needs this same intent with its own
+     * ActivityOptions attached, and needs to resolve the target activity before starting it — see
+     * [dev.neffly.gesturelauncher.launch.FloatingWindow].
      */
-    fun launch(context: Context, componentName: ComponentName) {
+    fun launchIntent(context: Context, componentName: ComponentName): Intent? {
         val flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         val direct = Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_LAUNCHER)
             .setComponent(componentName)
             .addFlags(flags)
-        val launched = runCatching { context.startActivity(direct) }.isSuccess
-        if (!launched) {
-            val fallback = context.packageManager.getLaunchIntentForPackage(componentName.packageName)
-                ?.addFlags(flags)
-            val fallbackLaunched = fallback != null &&
-                runCatching { context.startActivity(fallback) }.isSuccess
-            if (!fallbackLaunched) {
-                Log.w("AppRepository", "launch failed for $componentName (no valid launcher intent)")
-                Toast.makeText(context, R.string.app_not_available, Toast.LENGTH_SHORT).show()
-                invalidate()
-            }
-        }
+        if (direct.resolveActivity(context.packageManager) != null) return direct
+        return context.packageManager.getLaunchIntentForPackage(componentName.packageName)
+            ?.addFlags(flags)
     }
 
-    private fun normalize(s: String): String = SearchScoring.normalize(s)
-
-    private fun fuzzyScore(text: String, query: String): Int? =
-        SearchScoring.fuzzyScore(text, query)
-
-    /** Sort tier for an exact tag match — comfortably above any possible fuzzy score. */
-    private const val TAG_EXACT_SCORE = Int.MAX_VALUE
-
-    /** Added to a fuzzy tag match's score so it outranks any ordinary label match, however good —
-     *  comfortably larger than a realistic label fuzzy score even for long queries/labels. */
-    private const val TAG_MATCH_BONUS = 1000
+    /**
+     * Opens [componentName], or reports that it is gone.
+     *
+     * The other way a component goes stale is the drawer rendering a disk snapshot (see
+     * [AppListSnapshot]) that was written before an app was uninstalled while this process was
+     * dead. When nothing can be launched, the list is invalidated so it self-heals immediately
+     * rather than waiting for a LauncherApps callback that already fired while nothing was
+     * listening.
+     */
+    fun launch(context: Context, componentName: ComponentName) {
+        val intent = launchIntent(context, componentName)
+        if (intent != null && runCatching { context.startActivity(intent) }.isSuccess) return
+        Log.w("AppRepository", "launch failed for $componentName (no valid launcher intent)")
+        Toast.makeText(context, R.string.app_not_available, Toast.LENGTH_SHORT).show()
+        invalidate()
+    }
 }

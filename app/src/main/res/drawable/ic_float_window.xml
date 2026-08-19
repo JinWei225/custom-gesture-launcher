@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Swipe-to-float affordance: a full-screen frame with a smaller window lifted out of it, which
+     is what the gesture does. Drawn white and tinted at the call site. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="@color/white"
+        android:strokeWidth="1.6"
+        android:pathData="M4,4 H15 A1.5,1.5 0 0 1 16.5,5.5 V9 M4,4 A1.5,1.5 0 0 0 2.5,5.5 V16 A1.5,1.5 0 0 0 4,17.5 H8" />
+    <path
+        android:strokeColor="@color/white"
+        android:strokeWidth="1.6"
+        android:pathData="M11.5,10 H20 A1.5,1.5 0 0 1 21.5,11.5 V18.5 A1.5,1.5 0 0 1 20,20 H11.5 A1.5,1.5 0 0 1 10,18.5 V11.5 A1.5,1.5 0 0 1 11.5,10 Z" />
+</vector>

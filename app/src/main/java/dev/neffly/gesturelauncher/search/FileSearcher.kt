@@ -91,11 +91,15 @@ object FileSearcher {
     }
 
     /** Opens [hit] in whatever app handles its type. Returns whether anything took it. */
-    fun open(context: Context, hit: FileHit): Boolean {
-        val intent = Intent(Intent.ACTION_VIEW)
+    /** The viewer intent for [hit]. Split out from [open] so a floating-window launch can attach
+     *  its own ActivityOptions to the same intent. */
+    fun intentFor(hit: FileHit): Intent =
+        Intent(Intent.ACTION_VIEW)
             .setDataAndType(hit.uri, hit.mimeType.ifEmpty { "*/*" })
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-        val opened = runCatching { context.startActivity(intent) }.isSuccess
+
+    fun open(context: Context, hit: FileHit): Boolean {
+        val opened = runCatching { context.startActivity(intentFor(hit)) }.isSuccess
         if (!opened) {
             Toast.makeText(context, R.string.file_open_failed, Toast.LENGTH_SHORT).show()
         }

@@ -1,10 +1,8 @@
 package dev.neffly.gesturelauncher.settings
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
@@ -16,6 +14,8 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.overrideNextTransition
+import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 
 /**
  * Collects a URL for an "Open a URL" gesture, then either:
@@ -35,10 +35,7 @@ class GestureUrlEntryActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
-        }
+        overrideOwnTransitions()
         setContentView(R.layout.activity_gesture_url_entry)
 
         urlEntryRoot = findViewById(R.id.urlEntryRoot)
@@ -83,10 +80,7 @@ class GestureUrlEntryActivity : BaseActivity() {
                 this, GestureAction.OPEN_URL, url = normalized, label = hostLabel(normalized)
             )
         )
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
         // Unlike the chooser (which stays on the back stack so Back returns to it), this screen
         // has nothing left to collect once the URL is in — finish so Back from the draw step
         // lands on the chooser directly instead of bouncing through this now-stale form again.
@@ -107,10 +101,7 @@ class GestureUrlEntryActivity : BaseActivity() {
             .setInterpolator(AccelerateInterpolator())
             .withEndAction { super.finish() }
             .start()
-        @Suppress("DEPRECATION")
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overridePendingTransition(0, 0)
-        }
+        overrideNextTransition()
     }
 
     companion object {

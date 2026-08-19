@@ -5,7 +5,6 @@ import androidx.annotation.StringRes
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppInfo
-import dev.neffly.gesturelauncher.drawer.AppRepository
 
 /**
  * Composes one result list out of the three sources, honouring the settings toggles. Pure: the
@@ -16,7 +15,7 @@ object SearchEngine {
 
     /** Fuzzy app matches, exactly as the drawer has always ranked them. */
     fun apps(allApps: List<AppInfo>, query: String): List<SearchResult.App> =
-        AppRepository.filter(allApps, query).map { SearchResult.App(it) }
+        SearchScoring.rankApps(allApps, query).map { SearchResult.App(it) }
 
     /**
      * The launcher's own settings, when the query plainly refers to them.

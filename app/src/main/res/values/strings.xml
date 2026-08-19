@@ -45,6 +45,9 @@
     <string name="no_clock_app">No clock app found</string>
     <string name="app_not_available">That app is no longer available</string>
 
+    <!-- Swipe a result to the right to open it in a floating window. -->
+    <string name="float_unsupported">%1$s can\'t be resized, so it opened full screen</string>
+
     <string name="add_gesture">Add gesture</string>
     <string name="no_gestures">No gestures yet — tap + to add one.</string>
     <string name="edit">Edit</string>
@@ -122,7 +125,7 @@
     <string name="section_gestures">Gestures</string>
     <string name="section_backup">Backup</string>
     <string name="gestures_row_subtitle">%1$d saved</string>
-    <string name="export_row_subtitle">Save your gestures, sensitivity, and app aliases to a file</string>
+    <string name="export_row_subtitle">Save your gestures, app aliases, and settings to a file</string>
     <string name="import_row_subtitle">Restore from a previously exported backup file</string>
     <string name="about_version">Gesture Launcher v%1$s</string>
 

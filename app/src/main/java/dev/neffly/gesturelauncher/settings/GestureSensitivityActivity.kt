@@ -13,11 +13,13 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.data.anyMultiStroke
+import dev.neffly.gesturelauncher.data.toPt
+import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
-import dev.neffly.gesturelauncher.unistroke.Pt
 
 /**
  * Merges the recognition-sensitivity slider with the gesture test/scratch area on one screen:
@@ -79,17 +81,9 @@ class GestureSensitivityActivity : BaseActivity() {
     private fun rebuildTemplates() {
         val mappings = GestureStore.all(this)
         mappingsById = mappings.associateBy { it.id }
-        templates = mappings.flatMap { m ->
-            m.templates.mapIndexed { idx, stroke ->
-                GestureTemplate(
-                    m.id,
-                    stroke.map { Pt(it.x.toDouble(), it.y.toDouble()) },
-                    m.subStrokeLengths.getOrNull(idx)?.size?.coerceAtLeast(1) ?: 1
-                )
-            }
-        }
+        templates = mappings.toTemplates()
         canvas.multiStrokeGapMillis =
-            if (mappings.any { it.isMultiStroke }) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
+            if (mappings.anyMultiStroke()) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
     }
 
     private fun onTestStroke(points: List<PointF>, subStrokeCount: Int) {
@@ -97,7 +91,7 @@ class GestureSensitivityActivity : BaseActivity() {
             showResult(getString(R.string.test_no_gestures), null)
             return
         }
-        val pts = points.map { Pt(it.x.toDouble(), it.y.toDouble()) }
+        val pts = points.toPt()
         if (!OneDollarRecognizer.isStrokeUsable(pts)) {
             showResult(getString(R.string.stroke_too_short), null)
             return
