@@ -35,10 +35,12 @@ object FloatingWindow {
 
     private const val TAG = "FloatingWindow"
 
-    /** Fraction of the screen the floating window occupies. Wide enough for real content, small
-     *  enough that what it was launched over stays visible around it — the point of floating it. */
-    private const val WIDTH_FRACTION = 0.86f
-    private const val HEIGHT_FRACTION = 0.60f
+    /**
+     * Height of the window as a multiple of its width, matching the shape the device's own
+     * small-window gesture produces — see [options] for how this was measured.
+     */
+    private const val ASPECT = 1.6f
+
 
     /** ActivityOptions' own key for the launch windowing mode, and WindowConfiguration's freeform
      *  constant. Both are hidden as symbols but stable as values — see [options]. */
@@ -106,12 +108,30 @@ object FloatingWindow {
     }
 
     /**
-     * Centred bounds plus the freeform windowing mode.
+     * The freeform windowing mode, plus bounds shaped like the ones the device's own small-window
+     * gesture uses.
      *
-     * setLaunchBounds is public API and is documented as the way to launch into a freeform window,
-     * but on its own it isn't enough: measured on device, an app started with bounds and nothing
-     * else comes up full screen, while the same app started with `am start --windowingMode 5`
-     * lands in freeform. The mode has to be asked for explicitly.
+     * The mode is what actually gets a window floating: measured on device, an app started with
+     * bounds and nothing else comes up full screen, while the same app started with
+     * `am start --windowingMode 5` lands in freeform.
+     *
+     * The bounds then decide what the window *is*, and the width is the whole point. HyperOS's own
+     * sidebar opens WhatsApp at Rect(64, 574 - 1264, 2494) — 1200x1920 on a 1200x2670 screen, so
+     * exactly the full display width, which the config confirms as w369dp, the same width in dp
+     * the app gets full screen. The app therefore lays out as if it were full screen and the whole
+     * surface is scaled down to the visible box, which is why nothing reflows and text keeps its
+     * proportions.
+     *
+     * Leaving the bounds unset does not reproduce that: the system then picked 1032x1426 (317dp
+     * wide), a genuinely narrower layout, which is the "shorter and more zoomed in" window this
+     * replaced. Neither did a fraction of the screen, for the same reason. Full width plus the
+     * 1:1.6 shape is the thing to copy, and it is expressed relative to the display so a device
+     * with different pixels gets the same window rather than these numbers.
+     *
+     * Only the size is worth asking for precisely. The platform treats the position as a hint and
+     * moves it — the same request landed at three different tops across runs, and it cascades a
+     * new window when one is already open — so this centres the window and leaves placement to
+     * the system rather than chasing it with a constant the system overrules anyway.
      *
      * ActivityOptions.setLaunchWindowingMode is hidden, so the mode goes into the options Bundle
      * under the key that method writes. That is a plain Bundle entry, not a reflective call into a
@@ -121,12 +141,11 @@ object FloatingWindow {
      */
     private fun options(activity: Activity): Bundle {
         val metrics = activity.resources.displayMetrics
-        val width = (metrics.widthPixels * WIDTH_FRACTION).toInt()
-        val height = (metrics.heightPixels * HEIGHT_FRACTION).toInt()
-        val left = (metrics.widthPixels - width) / 2
+        val width = metrics.widthPixels
+        val height = (width * ASPECT).toInt().coerceAtMost(metrics.heightPixels)
         val top = (metrics.heightPixels - height) / 2
         return ActivityOptions.makeBasic()
-            .setLaunchBounds(Rect(left, top, left + width, top + height))
+            .setLaunchBounds(Rect(0, top, width, top + height))
             .toBundle()
             .apply { putInt(KEY_LAUNCH_WINDOWING_MODE, WINDOWING_MODE_FREEFORM) }
     }
