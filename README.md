@@ -87,8 +87,6 @@ pick Gesture Launcher as your digital assistant — both are off until you grant
   reinstalling over an existing copy after certain updates may require uninstalling the old one
   first.
 - No automated UI tests yet; unit tests cover the recognizer, search ranking and URL detection.
-- `lintDebug` currently reports pre-existing `NewApi` errors for API-gated calls that are guarded
-  at runtime rather than annotated.
 
 ## Building from source
 
