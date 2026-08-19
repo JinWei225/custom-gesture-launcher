@@ -4,6 +4,7 @@ import android.os.Build
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import dev.neffly.gesturelauncher.R
 import java.util.function.Consumer
@@ -44,6 +45,20 @@ object Glass {
             paintVeil(veil(anchor, blurred = false))
             return
         }
+        frostBlurred(window, anchor, paintVeil)
+    }
+
+    /**
+     * The half of [frost] that touches the blur API, split out purely so its API requirement is
+     * declared rather than merely guarded.
+     *
+     * The guard in [frost] covers this code at runtime either way, but lint cannot see that: the
+     * listener below is an anonymous class, and version narrowing doesn't reach inside one. Naming
+     * the requirement here means the compiler checks the guard instead of it being asserted in a
+     * comment.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun frostBlurred(window: Window, anchor: View, paintVeil: (Int) -> Unit) {
         // FLAG_BLUR_BEHIND is what makes blurBehindRadius take effect; the radius alone is inert.
         window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         window.attributes = window.attributes.apply { blurBehindRadius = BLUR_RADIUS_PX }

@@ -56,9 +56,16 @@
 
         <!-- "Light bar" means dark icons for a light background: true in light mode, false in
              dark. Kept in a bool so this theme needs no night-qualified duplicate — see the
-             note in values/bools.xml for why that matters. -->
+             note in values/bools.xml for why that matters.
+
+             windowLightNavigationBar arrived in API 27 and this app's floor is 26, hence the
+             tools:targetApi on every use of it. A theme attribute an older framework has never
+             heard of is simply never queried, so 26 just keeps the light icons it would have had;
+             splitting the whole theme into a values-v27 copy to say that would cost far more than
+             it buys, because a qualified themes.xml replaces the base style rather than merging
+             with it — the same trap the night-mode note above describes. -->
         <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
-        <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/light_system_bars</item>
     </style>
 
     <!-- App drawer: the activity transition itself is suppressed (see AppDrawerActivity); the
@@ -146,7 +153,7 @@
         <!-- The scrim, not the theme, is what sits behind the bars, and it's dark in both themes —
              so light icons are correct either way. Same bet Theme.GestureLauncher.Home makes. -->
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 
     <!-- Home screen: draw behind system bars and show the wallpaper.
@@ -171,7 +178,7 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 
     <!-- Glass treatment for the app long-press menu in the drawer.
