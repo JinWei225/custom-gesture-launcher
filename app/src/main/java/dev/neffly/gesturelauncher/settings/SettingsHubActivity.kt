@@ -24,6 +24,7 @@ import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.FilePermissions
+import dev.neffly.gesturelauncher.shortcut.KeyboardShortcutService
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
@@ -59,6 +60,13 @@ class SettingsHubActivity : BaseActivity() {
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
     private lateinit var quickSearchTriggerSubtitle: TextView
+    private lateinit var keyboardShortcutSwitch: MaterialSwitch
+    private lateinit var keyboardShortcutRow: View
+    private lateinit var keyboardShortcutTitle: TextView
+    private lateinit var keyboardShortcutSubtitle: TextView
+    private lateinit var keyboardShortcutAccessRow: View
+    private lateinit var keyboardShortcutAccessTitle: TextView
+    private lateinit var keyboardShortcutAccessSubtitle: TextView
     private var isClosing = false
 
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
@@ -163,12 +171,30 @@ class SettingsHubActivity : BaseActivity() {
             Prefs.setQuickSearchEnabled(this, enabled)
             quickSearchSwitch.isChecked = enabled
             updateQuickSearchTrigger()
+            // The keyboard shortcut opens this same window, so it follows the master switch too.
+            updateKeyboardShortcut()
         }
 
         quickSearchTriggerRow = findViewById(R.id.quickSearchTriggerRow)
         quickSearchTriggerTitle = findViewById(R.id.quickSearchTriggerTitle)
         quickSearchTriggerSubtitle = findViewById(R.id.quickSearchTriggerSubtitle)
         quickSearchTriggerRow.setOnClickListener { openAssistantSettings() }
+
+        keyboardShortcutRow = findViewById(R.id.keyboardShortcutRow)
+        keyboardShortcutTitle = findViewById(R.id.keyboardShortcutTitle)
+        keyboardShortcutSubtitle = findViewById(R.id.keyboardShortcutSubtitle)
+        keyboardShortcutSwitch = findViewById(R.id.keyboardShortcutSwitch)
+        keyboardShortcutRow.setOnClickListener {
+            val enabled = !Prefs.keyboardShortcutEnabled(this)
+            Prefs.setKeyboardShortcutEnabled(this, enabled)
+            keyboardShortcutSwitch.isChecked = enabled
+            updateKeyboardShortcut()
+        }
+
+        keyboardShortcutAccessRow = findViewById(R.id.keyboardShortcutAccessRow)
+        keyboardShortcutAccessTitle = findViewById(R.id.keyboardShortcutAccessTitle)
+        keyboardShortcutAccessSubtitle = findViewById(R.id.keyboardShortcutAccessSubtitle)
+        keyboardShortcutAccessRow.setOnClickListener { openAccessibilitySettings() }
 
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()
@@ -218,6 +244,10 @@ class SettingsHubActivity : BaseActivity() {
         searchWebSwitch.isChecked = Prefs.searchWeb(this)
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
+        keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)
+        // Re-read for the same reason the battery row is: the access is granted on a system screen
+        // this one can't get a result from, so coming back is the only moment to notice.
+        updateKeyboardShortcut()
     }
 
     /**
@@ -247,14 +277,49 @@ class SettingsHubActivity : BaseActivity() {
     /** Greys the trigger row out while the overlay is off, and reports whether the role is held. */
     private fun updateQuickSearchTrigger() {
         val enabled = Prefs.quickSearchEnabled(this)
-        quickSearchTriggerRow.isEnabled = enabled
-        quickSearchTriggerTitle.isEnabled = enabled
-        quickSearchTriggerSubtitle.isEnabled = enabled
-        quickSearchTriggerRow.alpha = if (enabled) 1f else DISABLED_ROW_ALPHA
+        setRowEnabled(
+            quickSearchTriggerRow,
+            enabled,
+            quickSearchTriggerTitle,
+            quickSearchTriggerSubtitle
+        )
         quickSearchTriggerSubtitle.setText(
             if (isAssistantRoleHeld()) R.string.quick_search_trigger_granted
             else R.string.quick_search_trigger_missing
         )
+    }
+
+    /**
+     * Greys both keyboard rows out while quick search itself is off, and reports whether the
+     * accessibility access the shortcut needs has been granted.
+     *
+     * The shortcut opens the quick-search window and nothing else, so with the overlay switched
+     * off there is nothing for it to open — the same relationship the trigger row above has.
+     */
+    private fun updateKeyboardShortcut() {
+        val quickSearch = Prefs.quickSearchEnabled(this)
+        setRowEnabled(keyboardShortcutRow, quickSearch, keyboardShortcutTitle, keyboardShortcutSubtitle)
+        keyboardShortcutSwitch.isEnabled = quickSearch
+
+        // The access row is only worth offering once the shortcut is actually switched on.
+        val shortcut = quickSearch && Prefs.keyboardShortcutEnabled(this)
+        setRowEnabled(
+            keyboardShortcutAccessRow,
+            shortcut,
+            keyboardShortcutAccessTitle,
+            keyboardShortcutAccessSubtitle
+        )
+        keyboardShortcutAccessSubtitle.setText(
+            if (KeyboardShortcutService.isGranted(this)) R.string.keyboard_shortcut_access_granted
+            else R.string.keyboard_shortcut_access_missing
+        )
+    }
+
+    /** Both halves of "this row doesn't apply right now": it stops taking taps, and it dims. */
+    private fun setRowEnabled(row: View, enabled: Boolean, vararg labels: TextView) {
+        row.isEnabled = enabled
+        row.alpha = if (enabled) 1f else DISABLED_ROW_ALPHA
+        labels.forEach { it.isEnabled = enabled }
     }
 
     /** "Default (100%)" for 1.0, a bare percentage otherwise — the default is worth naming so it's

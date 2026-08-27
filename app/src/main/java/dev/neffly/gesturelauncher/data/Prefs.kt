@@ -20,6 +20,7 @@ object Prefs {
     private const val KEY_SEARCH_FILES = "search_files"
     private const val KEY_SEARCH_WEB = "search_web"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
+    private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -134,5 +135,18 @@ object Prefs {
 
     fun setQuickSearchEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_QUICK_SEARCH, value).apply()
+    }
+
+    /** Whether Alt+Space on a physical keyboard opens quick search (default OFF).
+     *
+     *  Read by [dev.neffly.gesturelauncher.shortcut.KeyboardShortcutService] on every key event, so
+     *  the accessibility service can stay bound while the feature is off — turning the shortcut off
+     *  should not make the user go back into the accessibility screen, and turning it on again
+     *  should not make them grant access a second time. */
+    fun keyboardShortcutEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_KEYBOARD_SHORTCUT, false)
+
+    fun setKeyboardShortcutEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_KEYBOARD_SHORTCUT, value).apply()
     }
 }

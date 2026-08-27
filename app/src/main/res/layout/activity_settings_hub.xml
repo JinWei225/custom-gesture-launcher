@@ -494,6 +494,81 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/keyboardShortcutRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/keyboardShortcutTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/keyboard_shortcut"
+                        android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                    <TextView
+                        android:id="@+id/keyboardShortcutSubtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/keyboard_shortcut_row_subtitle"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/keyboardShortcutSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    android:focusable="false" />
+
+            </LinearLayout>
+
+            <!-- The accessibility grant the shortcut above needs. Enabled/disabled from onResume
+                 alongside the quick-search trigger row, and for the same reason: neither means
+                 anything while the overlay they open is switched off. -->
+            <LinearLayout
+                android:id="@+id/keyboardShortcutAccessRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:id="@+id/keyboardShortcutAccessTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/keyboard_shortcut_access"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in onResume: whether accessibility access is actually granted. -->
+                <TextView
+                    android:id="@+id/keyboardShortcutAccessSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/defaultLauncherRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

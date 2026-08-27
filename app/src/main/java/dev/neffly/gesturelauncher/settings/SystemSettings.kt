@@ -121,6 +121,23 @@ fun Activity.openAssistantSettings() {
 }
 
 /**
+ * Opens the accessibility screen, where the keyboard-shortcut service is switched on.
+ *
+ * There is no deep link to a single service's page that works across OEM builds, so this lands on
+ * the list and the settings row's subtitle names the entry to look for. Unlike the assistant role
+ * above, this grant genuinely is user-toggleable — it just isn't requestable from an app, by
+ * design: an accessibility service that could turn itself on would defeat the point of the screen.
+ */
+fun Activity.openAccessibilitySettings() {
+    startFirstThatOpens(
+        listOf(
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+            Intent(Settings.ACTION_SETTINGS)
+        )
+    )
+}
+
+/**
  * Opens whichever screen grants this app all-files access, needed for local file search on API 30+.
  * A no-op below that, where the grant is an ordinary runtime permission instead.
  */

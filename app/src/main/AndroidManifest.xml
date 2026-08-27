@@ -160,6 +160,29 @@
             android:exported="false"
             android:theme="@style/Theme.GestureLauncher" />
 
+        <!-- Alt+Space from a physical keyboard opens quick search.
+
+             An accessibility service is the only route an ordinary app has to a key press aimed at
+             someone else's window — see KeyboardShortcutService for why nothing lighter works. It
+             is off until the user enables it in the system's accessibility screen, and the settings
+             hub's toggle governs whether it acts once they have.
+
+             exported + the BIND_ACCESSIBILITY_SERVICE permission are both mandatory for the system
+             to bind it: exported so AccessibilityManagerService can reach it, and the permission so
+             that nothing else can. -->
+        <service
+            android:name=".shortcut.KeyboardShortcutService"
+            android:exported="true"
+            android:label="@string/keyboard_shortcut_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/keyboard_shortcut_service" />
+        </service>
+
         <!-- Live app-list refresh uses LauncherApps.registerCallback (see App.onCreate) — the
              old PACKAGE_* manifest receiver never fired on API 26+. -->
     </application>
