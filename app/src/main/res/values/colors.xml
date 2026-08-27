@@ -103,10 +103,12 @@
 
          The wallpaper_glass_* pair is theme-invariant for the same reason as
          wallpaper_overlay_* above: it styles the home screen's search button, which is drawn
-         straight over the wallpaper.
+         straight over the wallpaper. Note that its fill is *dark* while the glass_* veils below
+         are light — the veils sit on a window the platform can blur, the button doesn't, so the
+         only thing keeping its white glyph legible over a pale wallpaper is the fill itself.
          ============================================================================ -->
-    <color name="wallpaper_glass_fill">#33FFFFFF</color>
-    <color name="wallpaper_glass_stroke">#59FFFFFF</color>
+    <color name="wallpaper_glass_fill">#73000000</color>
+    <color name="wallpaper_glass_stroke">#8CFFFFFF</color>
 
     <color name="glass_veil">#8CFCF8F0</color>
     <color name="glass_veil_flat">#DBFCF8F0</color>

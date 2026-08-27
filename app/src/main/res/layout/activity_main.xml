@@ -28,23 +28,34 @@
                  two lines: these TextViews carry a 10px blur shadow with no offset, the parent
                  clips children to their bounds, and that padding is the only slack keeping the
                  shadow from being cut off at the top of the glyphs. -->
+            <!-- No longer clickable as a whole: the date line and the time open different apps
+                 (calendar and clock), so each is its own target and this is just the column that
+                 stacks them. The negative start margin cancels the horizontal padding both rows
+                 now carry for their touch feedback, so the text still lines up with everything
+                 else in the panel. -->
             <LinearLayout
                 android:id="@+id/clockWidget"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
+                android:layout_marginStart="-8dp"
                 android:orientation="vertical">
 
+                <!-- The whole line, battery included, opens the calendar: it reads as one row, and
+                     carving the battery out of the middle of it would leave a dead patch between
+                     two live ones. -->
                 <LinearLayout
                     android:id="@+id/dateRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:alpha="0.85"
+                    android:background="@drawable/bg_widget_tap"
                     android:baselineAligned="false"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp">
 
                     <TextClock
                         android:id="@+id/clockDate"
@@ -60,13 +71,20 @@
                         android:textSize="15sp" />
 
                     <!-- Level set from ACTION_BATTERY_CHANGED; the percentage beside it carries
-                         the accessibility text, so the icon itself stays decorative. -->
-                    <ImageView
+                         the accessibility text, so the icon itself stays decorative.
+
+                         36dp of box around a 24dp icon: ShadowImageView paints the same 10px halo
+                         the text beside it has, and the 6dp padding is the room that halo needs
+                         before the parent clips it — the same slack the clock's font padding
+                         provides. The start margin is reduced by that padding so the icon still
+                         lands where it did. -->
+                    <dev.neffly.gesturelauncher.ui.ShadowImageView
                         android:id="@+id/batteryIcon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="14dp"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginStart="8dp"
                         android:importantForAccessibility="no"
+                        android:padding="6dp"
                         android:src="@drawable/battery_indicator"
                         app:tint="@color/wallpaper_overlay_text" />
 
@@ -74,7 +92,6 @@
                         android:id="@+id/batteryLevel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="3dp"
                         android:shadowColor="@color/wallpaper_overlay_shadow"
                         android:shadowDx="0"
                         android:shadowDy="0"
@@ -88,7 +105,11 @@
                     android:id="@+id/clockTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_widget_tap"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:fontFamily="sans-serif-black"
+                    android:paddingHorizontal="8dp"
                     android:format12Hour="h:mm"
                     android:format24Hour="HH:mm"
                     android:shadowColor="@color/wallpaper_overlay_shadow"

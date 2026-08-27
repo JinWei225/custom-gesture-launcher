@@ -67,6 +67,9 @@ class MainActivity : BaseActivity() {
 
     private lateinit var canvas: GestureCanvasView
     private lateinit var eventsContainer: LinearLayout
+
+    /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
+    private lateinit var tappableWidgets: List<View>
     private lateinit var emptyHint: TextView
     private lateinit var recognitionHint: TextView
     private lateinit var batteryIcon: ImageView
@@ -140,7 +143,16 @@ class MainActivity : BaseActivity() {
             insets
         }
 
-        findViewById<View>(R.id.clockWidget).setOnClickListener { openClock() }
+        // The two lines of the clock widget go to the two apps they are actually about: the date
+        // (and the events under it) to the calendar, the time to the clock. The column that stacks
+        // them is no longer a single target — see the layout.
+        val dateRow = findViewById<View>(R.id.dateRow)
+        val clockTime = findViewById<View>(R.id.clockTime)
+        // The date opens the calendar outright. The events list below it is the one that asks for
+        // the permission, because the permission is what fills *it* — being made to grant calendar
+        // access just to open the calendar app would be a toll on the wrong gate.
+        dateRow.setOnClickListener { openCalendar() }
+        clockTime.setOnClickListener { openClock() }
         eventsContainer.setOnClickListener {
             if (hasCalendarPermission()) openCalendar()
             else requestCalendar.launch(Manifest.permission.READ_CALENDAR)
@@ -160,6 +172,30 @@ class MainActivity : BaseActivity() {
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             openDrawer()
             true
+        }
+
+        tappableWidgets = listOf(dateRow, clockTime, eventsContainer, searchButton)
+    }
+
+    /**
+     * Drops any touch feedback that the tap which left this screen froze part-way.
+     *
+     * A ripple's exit is a RenderThread animation. When the tap starts another activity, this
+     * window is hidden before that animation can finish, and coming back through recents shows the
+     * drawable still parked in its pressed state — which is why a tap on the clock left a disc
+     * sitting over the widget until something else was tapped to clear it. Clearing the pressed
+     * flag and jumping the drawables to their current state is exactly what that extra tap did.
+     *
+     * Run on resume and again when the window takes focus, rather than on pause: those are the two
+     * moments before the frame the artifact would otherwise be visible in, and they are not the
+     * same moment. onResume can land while the window is still focusless — coming back from the
+     * quick-search overlay is the case that showed it — and feedback that settles in that gap
+     * outlives the clear there. Doing both is idempotent and costs a walk of four views.
+     */
+    private fun clearFrozenTapFeedback() {
+        for (view in tappableWidgets) {
+            view.isPressed = false
+            view.jumpDrawablesToCurrentState()
         }
     }
 
@@ -197,8 +233,14 @@ class MainActivity : BaseActivity() {
         runCatching { unregisterReceiver(batteryReceiver) }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) clearFrozenTapFeedback()
+    }
+
     override fun onResume() {
         super.onResume()
+        clearFrozenTapFeedback()
         rebuildTemplates()
         refreshEvents()
         // Start (or restart) the "healthy" heartbeat.

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Touch feedback for the home screen's clock and date.
+
+     Bounded and rounded, rather than the ?attr/selectableItemBackgroundBorderless these used to
+     share. Borderless sizes its ripple from the view's farthest corner, which on a wrap_content
+     widget over a wallpaper meant a disc far larger than the thing being tapped — and when that
+     ripple was left frozen by the tap that launched another app, what came back was a dark circle
+     most of the widget panel wide. A rounded rect that hugs the text says the same thing without
+     ever drawing outside what was touched.
+
+     Mask-only on purpose: the item marked @android:id/mask clips the ripple but is never painted
+     itself, so there is no resting-state background over the wallpaper. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <solid android:color="@color/white" />
+        </shape>
+    </item>
+</ripple>

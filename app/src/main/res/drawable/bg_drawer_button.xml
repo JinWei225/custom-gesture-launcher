@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Frosted disc behind the home screen's search glyph. Sits over the wallpaper, so like the
-     wallpaper_overlay_* colours it is theme-invariant: a translucent white fill plus a brighter
-     rim, which is what reads as "glass" against both a dark and a light wallpaper. -->
+<!-- Disc behind the home screen's search glyph. Sits over the wallpaper, so like the
+     wallpaper_overlay_* colours it is theme-invariant.
+
+     Deliberately a *dark* glass rather than the light one this used to be. A translucent white
+     fill reads as glass only while something darker is behind it; over a pale wallpaper it left a
+     white glyph on a white disc, effectively invisible. Tinting the fill dark instead is the one
+     treatment that holds against any wallpaper, and it is the same bet the clock makes with its
+     drop shadow — white ink, dark backing, no dependence on what the user picked. The bright rim
+     keeps the disc's edge legible against a dark wallpaper, where the fill alone would vanish. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <solid android:color="@color/wallpaper_glass_fill" />
