@@ -32,6 +32,15 @@ object SearchEngine {
         return if (SETTINGS_KEYWORDS.contains(q)) SearchResult.Settings else null
     }
 
+    /**
+     * The calculator row, when the query is arithmetic. No settings toggle behind it, unlike files
+     * and the web: it costs no permission, reaches nothing outside the process, and [Calculator]
+     * only answers for a query that is unambiguously a sum — so there is nothing for a switch to
+     * protect the user from.
+     */
+    fun calculation(query: String): SearchResult.Calculation? =
+        Calculator.evaluate(query)?.let { SearchResult.Calculation(query.trim(), it) }
+
     private const val MIN_SETTINGS_QUERY = 3
     private const val SETTINGS_KEYWORDS = "launcher settings"
 

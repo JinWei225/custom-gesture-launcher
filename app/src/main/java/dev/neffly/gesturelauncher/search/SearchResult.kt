@@ -14,6 +14,13 @@ sealed class SearchResult {
     object Settings : SearchResult()
 
     /**
+     * A sum the query turned out to be — see [Calculator]. [result] is already formatted for
+     * display and is what gets copied; [expression] is the query it came from, kept so the row can
+     * show its working.
+     */
+    data class Calculation(val expression: String, val result: String) : SearchResult()
+
+    /**
      * The web row. [url] is non-null when the query itself parsed as an address, in which case the
      * row offers to open it directly instead of running a Google search for it.
      */

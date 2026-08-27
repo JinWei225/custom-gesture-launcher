@@ -1,0 +1,17 @@
+<resources>
+
+    <!-- How much of the display width the floating search card takes.
+
+         100% means "leave the layout alone" — the card is match_parent inside its margins, which
+         is the right shape on a phone, where the screen is barely wider than the card needs to be.
+
+         A tablet in landscape is the case this exists for: the same card stretched across ~1160dp
+         is a search field with most of a metre of empty space in it, and result rows whose icon
+         and label sit alone at the far left. Three fifths, centred, keeps the card at roughly the
+         proportions it has on a phone. Portrait on a tablet is left at full width — the screen is
+         only as wide as a large phone's there, so the card is already in proportion.
+
+         Read by QuickSearchActivity.positionCard. -->
+    <fraction name="quick_search_card_width">100%</fraction>
+
+</resources>

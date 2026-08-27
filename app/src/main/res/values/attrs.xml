@@ -1,0 +1,24 @@
+<resources>
+
+    <!-- Metrics of one search result row, supplied by the theme rather than fixed in the layout.
+
+         item_app.xml and item_search_entry.xml are shared by the app drawer, the floating
+         quick-search window and the gesture training picker, and the floating window wants a
+         tighter row than a full screen does: it is a small panel with a hard ceiling on its
+         height, so every dp of row is a result the user can't see. Reading the numbers from the
+         theme keeps one copy of each layout — the alternative, a parallel set of "compact"
+         layouts, is two files to keep in step for the sake of two dimensions.
+
+         Defaults live on Theme.GestureLauncher; Theme.GestureLauncher.QuickSearch overrides them.
+         The compact value stays at 48dp because that is the minimum comfortable touch target,
+         which is the floor a list of tappable rows should not go under. -->
+    <attr name="searchRowMinHeight" format="dimension" />
+    <attr name="searchRowIconSize" format="dimension" />
+
+    <!-- Inset of the glyph inside that icon box, on the rows that draw a vector rather than an
+         app's artwork. It shrinks with the box: 8dp inside 40dp leaves the 24dp glyph at its
+         natural size, and the same 8dp inside a 32dp box would squeeze it to 16dp — visibly
+         smaller than the app icons sitting in the same list. -->
+    <attr name="searchRowGlyphInset" format="dimension" />
+
+</resources>

@@ -40,15 +40,17 @@
         app:strokeColor="@color/glass_stroke"
         app:strokeWidth="1dp">
 
-        <!-- Symmetric now that the field is borderless: with the floating label off,
-             TextInputLayout no longer reserves the band above its box that the old asymmetric
-             pair was compensating for. -->
+        <!-- Genuinely symmetric now that the field is borderless: with the floating label off,
+             TextInputLayout no longer reserves the band above its box that the old asymmetric pair
+             was compensating for. The 4dp that was left over went entirely to the bottom, which is
+             invisible once results are showing underneath but tipped the bare search bar — the
+             state it is in every time it opens — noticeably high in its own card. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="8dp"
-            android:paddingBottom="12dp">
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/searchLayout"
@@ -57,13 +59,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="10dp"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/ic_search">
+                app:startIconDrawable="@drawable/ic_search_field">
 
+                <!-- No textSize here on purpose: QuickSearchActivity sets it in density-independent
+                     pixels so the field ignores the font-size multiplier BaseActivity applies to
+                     every `sp` dimension. This is a fixed-height bar over someone else's app, not a
+                     page of the launcher's own text — it has to stay the same shape whatever the
+                     user's text size is, while the results below it still follow it. -->
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/searchInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:imeOptions="actionSearch"
                     android:inputType="text"
                     android:maxLines="1" />

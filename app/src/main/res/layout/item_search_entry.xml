@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shared row for file and web results. Deliberately the same minHeight, 40dp icon box and 20dp
-     insets as item_app.xml, so a mixed result list has one consistent row rhythm. -->
+<!-- Shared row for file, web, settings and calculator results. Deliberately reads the same
+     minHeight, icon box and 20dp insets as item_app.xml, so a mixed result list has one row rhythm
+     whichever theme supplies the numbers — see values/attrs.xml. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -8,18 +9,19 @@
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
-    android:minHeight="60dp"
+    android:minHeight="?attr/searchRowMinHeight"
     android:orientation="horizontal"
     android:paddingHorizontal="20dp"
     android:paddingVertical="8dp">
 
-    <!-- 40dp box with padding so the 24dp glyph centres where an app icon's artwork sits. -->
+    <!-- The glyph is inset so it centres where an app icon's artwork sits, rather than filling
+         the box edge to edge the way artwork does. -->
     <ImageView
         android:id="@+id/entryIcon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="?attr/searchRowIconSize"
+        android:layout_height="?attr/searchRowIconSize"
         android:contentDescription="@null"
-        android:padding="8dp" />
+        android:padding="?attr/searchRowGlyphInset" />
 
     <LinearLayout
         android:layout_width="0dp"

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -71,8 +72,27 @@ class QuickSearchActivity : BaseActivity() {
     /** Whether the user has dragged the list since the query last changed — see [renderResults]. */
     private var userScrolled = false
 
-    /** Vertical space between the card's field and the keyboard, from the last insets pass. */
-    private var availableListPx = 0
+    /** Top of whatever currently obstructs the bottom of the screen — the keyboard when one is
+     *  up, the navigation bar otherwise. Zero until the first insets pass. */
+    private var obstructionTopPx = 0
+
+    /** Highest the card may be placed: clear of the status bar, from the same insets pass. */
+    private var minCardTopPx = 0
+
+    /**
+     * This window alone ignores the launcher's font-size multiplier.
+     *
+     * Everywhere else that setting is doing what it was asked to: making the launcher's own pages
+     * easier to read. Here it works against the design. The card is a small panel floating over
+     * someone else's app with a hard ceiling on its height, so the multiplier doesn't make it
+     * bigger, it makes it hold fewer results — at 1.25 a list that showed five apps shows three,
+     * and the whole point of the window is choosing from what it offers.
+     *
+     * The device's own text-size setting still applies. Opting out here means skipping our
+     * multiplier, not overriding the accessibility preference underneath it: someone who has made
+     * all text larger system-wide meant it, and this window is not the place to argue.
+     */
+    override val appliesFontScale: Boolean get() = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +122,11 @@ class QuickSearchActivity : BaseActivity() {
         findViewById<View>(R.id.quickSearchScrim).setOnClickListener { finish() }
         // On the EditText, not the layout — the borderless field style has no floating label.
         searchInput.hint = getString(SearchEngine.hint(this))
+        // DIP, not SP: the field is fixed outright, where the rows below merely opt out of the
+        // launcher's multiplier (see appliesFontScale). The bar is chrome with a height the card's
+        // whole layout is measured against, so it holds still even for the device's own text-size
+        // setting; the results are content, and content follows that setting.
+        searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, FIELD_TEXT_SIZE_DP)
 
         resultList.layoutManager = LinearLayoutManager(this)
         resultList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -114,7 +139,8 @@ class QuickSearchActivity : BaseActivity() {
             onClick = { app -> AppRepository.launch(this, app); finish() },
             onFileClick = { hit -> FileSearcher.open(this, hit); finish() },
             onWebClick = { web -> WebSearch.open(this, web.query, web.url); finish() },
-            onSettingsClick = { openSettings() }
+            onSettingsClick = { openSettings() },
+            onCalculationClick = { calculation -> open(calculation) }
         )
         resultList.adapter = adapter
         // Same gesture as the drawer's list: swipe a result right to open it floating. This window
@@ -154,56 +180,132 @@ class QuickSearchActivity : BaseActivity() {
         if (savedInstanceState == null) animateIn()
     }
 
-    /** Sits the card in the upper third, above where the keyboard will come up. */
+    /** Sits the card in the upper third, above where the keyboard will come up, and narrows it on
+     *  a display too wide for a full-bleed search bar to be a sensible shape. */
     private fun positionCard() {
-        val top = (resources.displayMetrics.heightPixels * CARD_TOP_FRACTION).toInt()
         // The glow wrapper is what is positioned and animated: the card rides inside it, so its
-        // shadow can never drift out of step with it.
-        cardGlow.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = top }
+        // shadow can never drift out of step with it. The resting top margin is the starting
+        // point only — [layoutCard] moves it up once the insets say what is in the way.
+        cardGlow.updateLayoutParams<FrameLayout.LayoutParams> {
+            topMargin = (resources.displayMetrics.heightPixels * CARD_TOP_FRACTION).toInt()
+            // A full-width fraction is left as the layout's match_parent rather than converted to
+            // a pixel width, so the wrapper's horizontal margins still apply — pinning it to the
+            // display width instead would push its glow off both edges. See values/fractions.xml.
+            val fraction = resources.getFraction(R.fraction.quick_search_card_width, 1, 1)
+            if (fraction < 1f) width = (resources.displayMetrics.widthPixels * fraction).toInt()
+        }
     }
 
     /**
-     * Keeps the expanded card clear of both the system bars and the keyboard.
+     * Records what is obstructing the screen, then re-places the card for it.
      *
-     * The window doesn't resize for the IME, so the result list's own ceiling is what stops it
-     * growing underneath the keyboard: whatever vertical space is left between the card's top edge
-     * and the top of the IME, capped at a fraction of the screen so it never dominates the app
-     * behind it either. The space is remembered rather than applied here, because the floor the
-     * ceiling is raised to depends on what is currently in the list — see [applyListCeiling].
+     * The window doesn't resize for the IME, so nothing moves on its own: the keyboard simply
+     * appears over the bottom of the screen and it is up to [layoutCard] to work around it.
      */
     private fun applyInsets() {
         val scrim = findViewById<View>(R.id.quickSearchScrim)
-        val screenHeight = resources.displayMetrics.heightPixels
-        val cardTop = (screenHeight * CARD_TOP_FRACTION).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(scrim) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            val navBar = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
-            val obstructionTop = screenHeight - maxOf(ime, navBar)
-            // The field may not have been measured yet the first time insets land; a dp estimate
-            // is close enough for one frame, and the next pass corrects it.
-            val fieldHeight = searchLayout.height.takeIf { it > 0 } ?: dp(this, 64)
-            availableListPx = obstructionTop - cardTop - fieldHeight - cardChromePx(this)
-            applyListCeiling()
+            obstructionTopPx = resources.displayMetrics.heightPixels - maxOf(ime, bars.bottom)
+            minCardTopPx = bars.top + dp(this, MIN_CARD_TOP_MARGIN_DP)
+            layoutCard()
             insets
         }
     }
 
-    /** Fits the list into whatever the keyboard leaves, but never below [minListPx]. */
-    private fun applyListCeiling() {
-        val ceiling = minOf(
-            (resources.displayMetrics.heightPixels * MAX_CARD_FRACTION).toInt(),
-            availableListPx
-        )
-        resultList.maxHeightPx = ceiling.coerceAtLeast(minListPx())
+    /**
+     * Places the card, and sizes its list for the room that leaves.
+     *
+     * The card sits at [CARD_TOP_FRACTION] when it can, which is the position the design wants: far
+     * enough down that the app behind stays recognisable above it. When the space between there and
+     * the keyboard won't hold [MIN_RESULTS], the card slides up the screen instead of the list
+     * shrinking — up to [minCardTopPx], just under the status bar.
+     *
+     * That is the difference between a soft keyboard and a hardware one, without either being
+     * named: with a physical keyboard there is no IME inset, the obstruction is only the navigation
+     * bar, the space is ample and the card never leaves its resting place. A tablet in landscape is
+     * the opposite extreme — a short screen under a tall keyboard — and there the card rides near
+     * the top so the results still fit. Both fall out of the same arithmetic.
+     */
+    private fun layoutCard() {
+        // Nothing sensible to compute until the first insets pass has said what is in the way.
+        if (obstructionTopPx <= 0) return
+        val screenHeight = resources.displayMetrics.heightPixels
+        // The field may not have been measured yet the first time insets land; a dp estimate is
+        // close enough for one frame, and the next pass corrects it.
+        val fieldHeight = searchLayout.height.takeIf { it > 0 } ?: dp(this, 64)
+        val chrome = cardChromePx(this)
+
+        val top = (screenHeight * CARD_TOP_FRACTION).toInt()
+            .coerceAtMost(obstructionTopPx - fieldHeight - chrome - wantedListPx())
+            .coerceAtLeast(minCardTopPx)
+        // Assigned only on a real change: this runs from an insets listener, and re-requesting
+        // layout every pass with the value it already had is how that becomes a loop.
+        val params = cardGlow.layoutParams as FrameLayout.LayoutParams
+        if (params.topMargin != top) {
+            params.topMargin = top
+            cardGlow.layoutParams = params
+        }
+
+        val available = (obstructionTopPx - top - fieldHeight - chrome).coerceAtLeast(0)
+        // MAX_CARD_FRACTION keeps a long list from dominating the app behind the card; the floor
+        // stops that cap cutting below the results the card promises. Both are clamped to the space
+        // actually available, so the card can never grow back under the keyboard it just moved to
+        // avoid — a result behind the IME can be neither read nor tapped, so it is not worth having.
+        val ceiling = minOf((screenHeight * MAX_CARD_FRACTION).toInt(), available)
+        resultList.maxHeightPx = snapToWholeRows(ceiling.coerceAtLeast(minListPx().coerceAtMost(available)))
+    }
+
+    /**
+     * Trims [ceiling] to the tallest run of rows that fits inside it whole.
+     *
+     * Without this the list stops mid-row: the card's bottom edge slices a result in half, which
+     * reads as a rendering fault rather than as "there is more below". Rows are measured rather
+     * than assumed because they aren't uniform — a file or web row carrying a subtitle stands
+     * taller than the minimum an app row sits at.
+     *
+     * Stable across passes rather than oscillating: once the list is exactly as tall as the rows
+     * that fit, the same rows still fit, so the next measure returns the same number. Before
+     * anything is laid out there is nothing to walk and [ceiling] passes through unchanged, which
+     * [renderResults] corrects on the pass after the rows land.
+     */
+    private fun snapToWholeRows(ceiling: Int): Int {
+        var used = 0
+        for (i in 0 until resultList.childCount) {
+            val height = resultList.getChildAt(i)?.height ?: continue
+            if (height <= 0) continue
+            if (used + height > ceiling) break
+            used += height
+        }
+        return if (used > 0) used else ceiling
+    }
+
+    /**
+     * Height [MIN_RESULTS] rows and a section label want, for positioning purposes.
+     *
+     * An estimate from the theme rather than the measured [minListPx], and deliberately so: the
+     * card is positioned when the keyboard appears, which is before a single result has been laid
+     * out. Measuring would place the card for an empty list and then move it the moment rows
+     * arrived, which is the card jumping under the reader's hands as they type. The row height
+     * comes from the same theme attribute that sizes the rows, so the two cannot drift.
+     */
+    private fun wantedListPx(): Int {
+        val rowHeight = TypedValue().let { out ->
+            theme.resolveAttribute(R.attr.searchRowMinHeight, out, true)
+            TypedValue.complexToDimensionPixelSize(out.data, resources.displayMetrics)
+        }
+        return MIN_RESULTS * rowHeight + dp(this, SECTION_LABEL_DP)
     }
 
     /**
      * Height the first [MIN_RESULTS] results need, section labels above them included.
      *
-     * Measured from the rows on screen rather than assumed from the layouts' dp, because
-     * BaseActivity applies the user's font-size multiplier: a row declared at 60dp comes out
-     * noticeably taller once that is turned up, and a floor computed from the declared value
-     * clips the last row it was supposed to guarantee.
+     * Measured from the rows on screen rather than assumed from the layouts' dp. A row's real
+     * height still moves under this window even though it opts out of the launcher's font-size
+     * multiplier: the device's own text-size setting scales it, and so does an imported typeface
+     * whose metrics differ from the system font's. A floor computed from the declared 60dp would
+     * clip the last row it exists to guarantee.
      *
      * Before anything is laid out there is nothing to measure and this is zero, which is correct
      * rather than merely safe: with no rows on screen the ceiling is whatever the keyboard leaves,
@@ -270,7 +372,7 @@ class QuickSearchActivity : BaseActivity() {
             if (!userScrolled) resultList.scrollToPosition(0)
             // The floor is measured off the rows themselves, so it can only be recomputed once
             // this batch has been laid out.
-            resultList.post { applyListCeiling() }
+            resultList.post { layoutCard() }
         }
         resultList.visibility = if (results.isEmpty()) View.GONE else View.VISIBLE
         // "No results" only once something has been typed — an untouched box is a bare search bar,
@@ -288,6 +390,10 @@ class QuickSearchActivity : BaseActivity() {
             is SearchResult.File -> FileSearcher.open(this, result.hit)
             is SearchResult.Web -> WebSearch.open(this, result.query, result.url)
             is SearchResult.Settings -> { openSettings(); return }
+            // Copies and closes, unlike the drawer, which stays open. This window is a panel over
+            // whatever app the number is wanted in, so tapping the row means "give me that and get
+            // out of the way"; someone who only wanted to read the answer never taps it at all.
+            is SearchResult.Calculation -> Calculator.copy(this, result)
         }
         finish()
     }
@@ -323,18 +429,46 @@ class QuickSearchActivity : BaseActivity() {
 
         private const val ENTRY_DURATION_MS = 180L
 
+        /** Gap between the status bar and the card, once the card has been pushed as high as it
+         *  goes. Enough that it reads as floating rather than docked to the top edge, and no more:
+         *  every dp here is taken from the results on a screen tight enough to need it. */
+        private const val MIN_CARD_TOP_MARGIN_DP = 6
+
+        /** Rough height of one section label, for [wantedListPx]. A result list always carries at
+         *  least one, and being a little generous only makes the card sit slightly higher. */
+        private const val SECTION_LABEL_DP = 44
+
+        /** Size of the field's text, in dp — see the note where it is applied. Smaller than the
+         *  body-large default the field used to inherit: at that size the bar read as a page
+         *  heading rather than as the compact overlay it is. */
+        private const val FIELD_TEXT_SIZE_DP = 15f
+
         /** Black shadow instead of the platform's grey, for a deeper edge against app content. */
         private fun dp(context: Context, value: Int): Int =
             (value * context.resources.displayMetrics.density).toInt()
 
-        /** The card's own vertical padding plus a breathing gap above the keyboard. */
-        private fun cardChromePx(context: Context) = dp(context, 64)
+        /**
+         * Space below the result list that the card still needs: 22dp of real structure — the
+         * card's 10dp bottom padding and the glow wrapper's 12dp — plus a 16dp gap so the card
+         * doesn't sit flush against the keyboard.
+         *
+         * This was 64dp, which was guesswork: measured on device only 22dp of it was ever the
+         * card, leaving 42dp of dead air under the list. On a tall screen that went unnoticed, but
+         * on a tablet in landscape — where the whole budget between the status bar and the keyboard
+         * is about six rows' worth — it was the difference between three results and four.
+         */
+        private fun cardChromePx(context: Context) = dp(context, 38)
 
-        /** Results the card is guaranteed to show, however little room the keyboard leaves. The
-         *  space above the IME on a tall phone works out at barely two rows, and two is not enough
-         *  to choose from — the third is usually where the file or web hit lands. Below this floor
-         *  the list scrolls inside the card rather than shrinking further. */
-        private const val MIN_RESULTS = 3
+        /** Results the card is guaranteed to show, however little room the keyboard leaves. Below
+         *  this floor the list scrolls inside the card rather than shrinking further.
+         *
+         *  Four rather than three because this window's rows are compact (48dp — see
+         *  searchRowMinHeight in themes.xml): measured on device, four of them occupy 624px where
+         *  three of the old 60dp rows took 585px, so the fourth result costs about 6% of the card's
+         *  height rather than a third of it. Three was the floor while rows were roomy, on the
+         *  reasoning that two is not enough to choose from; the same reasoning buys one more now
+         *  that a row is cheaper. */
+        private const val MIN_RESULTS = 4
 
         private fun entryOffsetPx(context: Context) = dp(context, 12)
 

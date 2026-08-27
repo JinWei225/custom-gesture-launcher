@@ -1,0 +1,7 @@
+<resources>
+
+    <!-- Tablet, landscape. See the note in values/fractions.xml for why this is the only
+         configuration that narrows the card. -->
+    <fraction name="quick_search_card_width">60%</fraction>
+
+</resources>

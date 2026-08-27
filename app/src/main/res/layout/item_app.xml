@@ -6,15 +6,15 @@
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
-    android:minHeight="60dp"
+    android:minHeight="?attr/searchRowMinHeight"
     android:orientation="horizontal"
     android:paddingHorizontal="20dp"
     android:paddingVertical="8dp">
 
     <ImageView
         android:id="@+id/appIcon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="?attr/searchRowIconSize"
+        android:layout_height="?attr/searchRowIconSize"
         android:contentDescription="@null" />
 
     <TextView

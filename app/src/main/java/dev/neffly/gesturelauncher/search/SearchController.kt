@@ -70,6 +70,9 @@ class SearchController(
             return
         }
         val results = ArrayList<SearchResult>()
+        // Pinned above everything: when the query is a sum, the answer is the whole reason it was
+        // typed, and it must not move as the file section lands underneath it a beat later.
+        SearchEngine.calculation(query)?.let { results += it }
         results += SearchEngine.apps(apps, query)
         // Above files and the web: someone typing "settings" wants this, not a file named after it.
         SearchEngine.settings(query)?.let { results += it }

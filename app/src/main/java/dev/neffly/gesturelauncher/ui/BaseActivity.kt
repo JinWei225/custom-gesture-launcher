@@ -22,13 +22,29 @@ abstract class BaseActivity : AppCompatActivity() {
     private var fontVersion = FontEngine.version
 
     /**
+     * Whether this screen follows the user's font-size multiplier.
+     *
+     * True everywhere except the floating quick-search window, which is a fixed panel over someone
+     * else's app rather than a page of ours — see the note on its override.
+     *
+     * A getter rather than a stored property on purpose: [attachBaseContext] runs during the
+     * framework's `Activity.attach`, and a getter cannot be caught out by initialisation order the
+     * way a backing field could.
+     */
+    protected open val appliesFontScale: Boolean get() = true
+
+    /**
      * Applies the user's font-size multiplier by overriding this activity's Configuration, which
      * makes every `sp` dimension in the app scale at once — layouts, dialogs, menus, the clock.
      * Doing it here rather than by walking views and multiplying textSize means nothing can be
      * missed, and `dp` sizes (icons, paddings, the drawer button) correctly stay put.
+     *
+     * It is also the only place a screen can opt out of the multiplier wholesale, which is why
+     * [appliesFontScale] lives here: skipping the override leaves the device's own configuration
+     * untouched, so such a screen still honours the system text size while ignoring ours.
      */
     override fun attachBaseContext(newBase: Context) {
-        val scale = Prefs.fontScale(newBase)
+        val scale = if (appliesFontScale) Prefs.fontScale(newBase) else 1f
         if (scale == 1f) {
             super.attachBaseContext(newBase)
             return

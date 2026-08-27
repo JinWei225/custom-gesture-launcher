@@ -66,6 +66,11 @@
              with it — the same trap the night-mode note above describes. -->
         <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/light_system_bars</item>
+
+        <!-- Roomy rows, for the screens that have room. See values/attrs.xml. -->
+        <item name="searchRowMinHeight">60dp</item>
+        <item name="searchRowIconSize">40dp</item>
+        <item name="searchRowGlyphInset">8dp</item>
     </style>
 
     <!-- App drawer: the activity transition itself is suppressed (see AppDrawerActivity); the
@@ -154,6 +159,15 @@
              so light icons are correct either way. Same bet Theme.GestureLauncher.Home makes. -->
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <!-- Compact rows, the counterpart to this window opting out of the font-size multiplier
+             (see QuickSearchActivity.appliesFontScale). Shrinking the text alone changed nothing
+             about how much fits: measured on device, a row stayed exactly 60dp either way, because
+             the 40dp icon and the minHeight floor decide that height and not the label. These two
+             are what actually buy the extra results. -->
+        <item name="searchRowMinHeight">48dp</item>
+        <item name="searchRowIconSize">32dp</item>
+        <item name="searchRowGlyphInset">4dp</item>
     </style>
 
     <!-- Home screen: draw behind system bars and show the wallpaper.

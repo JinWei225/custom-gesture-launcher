@@ -38,7 +38,8 @@ class AppListAdapter(
     private val onLongClick: ((AppInfo, View) -> Unit)? = null,
     private val onFileClick: ((FileHit) -> Unit)? = null,
     private val onWebClick: ((SearchResult.Web) -> Unit)? = null,
-    private val onSettingsClick: (() -> Unit)? = null
+    private val onSettingsClick: (() -> Unit)? = null,
+    private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null
 ) : ListAdapter<AppListAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
@@ -50,6 +51,7 @@ class AppListAdapter(
         data class FileRow(val hit: FileHit) : Row()
         data class WebRow(val web: SearchResult.Web) : Row()
         object SettingsRow : Row()
+        data class CalculationRow(val calculation: SearchResult.Calculation) : Row()
     }
 
     private var headersShown = false
@@ -111,6 +113,7 @@ class AppListAdapter(
                     is SearchResult.File -> Row.FileRow(result.hit)
                     is SearchResult.Web -> Row.WebRow(result)
                     is SearchResult.Settings -> Row.SettingsRow
+                    is SearchResult.Calculation -> Row.CalculationRow(result)
                 }
             )
         }
@@ -123,6 +126,7 @@ class AppListAdapter(
         is SearchResult.File -> R.string.search_section_files
         is SearchResult.Web -> R.string.search_section_web
         is SearchResult.Settings -> R.string.search_section_launcher
+        is SearchResult.Calculation -> R.string.search_section_calculator
     }
 
     /** The topmost app row currently shown, i.e. what Enter in the search bar should launch. */
@@ -162,6 +166,7 @@ class AppListAdapter(
             is Row.FileRow -> SearchResult.File(row.hit)
             is Row.WebRow -> row.web
             is Row.SettingsRow -> SearchResult.Settings
+            is Row.CalculationRow -> row.calculation
             is Row.Header, is Row.Section -> null
         }
 
@@ -192,7 +197,7 @@ class AppListAdapter(
         is Row.Section -> VIEW_TYPE_SECTION
         is Row.Item -> VIEW_TYPE_APP
         // File, web and settings rows share one layout and holder; only the bind step differs.
-        is Row.FileRow, is Row.WebRow, is Row.SettingsRow -> VIEW_TYPE_ENTRY
+        is Row.FileRow, is Row.WebRow, is Row.SettingsRow, is Row.CalculationRow -> VIEW_TYPE_ENTRY
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -261,6 +266,19 @@ class AppListAdapter(
                 )
                 holder.subtitle.visibility = View.VISIBLE
                 holder.itemView.setOnClickListener { onWebClick?.invoke(web) }
+                holder.itemView.setOnLongClickListener(null)
+            }
+            is Row.CalculationRow -> {
+                val calculation = row.calculation
+                holder as EntryVH
+                holder.icon.setImageResource(R.drawable.ic_calculate)
+                // The answer is the title because it is the thing being looked for; the expression
+                // it came from stays visible in the search box directly above the row.
+                holder.title.text = calculation.result
+                holder.subtitle.ellipsize = TextUtils.TruncateAt.END
+                holder.subtitle.setText(R.string.search_calculation_subtitle)
+                holder.subtitle.visibility = View.VISIBLE
+                holder.itemView.setOnClickListener { onCalculationClick?.invoke(calculation) }
                 holder.itemView.setOnLongClickListener(null)
             }
             is Row.SettingsRow -> {
