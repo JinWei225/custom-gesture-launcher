@@ -39,7 +39,7 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.launch.FloatingWindow
-import dev.neffly.gesturelauncher.search.Calculator
+import dev.neffly.gesturelauncher.search.Clipboard
 import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchController
 import dev.neffly.gesturelauncher.search.SearchEngine
@@ -147,7 +147,8 @@ class AppDrawerActivity : BaseActivity() {
             onFileClick = { hit -> FileSearcher.open(this, hit); clearSearch() },
             onWebClick = { web -> WebSearch.open(this, web.query, web.url); clearSearch() },
             onSettingsClick = { openSettings(); clearSearch() },
-            onCalculationClick = { calculation -> open(calculation) }
+            onCalculationClick = { calculation -> open(calculation) },
+            onTimeClick = { time -> open(time) }
         )
         appList.adapter = adapter
         // Swipe a row right to open it floating instead of full screen. Closing the drawer after
@@ -231,9 +232,10 @@ class AppDrawerActivity : BaseActivity() {
             is SearchResult.File -> { FileSearcher.open(this, result.hit); clearSearch() }
             is SearchResult.Web -> { WebSearch.open(this, result.query, result.url); clearSearch() }
             is SearchResult.Settings -> { openSettings(); clearSearch() }
-            // The only row that leaves the drawer open: the query stays in the box so a second
+            // The only rows that leave the drawer open: the query stays in the box so a second
             // sum can be typed over it, which is the whole point of a calculator in a search bar.
-            is SearchResult.Calculation -> Calculator.copy(this, result)
+            is SearchResult.Calculation -> Clipboard.copy(this, result.expression, result.result)
+            is SearchResult.Time -> Clipboard.copy(this, result.detail, result.time)
         }
     }
 

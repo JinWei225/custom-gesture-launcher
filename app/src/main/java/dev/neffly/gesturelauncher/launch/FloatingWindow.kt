@@ -72,10 +72,10 @@ object FloatingWindow {
      * apologises.
      */
     fun canFloat(context: Context, result: SearchResult): Boolean = when (result) {
-        // Neither has a window of its own: the settings hub is a screen of this very app, and a
-        // calculation is a number to copy. Exhaustive rather than a negated list, so a new kind of
+        // None has a window of its own: the settings hub is a screen of this very app, and the
+        // answer rows are text to copy. Exhaustive rather than a negated list, so a new kind of
         // result has to say which side it falls on.
-        is SearchResult.Settings, is SearchResult.Calculation -> false
+        is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
         is SearchResult.App, is SearchResult.File, is SearchResult.Web ->
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
     }
@@ -88,8 +88,8 @@ object FloatingWindow {
                 start(activity, FileSearcher.intentFor(result.hit), R.string.file_open_failed)
             is SearchResult.Web ->
                 start(activity, WebSearch.intentFor(result.query, result.url), R.string.web_search_failed)
-            // Neither opens a window, so there is nothing for the system to react to.
-            is SearchResult.Settings, is SearchResult.Calculation -> false
+            // None opens a window, so there is nothing for the system to react to.
+            is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
         }
         // Gated on a window having actually appeared, because that is what provokes the system's
         // home launch. Arming after a start that failed — an app that has gone, a file no viewer

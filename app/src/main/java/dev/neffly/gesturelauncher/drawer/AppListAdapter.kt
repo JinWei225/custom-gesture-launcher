@@ -39,7 +39,8 @@ class AppListAdapter(
     private val onFileClick: ((FileHit) -> Unit)? = null,
     private val onWebClick: ((SearchResult.Web) -> Unit)? = null,
     private val onSettingsClick: (() -> Unit)? = null,
-    private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null
+    private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null,
+    private val onTimeClick: ((SearchResult.Time) -> Unit)? = null
 ) : ListAdapter<AppListAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
@@ -54,6 +55,7 @@ class AppListAdapter(
         data class WebRow(val web: SearchResult.Web) : Row()
         object SettingsRow : Row()
         data class CalculationRow(val calculation: SearchResult.Calculation) : Row()
+        data class TimeRow(val time: SearchResult.Time) : Row()
     }
 
     private var headersShown = false
@@ -116,6 +118,7 @@ class AppListAdapter(
                     is SearchResult.Web -> Row.WebRow(result)
                     is SearchResult.Settings -> Row.SettingsRow
                     is SearchResult.Calculation -> Row.CalculationRow(result)
+                    is SearchResult.Time -> Row.TimeRow(result)
                 }
             )
         }
@@ -129,6 +132,7 @@ class AppListAdapter(
         is SearchResult.Web -> R.string.search_section_web
         is SearchResult.Settings -> R.string.search_section_launcher
         is SearchResult.Calculation -> R.string.search_section_calculator
+        is SearchResult.Time -> R.string.search_section_time
     }
 
     /** The openable thing at [position], or null when that row is a header, a section label, or
@@ -156,16 +160,17 @@ class AppListAdapter(
         return results to chrome
     }
 
+    /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
     fun firstResult(): SearchResult? = currentList.firstNotNullOfOrNull { row -> asResult(row) }
 
     private fun asResult(row: Row): SearchResult? =
         when (row) {
-    /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
             is Row.Item -> SearchResult.App(row.app)
             is Row.FileRow -> SearchResult.File(row.hit)
             is Row.WebRow -> row.web
             is Row.SettingsRow -> SearchResult.Settings
             is Row.CalculationRow -> row.calculation
+            is Row.TimeRow -> row.time
             is Row.Header, is Row.Section -> null
         }
 
@@ -195,8 +200,9 @@ class AppListAdapter(
         is Row.Header -> VIEW_TYPE_HEADER
         is Row.Section -> VIEW_TYPE_SECTION
         is Row.Item -> VIEW_TYPE_APP
-        // File, web and settings rows share one layout and holder; only the bind step differs.
-        is Row.FileRow, is Row.WebRow, is Row.SettingsRow, is Row.CalculationRow -> VIEW_TYPE_ENTRY
+        // File, web, settings and answer rows share one layout and holder; only the bind differs.
+        is Row.FileRow, is Row.WebRow, is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow ->
+            VIEW_TYPE_ENTRY
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -244,9 +250,8 @@ class AppListAdapter(
                 holder as EntryVH
                 holder.icon.setImageResource(FileSearcher.iconFor(hit.mimeType))
                 holder.title.text = hit.name
-                holder.subtitle.ellipsize = TextUtils.TruncateAt.START
-                holder.subtitle.text = hit.folder
-                holder.subtitle.visibility = if (hit.folder.isEmpty()) View.GONE else View.VISIBLE
+                holder.showSubtitle(hit.folder, TextUtils.TruncateAt.START)
+                if (hit.folder.isEmpty()) holder.subtitle.visibility = View.GONE
                 holder.itemView.setOnClickListener { onFileClick?.invoke(hit) }
                 holder.itemView.setOnLongClickListener(null)
             }
@@ -259,9 +264,11 @@ class AppListAdapter(
                 // round: a long query in a "Search Google for …" sentence gets ellipsized in the
                 // middle, which hides the very thing being searched for.
                 holder.title.text = web.query
-                holder.subtitle.ellipsize = TextUtils.TruncateAt.END
-                holder.subtitle.setText(
-                    if (isUrl) R.string.search_open_url_subtitle else R.string.search_google_subtitle
+                holder.showSubtitle(
+                    holder.itemView.context.getString(
+                        if (isUrl) R.string.search_open_url_subtitle else R.string.search_google_subtitle
+                    ),
+                    TextUtils.TruncateAt.END
                 )
                 holder.itemView.setOnClickListener { onWebClick?.invoke(web) }
                 holder.itemView.setOnLongClickListener(null)
@@ -273,23 +280,45 @@ class AppListAdapter(
                 // The answer is the title because it is the thing being looked for; the expression
                 // it came from stays visible in the search box directly above the row.
                 holder.title.text = calculation.result
-                holder.subtitle.ellipsize = TextUtils.TruncateAt.END
-                holder.subtitle.setText(R.string.search_calculation_subtitle)
-                holder.subtitle.visibility = View.VISIBLE
+                holder.showSubtitle(
+                    holder.itemView.context.getString(R.string.search_calculation_subtitle),
+                    TextUtils.TruncateAt.END
+                )
                 holder.itemView.setOnClickListener { onCalculationClick?.invoke(calculation) }
+                holder.itemView.setOnLongClickListener(null)
+            }
+            is Row.TimeRow -> {
+                val time = row.time
+                holder as EntryVH
+                holder.icon.setImageResource(R.drawable.ic_schedule)
+                holder.title.text = time.time
+                // Two lines: "3:00 PM Los Angeles → Kuala Lumpur · 15 h ahead" is the answer's
+                // working, and a wide typeface would otherwise ellipsize the half that matters.
+                holder.showSubtitle(time.detail, TextUtils.TruncateAt.END, lines = 2)
+                holder.itemView.setOnClickListener { onTimeClick?.invoke(time) }
                 holder.itemView.setOnLongClickListener(null)
             }
             is Row.SettingsRow -> {
                 holder as EntryVH
                 holder.icon.setImageResource(R.drawable.ic_settings)
                 holder.title.setText(R.string.search_launcher_settings)
-                holder.subtitle.ellipsize = TextUtils.TruncateAt.END
-                holder.subtitle.setText(R.string.search_launcher_settings_subtitle)
-                holder.subtitle.visibility = View.VISIBLE
+                holder.showSubtitle(
+                    holder.itemView.context.getString(R.string.search_launcher_settings_subtitle),
+                    TextUtils.TruncateAt.END
+                )
                 holder.itemView.setOnClickListener { onSettingsClick?.invoke() }
                 holder.itemView.setOnLongClickListener(null)
             }
         }
+    }
+
+    /** Every property is set on each bind, not just the text: the holder is shared by every entry
+     *  kind, so a line count or ellipsis left over from the last row would leak into this one. */
+    private fun EntryVH.showSubtitle(text: CharSequence, ellipsize: TextUtils.TruncateAt, lines: Int = 1) {
+        subtitle.maxLines = lines
+        subtitle.ellipsize = ellipsize
+        subtitle.text = text
+        subtitle.visibility = View.VISIBLE
     }
 
     /** Cached icon synchronously if available; otherwise show a placeholder and fetch off-thread,
@@ -358,6 +387,12 @@ class AppListAdapter(
                 // Only ever one web row, so identity is the row type itself; the query it carries
                 // is content, and changing it must rebind rather than replace.
                 old is Row.WebRow && new is Row.WebRow -> true
+                // Same reasoning, and load-bearing: the calculation row is pinned to the top and
+                // its result changes on every keystroke, so treating each answer as a new item
+                // would remove and re-insert the row — an animated flicker on the one row that
+                // must hold still.
+                old is Row.CalculationRow && new is Row.CalculationRow -> true
+                old is Row.TimeRow && new is Row.TimeRow -> true
                 old is Row.SettingsRow && new is Row.SettingsRow -> true
                 else -> false
             }

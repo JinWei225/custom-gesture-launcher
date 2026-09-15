@@ -148,7 +148,8 @@ class QuickSearchActivity : BaseActivity() {
             onFileClick = { hit -> FileSearcher.open(this, hit); finish() },
             onWebClick = { web -> WebSearch.open(this, web.query, web.url); finish() },
             onSettingsClick = { openSettings() },
-            onCalculationClick = { calculation -> open(calculation) }
+            onCalculationClick = { calculation -> open(calculation) },
+            onTimeClick = { time -> open(time) }
         )
         resultList.adapter = adapter
         // Same gesture as the drawer's list: swipe a result right to open it floating. This window
@@ -401,7 +402,8 @@ class QuickSearchActivity : BaseActivity() {
             // Copies and closes, unlike the drawer, which stays open. This window is a panel over
             // whatever app the number is wanted in, so tapping the row means "give me that and get
             // out of the way"; someone who only wanted to read the answer never taps it at all.
-            is SearchResult.Calculation -> Calculator.copy(this, result)
+            is SearchResult.Calculation -> Clipboard.copy(this, result.expression, result.result)
+            is SearchResult.Time -> Clipboard.copy(this, result.detail, result.time)
         }
         finish()
     }

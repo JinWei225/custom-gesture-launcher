@@ -21,6 +21,12 @@ sealed class SearchResult {
     data class Calculation(val expression: String, val result: String) : SearchResult()
 
     /**
+     * A time-zone question the query turned out to be — see [TimeZones]. [time] is the answer,
+     * formatted, and is what gets copied; [detail] says which zones it is between.
+     */
+    data class Time(val time: String, val detail: String) : SearchResult()
+
+    /**
      * The web row. [url] is non-null when the query itself parsed as an address, in which case the
      * row offers to open it directly instead of running a Google search for it.
      */

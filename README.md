@@ -24,6 +24,10 @@ persistence, min SDK 26 (Android 8.0+).
 - **Unified search** over installed apps, local files and the web, ranked by one fuzzy matcher so
   everything sorts by the same rules. Enter opens the top result whatever kind it is. File search
   (via MediaStore) and the web row are individually toggleable.
+- **Answers in the search box**: a sum (`12*12`, `20% of 50`) or a time-zone question (`time in
+  tokyo`, `3pm est to tokyo`, `tokyo to london`) is answered in a row pinned above the results;
+  tap it to copy. Zones can be named by city, country or abbreviation, straight from the
+  platform's tz database — nothing is fetched.
 - **Floating search over any app**: the same search box, reachable from anywhere on the phone by
   holding the power button (it registers as a digital assistant) or from a home-screen gesture.
 - **Swipe a result right** to open it in a floating window instead of full screen — apps, files

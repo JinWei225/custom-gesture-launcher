@@ -41,6 +41,12 @@ object SearchEngine {
     fun calculation(query: String): SearchResult.Calculation? =
         Calculator.evaluate(query)?.let { SearchResult.Calculation(query.trim(), it) }
 
+    /** The time-zone row, when the query asks what time it is somewhere. Untoggled, as above. */
+    fun time(context: Context, query: String): SearchResult.Time? =
+        TimeZones.answer(query)?.let {
+            SearchResult.Time(TimeZones.title(context, it), TimeZones.detail(context, it))
+        }
+
     private const val MIN_SETTINGS_QUERY = 3
     private const val SETTINGS_KEYWORDS = "launcher settings"
 

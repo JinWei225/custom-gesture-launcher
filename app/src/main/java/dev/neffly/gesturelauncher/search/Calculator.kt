@@ -1,13 +1,7 @@
 package dev.neffly.gesturelauncher.search
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.os.Build
-import android.widget.Toast
 import com.ezylang.evalex.Expression
 import com.ezylang.evalex.config.ExpressionConfiguration
-import dev.neffly.gesturelauncher.R
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
@@ -41,6 +35,7 @@ import java.util.Locale
  *
  * Not included: unit and currency conversion, and date arithmetic. Both need reference data this
  * app doesn't have and shouldn't fetch on a keystroke, so they are absent rather than approximated.
+ * Time zones are the exception, and live in [TimeZones]: the platform's tz database is that data.
  */
 object Calculator {
 
@@ -76,29 +71,6 @@ object Calculator {
             // its own exception types and plain java.lang.ArithmeticException.
             null
         }
-    }
-
-    /**
-     * Puts [calculation]'s result on the clipboard and, where the system doesn't already say so,
-     * confirms it.
-     *
-     * Copying is what the row is for — a sum has nothing to open — and it is what Raycast and
-     * Spotlight do with Enter on the same row. From Android 13 the platform shows its own clipboard
-     * confirmation, so a toast there would be the second thing saying the same thing at the same
-     * moment; below it there is no such feedback and the copy would otherwise be silent.
-     */
-    fun copy(context: Context, calculation: SearchResult.Calculation) {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            ?: return
-        clipboard.setPrimaryClip(
-            ClipData.newPlainText(calculation.expression, calculation.result)
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-        Toast.makeText(
-            context,
-            context.getString(R.string.search_calculation_copied, calculation.result),
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     /**

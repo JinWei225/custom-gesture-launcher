@@ -38,8 +38,9 @@
             android:maxLines="1"
             android:textAppearance="?attr/textAppearanceBodyLarge" />
 
-        <!-- ellipsize is set per row in AppListAdapter: START for file paths (the deepest folder
-             is the useful end), END for the prose subtitles the other row types carry. -->
+        <!-- ellipsize and maxLines are set per row in AppListAdapter: START for file paths (the
+             deepest folder is the useful end), END for the prose subtitles the other row types
+             carry, and two lines for the time-zone row's working. -->
         <TextView
             android:id="@+id/entrySubtitle"
             android:layout_width="match_parent"
