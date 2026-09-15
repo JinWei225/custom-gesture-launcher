@@ -55,6 +55,14 @@ Grab the latest APK from this repo's [Releases](../../releases) page and sideloa
 to allow installs from your file manager / browser in Android's settings). There's no Play Store
 listing.
 
+To get updates automatically, add the repo to [Obtainium](https://github.com/ImranR98/Obtainium):
+**Add App** → paste `https://github.com/JinWei225/custom-gesture-launcher` → **Add**. Every
+release carries one signed APK, so Obtainium needs no further configuration.
+
+Releases are signed with a dedicated key. A copy built from source in Android Studio is signed
+with your own debug key instead, and Android won't install one over the other — uninstall first
+when switching between the two.
+
 ## Making it your launcher (and how to leave safely)
 
 - After installing, press Home → pick **Gessearch Launcher**. **Keep your existing launcher
@@ -87,9 +95,6 @@ pick Gessearch Launcher as your digital assistant — both are off until you gra
   their own rules on top of it — some apps report themselves resizable, reach freeform, and are
   then expanded to full screen anyway. Nothing public exposes that, so those cases aren't warned
   about.
-- Release builds are unsigned/debug-signed for now — there's no dedicated release keystore, so
-  reinstalling over an existing copy after certain updates may require uninstalling the old one
-  first.
 - No automated UI tests yet; unit tests cover the recognizer, search ranking and URL detection.
 
 ## Building from source
@@ -102,6 +107,34 @@ pick Gessearch Launcher as your digital assistant — both are off until you gra
    Gradle JDK.
 3. **Run** the `app` configuration onto a device/emulator (API 26+), or build an APK via
    Build → Build Bundle(s)/APK(s) → Build APK(s).
+
+## Publishing a release
+
+Releases are built by [GitHub Actions](.github/workflows/release.yml) from a version tag; nothing
+is built or uploaded by hand.
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+The workflow runs the unit tests, builds a release APK with `versionName` `1.2.3` and
+`versionCode` `10203` derived from the tag, and publishes a GitHub Release with the APK attached
+and auto-generated notes. Obtainium picks it up from there.
+
+It signs with a keystore held in repository secrets, set up once:
+
+1. Generate the key (Android Studio's bundled JDK has `keytool`), and **back the file up** — a
+   lost keystore means every future release is a fresh install for everyone:
+   ```bash
+   keytool -genkeypair -v -keystore gessearch-release.jks -alias gessearch -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Add four secrets under the repo's Settings → Secrets and variables → Actions:
+   `KEYSTORE_BASE64` (the file, base64-encoded: `base64 -i gessearch-release.jks | pbcopy`),
+   `KEYSTORE_PASSWORD`, `KEY_ALIAS` (`gessearch`) and `KEY_PASSWORD`.
+
+A signed build locally works the same way: put the keystore's path and passwords in a
+`keystore.properties` at the repo root (gitignored — `storeFile`, `storePassword`, `keyAlias`,
+`keyPassword`) and run `./gradlew assembleRelease`. Without that file a release build is unsigned.
 
 ## Suggested test order (safety before gestures)
 

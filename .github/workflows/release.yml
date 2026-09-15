@@ -1,0 +1,75 @@
+# Builds and publishes a signed release APK whenever a version tag is pushed:
+#
+#   git tag v1.2.3 && git push origin v1.2.3
+#
+# The tag is the single source of the version — versionName "1.2.3" and versionCode 10203 are
+# derived from it — and the GitHub Release it creates is what Obtainium watches for updates.
+# Unit tests run first; a red test means no release.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Derive the version from the tag
+        id: version
+        run: |
+          name="${GITHUB_REF_NAME#v}"
+          IFS=. read -r major minor patch <<< "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$((major * 10000 + minor * 100 + patch))" >> "$GITHUB_OUTPUT"
+
+      # The keystore itself is a base64 secret; app/build.gradle.kts reads the rest from
+      # keystore.properties, the same file a local signed build uses.
+      - name: Write the signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for var in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Repository secret $var is not set — see README, 'Publishing a release'"
+              exit 1
+            fi
+          done
+          echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+          cat > keystore.properties <<PROPS
+          storeFile=release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: Test and build
+        run: >
+          ./gradlew testDebugUnitTest assembleRelease
+          -PversionName=${{ steps.version.outputs.name }}
+          -PversionCode=${{ steps.version.outputs.code }}
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk
+          "gessearch-launcher-${{ steps.version.outputs.name }}.apk"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.name }}
+          files: gessearch-launcher-*.apk
+          generate_release_notes: true

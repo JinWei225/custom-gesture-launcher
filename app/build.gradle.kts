@@ -1,8 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+// Release signing comes from keystore.properties at the repo root — gitignored, four keys:
+// storeFile, storePassword, keyAlias, keyPassword. The release workflow writes it from repository
+// secrets; without it a release build is simply unsigned, which is right for every build that
+// isn't a published release.
+val keystoreProperties: Properties? =
+    rootProject.file("keystore.properties").takeIf { it.isFile }?.let { file ->
+        Properties().also { props -> file.inputStream().use(props::load) }
+    }
 
 android {
     namespace = "dev.neffly.gesturelauncher"
@@ -16,12 +27,27 @@ android {
         // Android 17 device, and there is none here to verify them against — so that is a separate
         // step, taken when it can be tested rather than read about.
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // Set by the release workflow from the git tag (v1.2.3 → "1.2.3" / 10203). A local build
+        // is "dev": it can't be mistaken for a published one, and Obtainium — which compares
+        // version names — will always see a release as an update to it.
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = findProperty("versionName") as String? ?: "dev"
+    }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
