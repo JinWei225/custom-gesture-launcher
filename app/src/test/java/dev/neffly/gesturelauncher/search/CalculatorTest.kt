@@ -67,6 +67,41 @@ class CalculatorTest {
         assertEquals("30", calc("200 * 15%"))
     }
 
+    // --- CJK keyboard input -------------------------------------------------
+
+    /** A pinyin keyboard in Chinese mode types `＊`, not `*`, which used to mean no calculator row
+     *  at all unless the user switched input language first. */
+    @Test
+    fun `reads the fullwidth arithmetic a CJK keyboard produces`() {
+        assertEquals("144", calc("12＊12"))
+        assertEquals("7", calc("１＋２＊３"))
+        assertEquals("9", calc("（1＋2）＊3"))
+        assertEquals("2.5", calc("10／4"))
+        assertEquals("55", calc("50＋10％"))
+    }
+
+    /** The ideographic full stop is the decimal-point key on that keyboard. */
+    @Test
+    fun `reads the ideographic full stop as a decimal point`() {
+        assertEquals("4", calc("3。5＋0。5"))
+    }
+
+    /** No compatibility decomposition, so these are mapped by hand. */
+    @Test
+    fun `reads the multiplication, division and minus signs`() {
+        assertEquals("144", calc("12 × 12"))
+        assertEquals("4", calc("12 ÷ 3"))
+        assertEquals("-5", calc("5 − 10"))
+    }
+
+    /** Folding must not turn ordinary CJK searching into a calculator row. */
+    @Test
+    fun `ignores CJK text that isn't arithmetic`() {
+        assertNull(calc("微信"))
+        assertNull(calc("小红书3。0"))
+        assertNull(calc("支付宝－转账"))
+    }
+
     // --- formatting ---------------------------------------------------------
 
     @Test

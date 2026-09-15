@@ -5,8 +5,9 @@ import android.content.Context
 import android.provider.CalendarContract
 import java.time.LocalDate
 
-/** One calendar event occurring today. */
-data class DayEvent(val title: String, val begin: Long, val allDay: Boolean)
+/** One calendar event occurring today. [end] is what lets a caller tell the part of the day that
+ *  is still ahead from the part that has already happened. */
+data class DayEvent(val title: String, val begin: Long, val end: Long, val allDay: Boolean)
 
 /** Reads today's events from the system calendar. Requires the READ_CALENDAR permission. */
 object CalendarRepository {
@@ -14,6 +15,7 @@ object CalendarRepository {
     private val PROJECTION = arrayOf(
         CalendarContract.Instances.TITLE,
         CalendarContract.Instances.BEGIN,
+        CalendarContract.Instances.END,
         CalendarContract.Instances.ALL_DAY
     )
 
@@ -35,8 +37,9 @@ object CalendarRepository {
             while (c.moveToNext()) {
                 val title = c.getString(0)?.takeIf { it.isNotBlank() } ?: "(No title)"
                 val begin = c.getLong(1)
-                val allDay = c.getInt(2) == 1
-                events.add(DayEvent(title, begin, allDay))
+                val end = c.getLong(2)
+                val allDay = c.getInt(3) == 1
+                events.add(DayEvent(title, begin, end, allDay))
             }
         }
         // All-day events sort first: their `begin` is UTC midnight, which would otherwise place

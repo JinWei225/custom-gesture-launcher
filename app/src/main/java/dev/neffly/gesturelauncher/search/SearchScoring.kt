@@ -13,9 +13,17 @@ import java.util.Locale
  */
 internal object SearchScoring {
 
-    /** Lowercase, strip diacritics, trim — so "Café" matches "cafe". */
+    /**
+     * Lowercase, fold compatibility forms, strip diacritics, trim — so "Café" matches "cafe" and
+     * the fullwidth "ＷｈａｔｓＡｐｐ" a CJK keyboard produces matches "whatsapp".
+     *
+     * NFKD rather than NFD does both jobs in one pass: the compatibility decomposition maps the
+     * fullwidth and halfwidth blocks onto plain ASCII on the way to separating a letter from its
+     * accents. Matching is the one place where folding aggressively is free — a query and a label
+     * are only ever compared with each other here, never shown to anyone.
+     */
     fun normalize(s: String): String =
-        Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFD)
+        Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFKD)
             .replace(Regex("\\p{M}+"), "")
             .trim()
 

@@ -45,8 +45,10 @@ class AppListAdapter(
     sealed class Row {
         /** Alphabet bucket header, browse mode only. */
         data class Header(val letter: Char) : Row()
-        /** Search-mode group label (Apps / Files / Web). */
-        data class Section(@StringRes val titleRes: Int) : Row()
+        /** Search-mode group label (Apps / Files / Web). Explicitly `@param:` because Kotlin 2.2
+         *  is on its way to applying a bare annotation to the backing field as well, and the
+         *  resource check this one carries belongs on the value. */
+        data class Section(@param:StringRes val titleRes: Int) : Row()
         data class Item(val app: AppInfo) : Row()
         data class FileRow(val hit: FileHit) : Row()
         data class WebRow(val web: SearchResult.Web) : Row()
@@ -129,10 +131,6 @@ class AppListAdapter(
         is SearchResult.Calculation -> R.string.search_section_calculator
     }
 
-    /** The topmost app row currently shown, i.e. what Enter in the search bar should launch. */
-    fun firstItem(): AppInfo? = currentList.firstNotNullOfOrNull { (it as? Row.Item)?.app }
-
-    /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
     /** The openable thing at [position], or null when that row is a header, a section label, or
      *  out of range. Used by the swipe-to-float gesture, which works off adapter positions. */
     fun resultAt(position: Int): SearchResult? =
@@ -162,6 +160,7 @@ class AppListAdapter(
 
     private fun asResult(row: Row): SearchResult? =
         when (row) {
+    /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
             is Row.Item -> SearchResult.App(row.app)
             is Row.FileRow -> SearchResult.File(row.hit)
             is Row.WebRow -> row.web
@@ -264,7 +263,6 @@ class AppListAdapter(
                 holder.subtitle.setText(
                     if (isUrl) R.string.search_open_url_subtitle else R.string.search_google_subtitle
                 )
-                holder.subtitle.visibility = View.VISIBLE
                 holder.itemView.setOnClickListener { onWebClick?.invoke(web) }
                 holder.itemView.setOnLongClickListener(null)
             }

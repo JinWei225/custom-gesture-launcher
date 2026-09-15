@@ -392,10 +392,13 @@ class AppDrawerActivity : BaseActivity() {
                 menu.add(0, ID_UNINSTALL, 2, R.string.uninstall).icon = menuIcon(R.drawable.ic_delete)
             }
             shortcuts.forEachIndexed { index, shortcut ->
-                val label = shortcut.longLabel ?: shortcut.shortLabel
-                val icon = AppShortcutHelper.icon(this@AppDrawerActivity, shortcut)
-                menu.add(1, ID_SHORTCUT_BASE + index, index + 3, label).icon =
-                    menuIcon(icon ?: ContextCompat.getDrawable(this@AppDrawerActivity, R.drawable.ic_arrow_forward)!!)
+                // Both labels are nullable in the platform API, and a row with nothing to read is
+                // worse than no row — skipping one leaves a gap in the ids, which is harmless
+                // because the click handler maps an id back to its list index either way.
+                val label = shortcut.longLabel ?: shortcut.shortLabel ?: return@forEachIndexed
+                val icon = AppShortcutHelper.icon(this@AppDrawerActivity, shortcut)?.let { menuIcon(it) }
+                    ?: menuIcon(R.drawable.ic_arrow_forward)
+                menu.add(1, ID_SHORTCUT_BASE + index, index + 3, label).icon = icon
             }
             forceShowIcons()
             FontEngine.applyTo(menu)

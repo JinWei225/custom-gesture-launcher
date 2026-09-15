@@ -94,6 +94,14 @@ class QuickSearchActivity : BaseActivity() {
      */
     override val appliesFontScale: Boolean get() = false
 
+    /**
+     * A panel over someone else's app, not a page that replaces it: the app behind stays on screen
+     * and is what a floating window opened from here lands on top of. Counting this window as the
+     * launcher holding the foreground would tell
+     * [dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch] the opposite of the truth.
+     */
+    override val hidesForegroundApp: Boolean get() = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The assistant role outlives the toggle — someone who turns the feature off but leaves us

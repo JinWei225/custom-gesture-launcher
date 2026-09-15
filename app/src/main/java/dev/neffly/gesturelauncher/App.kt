@@ -13,6 +13,7 @@ import dev.neffly.gesturelauncher.crash.CrashHandler
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.drawer.IconCache
+import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
 import dev.neffly.gesturelauncher.ui.FontEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,13 @@ class App : Application() {
         // synchronous SharedPreferences read is the same file MainActivity reads on its safe-mode
         // path, so it's paged in either way.
         AppCompatDelegate.setDefaultNightMode(Prefs.themeMode(this))
+
+        // The home screen has to be able to tell a home launch the user asked for from one the
+        // system fires after a floating window appears; this is the only thing that separates
+        // them. Installed here because the process outlives every activity, and the windows in
+        // question change while the home screen is stopped. A no-op on any device that isn't
+        // HyperOS, which this call is also what determines.
+        UnrequestedHomeLaunch.install()
 
         // Same reasoning, same place: the user's font has to be resolved before the first window is
         // built, or the home screen renders once in the system font and visibly re-renders. Reads

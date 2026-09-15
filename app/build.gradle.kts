@@ -6,12 +6,16 @@ plugins {
 
 android {
     namespace = "dev.neffly.gesturelauncher"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.neffly.gesturelauncher"
         minSdk = 26
-        targetSdk = 34
+        // API 36 (Android 16) is what Google Play requires of new apps and updates as of August
+        // 2026. API 37 exists and is stable, but its behaviour changes only take effect on an
+        // Android 17 device, and there is none here to verify them against — so that is a separate
+        // step, taken when it can be tested rather than read about.
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }
@@ -34,8 +38,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+}
+
+// The `kotlinOptions` block inside `android {}` is AGP's own and is deprecated; from Kotlin 2.x the
+// compiler is configured through the Kotlin plugin itself.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

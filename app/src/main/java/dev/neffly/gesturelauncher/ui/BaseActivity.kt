@@ -8,6 +8,7 @@ import android.view.ViewTreeObserver
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
 
 /**
  * Applies the user's font (see [FontEngine]) to every screen, and recreates a screen that's still
@@ -55,9 +56,29 @@ abstract class BaseActivity : AppCompatActivity() {
         super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
+    /**
+     * Whether this screen takes the place of whatever app was in front of it.
+     *
+     * True for every page of the launcher; false for the floating quick-search window, which is a
+     * panel over someone else's app and leaves that app on screen behind it.
+     * [UnrequestedHomeLaunch] counts the screens for which this is true, which is how it tells
+     * what a floating window is being opened over.
+     */
+    protected open val hidesForegroundApp: Boolean get() = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fontVersion = FontEngine.version
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (hidesForegroundApp) UnrequestedHomeLaunch.onScreenStarted()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (hidesForegroundApp) UnrequestedHomeLaunch.onScreenStopped()
     }
 
     override fun setContentView(layoutResID: Int) {

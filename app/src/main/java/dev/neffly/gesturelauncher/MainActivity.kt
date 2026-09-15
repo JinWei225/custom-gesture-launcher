@@ -47,6 +47,7 @@ import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.data.anyMultiStroke
 import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.data.toTemplates
+import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
@@ -215,6 +216,9 @@ class MainActivity : BaseActivity() {
 
     override fun onStart() {
         super.onStart()
+        // The system launcher starts HOME right after a floating window opens; when it does, give
+        // the app underneath its screen back. See UnrequestedHomeLaunch.
+        if (UnrequestedHomeLaunch.consume()) moveTaskToBack(true)
         // Sticky broadcast: registering hands back the current battery state immediately, so the
         // indicator is already correct on the first frame instead of blank until the next change.
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -349,18 +353,36 @@ class MainActivity : BaseActivity() {
         return c.get(Calendar.YEAR) * 1000L + c.get(Calendar.DAY_OF_YEAR)
     }
 
+    /**
+     * Shows what is left of the day, not the whole of it.
+     *
+     * The widget holds three rows, so without this an afternoon glance is three rows of things that
+     * already happened while the next meeting sits below the fold. An event still running counts as
+     * ahead — it is the one most worth seeing — and an all-day event spans the day by definition, so
+     * neither is filtered out.
+     *
+     * Filtered here rather than in the query so the five-minute cache stays useful: every resume
+     * re-renders against the current time without going back to the calendar provider.
+     */
     private fun renderEvents(events: List<DayEvent>) {
-        if (events.isEmpty()) {
-            renderRows(listOf(getString(R.string.no_events_today)))
+        val now = System.currentTimeMillis()
+        val remaining = events.filter { it.allDay || it.end > now }
+        if (remaining.isEmpty()) {
+            // A day whose events are all behind us isn't a day with no events — saying so would be
+            // wrong for anyone checking after their last meeting.
+            val empty = if (events.isEmpty()) R.string.no_events_today else R.string.no_events_left
+            renderRows(listOf(getString(empty)))
             return
         }
         val timeFmt = DateFormat.getTimeFormat(this)
         val maxRows = 3
-        val rows = events.take(maxRows).map { e ->
+        val rows = remaining.take(maxRows).map { e ->
             val time = if (e.allDay) getString(R.string.all_day) else timeFmt.format(Date(e.begin))
             "$time   ${e.title}"
         }.toMutableList()
-        if (events.size > maxRows) rows.add(getString(R.string.more_events, events.size - maxRows))
+        if (remaining.size > maxRows) {
+            rows.add(getString(R.string.more_events, remaining.size - maxRows))
+        }
         renderRows(rows)
     }
 

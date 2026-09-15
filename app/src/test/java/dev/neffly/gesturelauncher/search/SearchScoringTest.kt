@@ -34,6 +34,14 @@ class SearchScoringTest {
         assertTrue("$contiguous should beat $scattered", contiguous > scattered)
     }
 
+    /** A CJK keyboard types fullwidth latin, so the same query has to reach the same app. */
+    @Test
+    fun `matching ignores fullwidth and halfwidth forms`() {
+        assertNotNull(score("WhatsApp", "ｗｈａｔｓ"))
+        assertNotNull(score("ＷｈａｔｓＡｐｐ", "whats"))
+        assertNotNull(score("Photos 2024", "photos ２０２４"))
+    }
+
     @Test
     fun `matching ignores case and diacritics`() {
         assertNotNull(score("Café Noir", "cafe"))

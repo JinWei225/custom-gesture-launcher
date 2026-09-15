@@ -13,6 +13,7 @@ import java.math.MathContext
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -35,6 +36,9 @@ import java.util.Locale
  * evaluator would otherwise make of it. Three shapes are rewritten into plain arithmetic before
  * parsing; see [expandPercentages].
  *
+ * **Input.** A sum counts whether it was typed on an English keyboard or a CJK one, which emits
+ * fullwidth punctuation for the very characters arithmetic is made of; see [toAsciiMath].
+ *
  * Not included: unit and currency conversion, and date arithmetic. Both need reference data this
  * app doesn't have and shouldn't fetch on a keystroke, so they are absent rather than approximated.
  */
@@ -49,13 +53,16 @@ object Calculator {
     fun evaluate(query: String): String? {
         val trimmed = query.trim()
         if (trimmed.isEmpty() || trimmed.length > MAX_LENGTH) return null
+        // Has to happen before the checks below, or none of them can see the arithmetic in a sum
+        // typed on a CJK keyboard — see [toAsciiMath].
+        val math = toAsciiMath(trimmed)
         // A bare number is not a calculation — "12" is far more likely to be someone looking for an
         // app — so something has to be done to it. '(' counts, for `sqrt(16)` and friends.
-        if (OPERATORS.none { it in trimmed }) return null
-        if (trimmed.none { it.isDigit() }) return null
+        if (OPERATORS.none { it in math }) return null
+        if (math.none { it.isDigit() }) return null
 
         return try {
-            val expression = Expression(expandPercentages(trimmed), CONFIG)
+            val expression = Expression(expandPercentages(math), CONFIG)
             // Anything the evaluator can't name is a word, not a variable — this is the check that
             // keeps ordinary searches out of the calculator.
             if (expression.undefinedVariables.isNotEmpty()) return null
@@ -93,6 +100,28 @@ object Calculator {
             Toast.LENGTH_SHORT
         ).show()
     }
+
+    /**
+     * Folds the arithmetic a CJK keyboard produces onto the ASCII the evaluator reads.
+     *
+     * A pinyin keyboard in Chinese mode emits fullwidth punctuation, so `12*12` arrives as `12＊12`
+     * (U+FF0A) and every sum typed without first switching to English input was silently not a sum
+     * at all — the operator check below never matched. NFKC is the standard fold for that whole
+     * block, fullwidth digits and the ideographic space included, and delegating to it rather than
+     * writing a table means the mapping stays right for forms nobody here thought to list.
+     *
+     * Four are added by hand because they have no compatibility decomposition: the multiplication
+     * and division signs, the true minus, and the ideographic full stop — which is what the decimal
+     * point key produces on that keyboard, so `3。5` has to read as `3.5`.
+     *
+     * None of this can turn an ordinary search into a false calculator row: a folded query still
+     * has to clear the digit, operator and undefined-identifier gates in [evaluate], and CJK text
+     * fails the last of those the same way "e-mail" does.
+     */
+    private fun toAsciiMath(query: String): String =
+        Normalizer.normalize(query, Normalizer.Form.NFKC)
+            .map { CJK_OPERATORS[it] ?: it }
+            .joinToString("")
 
     /**
      * Rewrites the three ways people write a percentage into arithmetic the evaluator understands.
@@ -141,6 +170,9 @@ object Calculator {
     private const val MAX_DECIMALS = 10
 
     private val OPERATORS = charArrayOf('+', '-', '*', '/', '^', '%', '(')
+
+    /** The arithmetic NFKC leaves alone — see [toAsciiMath]. */
+    private val CJK_OPERATORS = mapOf('×' to '*', '÷' to '/', '−' to '-', '。' to '.')
 
     private val SCIENTIFIC_ABOVE = BigDecimal("1E15")
     // Built from MAX_DECIMALS rather than written out, so the two can't drift apart.

@@ -11,7 +11,8 @@
 
     <!-- Adaptive-icon background. Deliberately has no values-night/ variant: the OS renders
          launcher icons against its own backdrop and never applies our night qualifier to them. -->
-    <color name="ic_launcher_background">#101317</color>
+    <!-- The light surface icon.png was drawn on; its own surface is near-transparent. -->
+    <color name="ic_launcher_background">#F1F1F3</color>
 
     <!-- Dark circle behind the home screen's white drawer glyph. Sits over the wallpaper, so
          like the wallpaper_overlay_* pair below it is intentionally theme-invariant. -->

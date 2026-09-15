@@ -5,15 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureStore
-import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 
@@ -26,11 +24,9 @@ import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
  *    updates the existing mapping's URL directly and closes — no redraw, matching how "Change
  *    app" already works for [GestureAction.LAUNCH_APP] mappings.
  */
-class GestureUrlEntryActivity : BaseActivity() {
+class GestureUrlEntryActivity : SlidePanelActivity() {
 
-    private lateinit var urlEntryRoot: View
     private lateinit var urlInput: TextInputEditText
-    private var isClosing = false
     private var editingId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,13 +34,7 @@ class GestureUrlEntryActivity : BaseActivity() {
         overrideOwnTransitions()
         setContentView(R.layout.activity_gesture_url_entry)
 
-        urlEntryRoot = findViewById(R.id.urlEntryRoot)
-        urlEntryRoot.translationX = resources.displayMetrics.widthPixels.toFloat()
-        urlEntryRoot.animate()
-            .translationX(0f)
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        slideIn(findViewById(R.id.urlEntryRoot), savedInstanceState)
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
@@ -92,20 +82,7 @@ class GestureUrlEntryActivity : BaseActivity() {
 
     private fun hostLabel(url: String): String = Uri.parse(url).host ?: url
 
-    override fun finish() {
-        if (isClosing || isFinishing) { super.finish(); return }
-        isClosing = true
-        urlEntryRoot.animate()
-            .translationX(resources.displayMetrics.widthPixels.toFloat())
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
-            .withEndAction { super.finish() }
-            .start()
-        overrideNextTransition()
-    }
-
     companion object {
-        private const val SLIDE_DURATION_MS = 260L
         private const val EXTRA_MAPPING_ID = "mapping_id"
 
         fun editIntent(context: Context, mappingId: String): Intent =

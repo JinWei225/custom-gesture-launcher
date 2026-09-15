@@ -82,7 +82,12 @@ object BackupManager {
             GestureStore.replaceAll(context, data.gestures)
             AppTagStore.replaceAll(context, data.appTags)
         } else {
-            data.gestures.forEach { GestureStore.add(context, it) }
+            // Upsert by id, not append: a gesture's id is its identity everywhere else (the home
+            // screen looks mappings up by it, and update/remove key on it), so merging a backup
+            // that shares ids with what is already here — re-importing one taken from this device
+            // is the obvious case — must replace those gestures rather than store a second copy
+            // under the same id. Matches how mergeAll overlays tags below.
+            data.gestures.forEach { GestureStore.update(context, it) }
             AppTagStore.mergeAll(context, data.appTags)
         }
         Prefs.setMatchThreshold(context, data.matchThreshold)

@@ -5,8 +5,6 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,9 +23,8 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.FilePermissions
 import dev.neffly.gesturelauncher.shortcut.KeyboardShortcutService
-import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
-import dev.neffly.gesturelauncher.ui.overrideNextTransition
+import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlinx.coroutines.Dispatchers
@@ -44,9 +41,8 @@ import kotlin.math.roundToInt
  * self-driven-animation technique [dev.neffly.gesturelauncher.drawer.AppDrawerActivity] uses (OEM
  * skins like HyperOS otherwise replace the requested transition with their own "app opening" zoom).
  */
-class SettingsHubActivity : BaseActivity() {
+class SettingsHubActivity : SlidePanelActivity() {
 
-    private lateinit var hubRoot: View
     private lateinit var gesturesSubtitle: TextView
     private lateinit var autoKeyboardSwitch: MaterialSwitch
     private lateinit var hapticFeedbackSwitch: MaterialSwitch
@@ -67,7 +63,6 @@ class SettingsHubActivity : BaseActivity() {
     private lateinit var keyboardShortcutAccessRow: View
     private lateinit var keyboardShortcutAccessTitle: TextView
     private lateinit var keyboardShortcutAccessSubtitle: TextView
-    private var isClosing = false
 
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
      *  whether the imported one is actually different before rebuilding the screen. */
@@ -104,17 +99,7 @@ class SettingsHubActivity : BaseActivity() {
         overrideOwnTransitions()
         setContentView(R.layout.activity_settings_hub)
 
-        hubRoot = findViewById(R.id.settingsHubRoot)
-        // Only slide in on a genuine open. Changing the theme recreates this activity, and
-        // replaying the entry animation then would read as the panel being re-opened.
-        if (savedInstanceState == null) {
-            hubRoot.translationX = resources.displayMetrics.widthPixels.toFloat()
-            hubRoot.animate()
-                .translationX(0f)
-                .setDuration(SLIDE_DURATION_MS)
-                .setInterpolator(DecelerateInterpolator())
-                .start()
-        }
+        slideIn(findViewById(R.id.settingsHubRoot), savedInstanceState)
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
@@ -453,18 +438,6 @@ class SettingsHubActivity : BaseActivity() {
             .showWithFont()
     }
 
-    override fun finish() {
-        if (isClosing || isFinishing) { super.finish(); return }
-        isClosing = true
-        hubRoot.animate()
-            .translationX(resources.displayMetrics.widthPixels.toFloat())
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
-            .withEndAction { super.finish() }
-            .start()
-        overrideNextTransition()
-    }
-
     private fun doExport(uri: Uri) {
         val result = BackupManager.writeTo(this, uri, BackupManager.buildBackup(this))
         val message = if (result.isSuccess) R.string.export_success else R.string.export_failed
@@ -538,8 +511,6 @@ class SettingsHubActivity : BaseActivity() {
     }
 
     companion object {
-        private const val SLIDE_DURATION_MS = 260L
-
         /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
         private const val DISABLED_ROW_ALPHA = 0.4f
 

@@ -3,12 +3,10 @@ package dev.neffly.gesturelauncher.settings
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import com.google.android.material.appbar.MaterialToolbar
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureAction
-import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 
@@ -20,23 +18,14 @@ import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
  * "app opening" zoom). Each row hands off to the next screen without finishing itself, so Back
  * unwinds the whole add-gesture chain naturally.
  */
-class GestureActionChooserActivity : BaseActivity() {
-
-    private lateinit var chooserRoot: View
-    private var isClosing = false
+class GestureActionChooserActivity : SlidePanelActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         overrideOwnTransitions()
         setContentView(R.layout.activity_gesture_action_chooser)
 
-        chooserRoot = findViewById(R.id.chooserRoot)
-        chooserRoot.translationX = resources.displayMetrics.widthPixels.toFloat()
-        chooserRoot.animate()
-            .translationX(0f)
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        slideIn(findViewById(R.id.chooserRoot), savedInstanceState)
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
@@ -60,21 +49,5 @@ class GestureActionChooserActivity : BaseActivity() {
     private fun goTo(intent: Intent) {
         startActivity(intent)
         overrideNextTransition()
-    }
-
-    override fun finish() {
-        if (isClosing || isFinishing) { super.finish(); return }
-        isClosing = true
-        chooserRoot.animate()
-            .translationX(resources.displayMetrics.widthPixels.toFloat())
-            .setDuration(SLIDE_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
-            .withEndAction { super.finish() }
-            .start()
-        overrideNextTransition()
-    }
-
-    companion object {
-        private const val SLIDE_DURATION_MS = 260L
     }
 }

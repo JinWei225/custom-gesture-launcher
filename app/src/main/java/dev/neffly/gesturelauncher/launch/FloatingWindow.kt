@@ -82,45 +82,54 @@ object FloatingWindow {
 
     /** Opens [result] floating. Only call for a [result] that [canFloat] accepts. */
     fun open(activity: Activity, result: SearchResult) {
-        when (result) {
+        val opened = when (result) {
             is SearchResult.App -> openApp(activity, result.app)
             is SearchResult.File ->
                 start(activity, FileSearcher.intentFor(result.hit), R.string.file_open_failed)
             is SearchResult.Web ->
                 start(activity, WebSearch.intentFor(result.query, result.url), R.string.web_search_failed)
-            is SearchResult.Settings, is SearchResult.Calculation -> Unit
+            // Neither opens a window, so there is nothing for the system to react to.
+            is SearchResult.Settings, is SearchResult.Calculation -> false
         }
+        // Gated on a window having actually appeared, because that is what provokes the system's
+        // home launch. Arming after a start that failed — an app that has gone, a file no viewer
+        // handles — would leave the expectation lying in wait for the user's next real Home press,
+        // which it would then swallow.
+        if (opened) UnrequestedHomeLaunch.expectAfterFreeformChange()
     }
 
     /** Work-profile apps can't be started by Intent from here — LauncherApps is the only route,
      *  and it takes the same options Bundle, so the float survives the detour. Nothing about that
      *  profile's activities is readable from here, so it goes unchecked rather than guessed at. */
-    private fun openApp(activity: Activity, app: AppInfo) {
+    private fun openApp(activity: Activity, app: AppInfo): Boolean {
         val options = options(activity)
         if (app.user != Process.myUserHandle()) {
-            runCatching {
+            return runCatching {
                 val launcherApps =
                     activity.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
                 launcherApps.startMainActivity(app.componentName, app.user, null, options)
             }.onFailure { Log.w(TAG, "work-profile float failed for ${app.componentName}", it) }
-            return
+                .isSuccess
         }
         val intent = AppRepository.launchIntent(activity, app.componentName)
         if (intent == null) {
             Toast.makeText(activity, R.string.app_not_available, Toast.LENGTH_SHORT).show()
             AppRepository.invalidate()
-            return
+            return false
         }
         warnIfUnresizeable(activity, intent, app.label)
-        runCatching { activity.startActivity(intent, options) }
+        return runCatching { activity.startActivity(intent, options) }
             .onFailure { Log.w(TAG, "float failed for ${app.componentName}", it) }
+            .isSuccess
     }
 
-    private fun start(activity: Activity, intent: Intent, @StringRes failureMessage: Int) {
+    private fun start(activity: Activity, intent: Intent, @StringRes failureMessage: Int): Boolean {
         warnIfUnresizeable(activity, intent, null)
         if (runCatching { activity.startActivity(intent, options(activity)) }.isFailure) {
             Toast.makeText(activity, failureMessage, Toast.LENGTH_SHORT).show()
+            return false
         }
+        return true
     }
 
     /**

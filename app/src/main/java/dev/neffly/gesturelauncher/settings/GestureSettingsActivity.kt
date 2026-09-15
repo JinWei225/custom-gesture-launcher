@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
@@ -32,7 +33,7 @@ class GestureSettingsActivity : BaseActivity() {
         emptyView = findViewById(R.id.emptyView)
         val list = findViewById<RecyclerView>(R.id.gestureList)
         list.layoutManager = LinearLayoutManager(this)
-        adapter = GestureListAdapter { mapping, anchor -> showRowMenu(mapping, anchor) }
+        adapter = GestureListAdapter(lifecycleScope) { mapping, anchor -> showRowMenu(mapping, anchor) }
         list.adapter = adapter
 
         findViewById<FloatingActionButton>(R.id.addButton).setOnClickListener {

@@ -1,4 +1,4 @@
-# Gesture Launcher
+# Gessearch Launcher
 
 A minimal, speed-focused Android home-screen replacement. The home screen is your system wallpaper
 plus a clock, date, battery and today's calendar over an invisible full-screen canvas: draw a
@@ -53,7 +53,7 @@ listing.
 
 ## Making it your launcher (and how to leave safely)
 
-- After installing, press Home → pick **Gesture Launcher**. **Keep your existing launcher
+- After installing, press Home → pick **Gessearch Launcher**. **Keep your existing launcher
   installed** as the real safety net — this app is not a drop-in replacement for a full-featured
   launcher.
 - To switch back: Settings → Apps → Default apps → **Home app**.
@@ -71,7 +71,7 @@ save. Then draw it anywhere on the home screen to trigger it. Tune matching stri
 
 The same settings hub is where you turn on file/web search, the floating search window, a custom
 font, and the theme. File search asks for all-files access, and the floating search needs you to
-pick Gesture Launcher as your digital assistant — both are off until you grant them deliberately.
+pick Gessearch Launcher as your digital assistant — both are off until you grant them deliberately.
 
 ## Known limitations
 

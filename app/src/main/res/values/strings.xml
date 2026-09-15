@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Gesture Launcher</string>
+    <string name="app_name">Gessearch Launcher</string>
     <string name="drawer_title">Search</string>
     <string name="settings_title">Gestures</string>
     <string name="training_title">Add gesture</string>
@@ -53,6 +53,7 @@
 
     <string name="add_gesture">Add gesture</string>
     <string name="no_gestures">No gestures yet — tap + to add one.</string>
+    <string name="no_events_left">Nothing left today</string>
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
     <string name="redraw_gesture">Redraw gesture</string>
@@ -91,7 +92,7 @@
     <string name="keep">Keep</string>
     <string name="gesture_saved">Gesture saved</string>
 
-    <string name="safe_mode_title">Gesture Launcher has crashed repeatedly</string>
+    <string name="safe_mode_title">Gessearch Launcher has crashed repeatedly</string>
     <string name="safe_mode_body">To keep you from getting stuck, the gesture home screen is disabled. Open your other apps below, or switch your default Home app.</string>
     <string name="open_home_settings">Change default Home app</string>
     <string name="reset_safe_mode">Try gesture home again</string>
@@ -112,7 +113,7 @@
     <string name="menu_import">Import backup</string>
     <string name="export_success">Backup saved</string>
     <string name="export_failed">Couldn\'t save backup</string>
-    <string name="import_invalid_file">This doesn\'t look like a valid Gesture Launcher backup file.</string>
+    <string name="import_invalid_file">This doesn\'t look like a valid Gessearch Launcher backup file.</string>
     <string name="import_confirm_title">Import backup</string>
     <string name="import_confirm_message">%1$d gesture(s) and %2$d app alias(es) found in this file.\n\nHow should it be applied?</string>
     <string name="import_replace">Replace all</string>
@@ -130,7 +131,7 @@
     <string name="gestures_row_subtitle">%1$d saved</string>
     <string name="export_row_subtitle">Save your gestures, app aliases, and settings to a file</string>
     <string name="import_row_subtitle">Restore from a previously exported backup file</string>
-    <string name="about_version">Gesture Launcher v%1$s</string>
+    <string name="about_version">Gessearch Launcher v%1$s</string>
 
     <string name="section_general">General</string>
     <string name="auto_keyboard_row_subtitle">Auto-open the keyboard when the app drawer opens</string>
@@ -168,7 +169,7 @@
     <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and finding files</string>
     <string name="quick_search_trigger">Quick search trigger</string>
     <string name="quick_search_trigger_granted">Ready — this launcher is your digital assistant. On Android 12+, also set Settings → System → Gestures → Press and hold power button to “Digital assistant”.</string>
-    <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gesture Launcher. Long-pressing the power button will then open quick search.</string>
+    <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gessearch Launcher. Long-pressing the power button will then open quick search.</string>
 
     <!-- Keyboard shortcut (accessibility service). The description is what the system shows on
          the service's own page in the accessibility settings, so it has to explain the access in
@@ -177,10 +178,10 @@
     <string name="keyboard_shortcut_row_subtitle">Press Alt + Space on a physical keyboard to open quick search</string>
     <string name="keyboard_shortcut_access">Keyboard access</string>
     <string name="keyboard_shortcut_access_granted">Ready — Alt + Space works anywhere. Tap to review or turn the access off.</string>
-    <string name="keyboard_shortcut_access_missing">Tap to open Accessibility, then turn on “Gesture Launcher keyboard shortcut”. Without it Android won\'t deliver key presses from other apps.</string>
-    <string name="keyboard_shortcut_service_label">Gesture Launcher keyboard shortcut</string>
+    <string name="keyboard_shortcut_access_missing">Tap to open Accessibility, then turn on “Gessearch Launcher keyboard shortcut”. Without it Android won\'t deliver key presses from other apps.</string>
+    <string name="keyboard_shortcut_service_label">Gessearch Launcher keyboard shortcut</string>
     <string name="keyboard_shortcut_service_summary">Watches for Alt + Space to open quick search</string>
-    <string name="keyboard_shortcut_service_description">Lets Gesture Launcher open its floating search bar when you press Alt + Space on a physical keyboard.\n\nAndroid only delivers key presses from other apps to an accessibility service, which is why this permission is needed. The service reads nothing on your screen — it only watches for that one key combination.</string>
+    <string name="keyboard_shortcut_service_description">Lets Gessearch Launcher open its floating search bar when you press Alt + Space on a physical keyboard.\n\nAndroid only delivers key presses from other apps to an accessibility service, which is why this permission is needed. The service reads nothing on your screen — it only watches for that one key combination.</string>
 
     <string name="battery_level">%1$d%%</string>
     <string name="battery_level_charging">%1$d%%, charging</string>

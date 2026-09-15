@@ -17,38 +17,40 @@ import dev.neffly.gesturelauncher.ui.overrideNextTransition
  *  [GestureAction] value, so callers (currently just [MainActivity]) don't need to. */
 object GestureActionDispatcher {
 
-    /** Returns whether the action actually fired — false only for [GestureAction.OPEN_URL] with
-     *  an unhandleable URL, so the caller can skip the "success" haptic/feedback for it. */
-    fun perform(context: Context, mapping: GestureMapping): Boolean = when (mapping.action) {
-        GestureAction.LAUNCH_APP -> {
-            ComponentName.unflattenFromString(mapping.componentName)?.let { comp ->
-                AppRepository.launch(context, comp)
+    /**
+     * Nothing to report back: every branch that can fail already tells the user itself
+     * ([AppRepository.launch] and the URL branch both toast), and the one caller's confirmation
+     * haptic deliberately fires *before* this runs — see MainActivity.onHomeStroke, where the point
+     * is instant feedback while the window takes a beat to appear. So there is no moment at which a
+     * result could still change what the caller does.
+     */
+    fun perform(context: Context, mapping: GestureMapping) {
+        when (mapping.action) {
+            GestureAction.LAUNCH_APP ->
+                ComponentName.unflattenFromString(mapping.componentName)?.let { comp ->
+                    AppRepository.launch(context, comp)
+                }
+            GestureAction.OPEN_DRAWER -> {
+                context.startActivity(Intent(context, AppDrawerActivity::class.java))
+                // The drawer animates its own slide-up; keep the OS transition out of it.
+                (context as? Activity)?.overrideNextTransition()
             }
-            true
-        }
-        GestureAction.OPEN_DRAWER -> {
-            context.startActivity(Intent(context, AppDrawerActivity::class.java))
-            // The drawer animates its own slide-up; keep the OS transition out of it.
-            (context as? Activity)?.overrideNextTransition()
-            true
-        }
-        GestureAction.QUICK_SEARCH -> {
-            context.startActivity(QuickSearchActivity.intent(context))
-            // The card animates its own fade/rise — same reasoning as the drawer above.
-            (context as? Activity)?.overrideNextTransition()
-            true
-        }
-        GestureAction.OPEN_URL -> {
-            val url = mapping.url
-            val launched = url != null && runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            }.isSuccess
-            if (!launched) {
-                Toast.makeText(context, R.string.gesture_url_open_failed, Toast.LENGTH_SHORT).show()
+            GestureAction.QUICK_SEARCH -> {
+                context.startActivity(QuickSearchActivity.intent(context))
+                // The card animates its own fade/rise — same reasoning as the drawer above.
+                (context as? Activity)?.overrideNextTransition()
             }
-            launched
+            GestureAction.OPEN_URL -> {
+                val url = mapping.url
+                val launched = url != null && runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }.isSuccess
+                if (!launched) {
+                    Toast.makeText(context, R.string.gesture_url_open_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 }
