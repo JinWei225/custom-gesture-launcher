@@ -7,7 +7,7 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppInfo
 
 /**
- * Composes one result list out of the three sources, honouring the settings toggles. Pure: the
+ * Composes one result list out of the sources, honouring the settings toggles. Pure: the
  * caller decides when to run each part — see [SearchController], which runs apps synchronously and
  * files on a debounced background job.
  */
@@ -47,6 +47,13 @@ object SearchEngine {
             SearchResult.Time(TimeZones.title(context, it), TimeZones.detail(context, it))
         }
 
+    /** The action row, when the query starts with a command keyword. Untoggled, as above: the
+     *  keyword is the opt-in, and nothing happens until the row is tapped. */
+    fun command(context: Context, query: String): SearchResult.Action? =
+        Commands.parse(query)?.let {
+            SearchResult.Action(it, Commands.title(context, it), Commands.detail(context, it))
+        }
+
     private const val MIN_SETTINGS_QUERY = 3
     private const val SETTINGS_KEYWORDS = "launcher settings"
 
@@ -56,24 +63,12 @@ object SearchEngine {
         return FileSearcher.search(context, query).map { SearchResult.File(it) }
     }
 
-    /** The single web row, or null when the toggle is off or there's nothing to search for. */
-    fun web(context: Context, query: String): SearchResult.Web? {
-        if (!Prefs.searchWeb(context)) return null
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return null
-        return SearchResult.Web(trimmed, WebSearch.detectUrl(trimmed))
-    }
-
     /** Search-field hint naming only the sources that are actually switched on. */
     @StringRes
-    fun hint(context: Context): Int {
-        val files = Prefs.searchFiles(context) && FilePermissions.isGranted(context)
-        val web = Prefs.searchWeb(context)
-        return when {
-            files && web -> R.string.search_everything
-            files -> R.string.search_apps_and_files
-            web -> R.string.search_apps_and_web
-            else -> R.string.search_apps
+    fun hint(context: Context): Int =
+        if (Prefs.searchFiles(context) && FilePermissions.isGranted(context)) {
+            R.string.search_apps_and_files
+        } else {
+            R.string.search_apps
         }
-    }
 }

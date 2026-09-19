@@ -18,17 +18,20 @@
 
     <!-- Search bar hints, picked to match whichever sources are actually switched on. -->
     <string name="search_apps_and_files">Search apps and files</string>
-    <string name="search_apps_and_web">Search apps and the web</string>
-    <string name="search_everything">Search apps, files, the web</string>
 
     <string name="search_section_apps">Apps</string>
     <string name="search_section_files">Files</string>
-    <string name="search_section_web">Web</string>
     <string name="search_section_launcher">Launcher</string>
     <string name="search_launcher_settings">Launcher settings</string>
     <string name="search_launcher_settings_subtitle">Gestures, appearance, search and backup</string>
     <string name="search_google_subtitle">Search Google in your browser</string>
     <string name="search_open_url_subtitle">Open this address in your browser</string>
+    <string name="search_web">Google</string>
+    <string name="search_web_hint">Add what to search for, or an address to open</string>
+    <string name="search_map">Google Maps</string>
+    <string name="search_map_subtitle">Search Google Maps</string>
+    <string name="search_map_hint">Add a place, e.g. map petrol station</string>
+    <string name="map_search_failed">No app can open Google Maps</string>
     <string name="file_open_failed">Nothing on this device can open that file</string>
     <string name="web_search_failed">No browser found</string>
     <string name="quick_search_no_results">No results</string>
@@ -46,6 +49,23 @@
     <string name="search_time_hours">%1$d h</string>
     <string name="search_time_minutes">%1$d min</string>
     <string name="search_time_hours_minutes">%1$d h %2$d min</string>
+    <string name="search_time_seconds">%1$d s</string>
+    <string name="search_section_actions">Actions</string>
+    <string name="search_alarm">Alarm</string>
+    <string name="search_alarm_at">Alarm at %1$s</string>
+    <string name="search_alarm_hint">Add a time, e.g. 7:30am weekdays gym</string>
+    <string name="search_alarm_weekdays">Weekdays</string>
+    <string name="search_alarm_weekends">Weekends</string>
+    <string name="search_alarm_every_day">Every day</string>
+    <string name="search_timer">Timer</string>
+    <string name="search_timer_for">Timer for %1$s</string>
+    <string name="search_timer_hint">Add a length, e.g. 10 min pasta</string>
+    <string name="search_event_new">New event</string>
+    <string name="search_event_hint">Add a title, a day and a time, e.g. dinner fri 7pm</string>
+    <string name="search_event_all_day">All day</string>
+    <string name="search_event_span">%1$s – %2$s</string>
+    <string name="clock_app_missing">No clock app found</string>
+    <string name="calendar_app_missing">No calendar app found</string>
 
     <string name="menu_gesture_settings">Settings</string>
     <string name="menu_auto_keyboard">Auto keyboard</string>
@@ -174,8 +194,6 @@
     <string name="menu_search_files">Search local files</string>
     <string name="search_files_row_subtitle">Include files from your storage in search results</string>
     <string name="search_files_permission_denied">Files won\'t be searched until all-files access is granted</string>
-    <string name="menu_search_web">Google search</string>
-    <string name="search_web_row_subtitle">Offer a web search — or a typed address — as the last result</string>
     <string name="menu_quick_search">Quick search overlay</string>
     <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and finding files</string>
     <string name="quick_search_trigger">Quick search trigger</string>

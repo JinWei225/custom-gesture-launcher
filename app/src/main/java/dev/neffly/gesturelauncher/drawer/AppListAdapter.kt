@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.search.Command
 import dev.neffly.gesturelauncher.search.FileHit
 import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchResult
@@ -25,8 +26,8 @@ import kotlinx.coroutines.withContext
  * Result list for the drawer, the floating quick-search window and the training app-picker.
  *
  * Two modes, one adapter. [submit] renders the plain alphabetical app list, optionally interleaving
- * alphabet section headers. [submitResults] renders a mixed search result list — apps, files and
- * the web row — grouped under their own section labels. Sharing one adapter is what keeps the
+ * alphabet section headers. [submitResults] renders a mixed search result list — answers, apps
+ * and files — grouped under their own section labels. Sharing one adapter is what keeps the
  * drawer and the floating window rendering identically, font handling included.
  *
  * Backed by [ListAdapter]/DiffUtil so only changed rows rebind. Icons load lazily per bound row
@@ -37,25 +38,25 @@ class AppListAdapter(
     private val onClick: (AppInfo) -> Unit,
     private val onLongClick: ((AppInfo, View) -> Unit)? = null,
     private val onFileClick: ((FileHit) -> Unit)? = null,
-    private val onWebClick: ((SearchResult.Web) -> Unit)? = null,
     private val onSettingsClick: (() -> Unit)? = null,
     private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null,
-    private val onTimeClick: ((SearchResult.Time) -> Unit)? = null
+    private val onTimeClick: ((SearchResult.Time) -> Unit)? = null,
+    private val onActionClick: ((SearchResult.Action) -> Unit)? = null
 ) : ListAdapter<AppListAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
         /** Alphabet bucket header, browse mode only. */
         data class Header(val letter: Char) : Row()
-        /** Search-mode group label (Apps / Files / Web). Explicitly `@param:` because Kotlin 2.2
+        /** Search-mode group label (Actions / Apps / Files). Explicitly `@param:` because Kotlin 2.2
          *  is on its way to applying a bare annotation to the backing field as well, and the
          *  resource check this one carries belongs on the value. */
         data class Section(@param:StringRes val titleRes: Int) : Row()
         data class Item(val app: AppInfo) : Row()
         data class FileRow(val hit: FileHit) : Row()
-        data class WebRow(val web: SearchResult.Web) : Row()
         object SettingsRow : Row()
         data class CalculationRow(val calculation: SearchResult.Calculation) : Row()
         data class TimeRow(val time: SearchResult.Time) : Row()
+        data class ActionRow(val action: SearchResult.Action) : Row()
     }
 
     private var headersShown = false
@@ -99,8 +100,8 @@ class AppListAdapter(
 
     /**
      * Renders a mixed search result list, inserting a section label wherever the result kind
-     * changes. [SearchEngine][dev.neffly.gesturelauncher.search.SearchEngine] already emits them in
-     * Apps -> Files -> Web order, so a change of kind is always a section boundary.
+     * changes. [SearchController][dev.neffly.gesturelauncher.search.SearchController] already
+     * emits them grouped by kind, so a change of kind is always a section boundary.
      */
     fun submitResults(results: List<SearchResult>, onCommitted: (() -> Unit)? = null) {
         headersShown = false
@@ -115,10 +116,10 @@ class AppListAdapter(
                 when (result) {
                     is SearchResult.App -> Row.Item(result.app)
                     is SearchResult.File -> Row.FileRow(result.hit)
-                    is SearchResult.Web -> Row.WebRow(result)
                     is SearchResult.Settings -> Row.SettingsRow
                     is SearchResult.Calculation -> Row.CalculationRow(result)
                     is SearchResult.Time -> Row.TimeRow(result)
+                    is SearchResult.Action -> Row.ActionRow(result)
                 }
             )
         }
@@ -129,10 +130,10 @@ class AppListAdapter(
     private fun sectionTitleFor(result: SearchResult): Int = when (result) {
         is SearchResult.App -> R.string.search_section_apps
         is SearchResult.File -> R.string.search_section_files
-        is SearchResult.Web -> R.string.search_section_web
         is SearchResult.Settings -> R.string.search_section_launcher
         is SearchResult.Calculation -> R.string.search_section_calculator
         is SearchResult.Time -> R.string.search_section_time
+        is SearchResult.Action -> R.string.search_section_actions
     }
 
     /** The openable thing at [position], or null when that row is a header, a section label, or
@@ -167,10 +168,10 @@ class AppListAdapter(
         when (row) {
             is Row.Item -> SearchResult.App(row.app)
             is Row.FileRow -> SearchResult.File(row.hit)
-            is Row.WebRow -> row.web
             is Row.SettingsRow -> SearchResult.Settings
             is Row.CalculationRow -> row.calculation
             is Row.TimeRow -> row.time
+            is Row.ActionRow -> row.action
             is Row.Header, is Row.Section -> null
         }
 
@@ -201,7 +202,7 @@ class AppListAdapter(
         is Row.Section -> VIEW_TYPE_SECTION
         is Row.Item -> VIEW_TYPE_APP
         // File, web, settings and answer rows share one layout and holder; only the bind differs.
-        is Row.FileRow, is Row.WebRow, is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow ->
+        is Row.FileRow, is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow, is Row.ActionRow ->
             VIEW_TYPE_ENTRY
     }
 
@@ -255,24 +256,6 @@ class AppListAdapter(
                 holder.itemView.setOnClickListener { onFileClick?.invoke(hit) }
                 holder.itemView.setOnLongClickListener(null)
             }
-            is Row.WebRow -> {
-                val web = row.web
-                holder as EntryVH
-                val isUrl = web.url != null
-                holder.icon.setImageResource(if (isUrl) R.drawable.ic_link else R.drawable.ic_search)
-                // The query is the title and the action is the subtitle, rather than the other way
-                // round: a long query in a "Search Google for …" sentence gets ellipsized in the
-                // middle, which hides the very thing being searched for.
-                holder.title.text = web.query
-                holder.showSubtitle(
-                    holder.itemView.context.getString(
-                        if (isUrl) R.string.search_open_url_subtitle else R.string.search_google_subtitle
-                    ),
-                    TextUtils.TruncateAt.END
-                )
-                holder.itemView.setOnClickListener { onWebClick?.invoke(web) }
-                holder.itemView.setOnLongClickListener(null)
-            }
             is Row.CalculationRow -> {
                 val calculation = row.calculation
                 holder as EntryVH
@@ -296,6 +279,25 @@ class AppListAdapter(
                 // working, and a wide typeface would otherwise ellipsize the half that matters.
                 holder.showSubtitle(time.detail, TextUtils.TruncateAt.END, lines = 2)
                 holder.itemView.setOnClickListener { onTimeClick?.invoke(time) }
+                holder.itemView.setOnLongClickListener(null)
+            }
+            is Row.ActionRow -> {
+                val action = row.action
+                holder as EntryVH
+                holder.icon.setImageResource(
+                    when (action.command) {
+                        is Command.Alarm -> R.drawable.ic_alarm
+                        is Command.Timer -> R.drawable.ic_timer
+                        is Command.Event -> R.drawable.ic_event
+                        is Command.Web -> if (action.command.url != null) R.drawable.ic_link else R.drawable.ic_search
+                        is Command.Map -> R.drawable.ic_place
+                    }
+                )
+                holder.title.text = action.title
+                // Two lines, as for the time row: the date and time span is the part to check
+                // before tapping, and it must not be the part that gets cut.
+                holder.showSubtitle(action.detail, TextUtils.TruncateAt.END, lines = 2)
+                holder.itemView.setOnClickListener { onActionClick?.invoke(action) }
                 holder.itemView.setOnLongClickListener(null)
             }
             is Row.SettingsRow -> {
@@ -384,15 +386,14 @@ class AppListAdapter(
                 old is Row.Section && new is Row.Section -> old.titleRes == new.titleRes
                 old is Row.Item && new is Row.Item -> old.app.key == new.app.key
                 old is Row.FileRow && new is Row.FileRow -> old.hit.uri == new.hit.uri
-                // Only ever one web row, so identity is the row type itself; the query it carries
-                // is content, and changing it must rebind rather than replace.
-                old is Row.WebRow && new is Row.WebRow -> true
-                // Same reasoning, and load-bearing: the calculation row is pinned to the top and
-                // its result changes on every keystroke, so treating each answer as a new item
-                // would remove and re-insert the row — an animated flicker on the one row that
-                // must hold still.
+                // Only ever one of each answer row, so identity is the row type itself; what it
+                // carries is content, and changing it must rebind rather than replace. Load-bearing:
+                // these rows are pinned to the top and change on every keystroke, so treating each
+                // answer as a new item would remove and re-insert the row — an animated flicker
+                // on the one row that must hold still.
                 old is Row.CalculationRow && new is Row.CalculationRow -> true
                 old is Row.TimeRow && new is Row.TimeRow -> true
+                old is Row.ActionRow && new is Row.ActionRow -> true
                 old is Row.SettingsRow && new is Row.SettingsRow -> true
                 else -> false
             }

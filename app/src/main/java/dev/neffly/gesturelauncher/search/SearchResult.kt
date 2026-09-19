@@ -27,10 +27,10 @@ sealed class SearchResult {
     data class Time(val time: String, val detail: String) : SearchResult()
 
     /**
-     * The web row. [url] is non-null when the query itself parsed as an address, in which case the
-     * row offers to open it directly instead of running a Google search for it.
+     * An alarm, timer or event the query asked for by keyword — see [Commands]. [title] and
+     * [detail] are the reading of it, already worded for the row.
      */
-    data class Web(val query: String, val url: String?) : SearchResult()
+    data class Action(val command: Command, val title: String, val detail: String) : SearchResult()
 }
 
 /**

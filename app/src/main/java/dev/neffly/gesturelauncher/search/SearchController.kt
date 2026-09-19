@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
  * Drives one search box. Shared by the app drawer and the floating quick-search window so the two
  * can't drift apart in behaviour.
  *
- * Apps and the web row are emitted synchronously on every keystroke — the app filter is an
+ * Apps and the answer rows are emitted synchronously on every keystroke — the app filter is an
  * in-memory pass and has always been instant. The file section arrives separately from a debounced
  * background query, and is spliced in only if the box still holds the query it was run for; a
  * stale result is dropped rather than rendered. That keeps typing as responsive as it was before
@@ -72,13 +72,13 @@ class SearchController(
         val results = ArrayList<SearchResult>()
         // Pinned above everything: when the query is a sum, the answer is the whole reason it was
         // typed, and it must not move as the file section lands underneath it a beat later.
+        SearchEngine.command(context, query)?.let { results += it }
         SearchEngine.calculation(query)?.let { results += it }
         SearchEngine.time(context, query)?.let { results += it }
         results += SearchEngine.apps(apps, query)
         // Above files and the web: someone typing "settings" wants this, not a file named after it.
         SearchEngine.settings(query)?.let { results += it }
         if (fileQuery == query) results += fileHits
-        SearchEngine.web(context, query)?.let { results += it }
         onResults(query, results)
     }
 

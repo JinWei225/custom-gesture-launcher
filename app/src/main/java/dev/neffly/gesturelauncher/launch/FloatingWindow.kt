@@ -18,9 +18,9 @@ import androidx.annotation.StringRes
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.Commands
 import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchResult
-import dev.neffly.gesturelauncher.search.WebSearch
 
 /**
  * Opens a search result in a floating (freeform) window instead of full screen.
@@ -76,7 +76,7 @@ object FloatingWindow {
         // answer rows are text to copy. Exhaustive rather than a negated list, so a new kind of
         // result has to say which side it falls on.
         is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
-        is SearchResult.App, is SearchResult.File, is SearchResult.Web ->
+        is SearchResult.App, is SearchResult.File, is SearchResult.Action ->
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
     }
 
@@ -86,8 +86,8 @@ object FloatingWindow {
             is SearchResult.App -> openApp(activity, result.app)
             is SearchResult.File ->
                 start(activity, FileSearcher.intentFor(result.hit), R.string.file_open_failed)
-            is SearchResult.Web ->
-                start(activity, WebSearch.intentFor(result.query, result.url), R.string.web_search_failed)
+            is SearchResult.Action ->
+                start(activity, Commands.intentFor(result.command), Commands.failureMessage(result.command))
             // None opens a window, so there is nothing for the system to react to.
             is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
         }

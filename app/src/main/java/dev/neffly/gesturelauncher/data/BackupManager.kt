@@ -30,7 +30,6 @@ data class BackupData(
     val gestures: List<GestureMapping>,
     val appTags: Map<String, String> = emptyMap(),
     val searchFiles: Boolean = false,
-    val searchWeb: Boolean = true,
     val quickSearch: Boolean = false,
     val hapticFeedback: Boolean = true,
     /** The raw AppCompatDelegate.MODE_NIGHT_* constant, exactly as [Prefs.themeMode] stores it. */
@@ -58,7 +57,6 @@ object BackupManager {
         gestures = GestureStore.all(context),
         appTags = AppTagStore.allTags(context),
         searchFiles = Prefs.searchFiles(context),
-        searchWeb = Prefs.searchWeb(context),
         quickSearch = Prefs.quickSearchEnabled(context),
         hapticFeedback = Prefs.hapticFeedback(context),
         themeMode = Prefs.themeMode(context),
@@ -93,7 +91,6 @@ object BackupManager {
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)
         Prefs.setHapticFeedback(context, data.hapticFeedback)
-        Prefs.setSearchWeb(context, data.searchWeb)
         Prefs.setQuickSearchEnabled(context, data.quickSearch)
         Prefs.setThemeMode(context, data.themeMode)
         Prefs.setFontScale(context, data.fontScale)

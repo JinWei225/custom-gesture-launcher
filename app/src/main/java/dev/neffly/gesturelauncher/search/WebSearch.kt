@@ -1,12 +1,9 @@
 package dev.neffly.gesturelauncher.search
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
-import dev.neffly.gesturelauncher.R
 
-/** Sends a query to the default browser — as a Google search, or straight to a typed address. */
+/** The browser side of the `web` command: a Google search, or a typed address opened directly. */
 object WebSearch {
 
     private const val SEARCH_BASE = "https://www.google.com/search?q="
@@ -29,19 +26,11 @@ object WebSearch {
         return "https://$q"
     }
 
-    /** The browser intent for [query] — a search, or the address it names. Split out from [open]
-     *  so a floating-window launch can attach its own ActivityOptions to the same intent. */
+    /** The browser intent for [query] — a search, or the address it names. */
     fun intentFor(query: String, url: String?): Intent {
         val target = url ?: (SEARCH_BASE + Uri.encode(query.trim()))
         return Intent(Intent.ACTION_VIEW, Uri.parse(target))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-
-    /** Opens [query] in the default browser, as a search or as the address it names. */
-    fun open(context: Context, query: String, url: String?) {
-        if (runCatching { context.startActivity(intentFor(query, url)) }.isFailure) {
-            Toast.makeText(context, R.string.web_search_failed, Toast.LENGTH_SHORT).show()
-        }
     }
 
     /** host.tld, optionally with subdomains and a port; TLD is letters only, 2+ chars. */

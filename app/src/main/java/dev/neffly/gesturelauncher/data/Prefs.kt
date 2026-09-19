@@ -118,15 +118,6 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_SEARCH_FILES, value).apply()
     }
 
-    /** Offer a Google search / "open this address" row for the typed query (default ON — it costs
-     *  no permission and nothing is sent anywhere until the row is tapped). */
-    fun searchWeb(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_SEARCH_WEB, true)
-
-    fun setSearchWeb(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_SEARCH_WEB, value).apply()
-    }
-
     /** Master switch for the floating quick-search window (default OFF — turning it on is what
      *  makes taking the assistant role meaningful, and that has system-wide side effects). The
      *  window checks this on every launch, since the assistant role outlives the toggle. */

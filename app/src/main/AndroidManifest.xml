@@ -4,6 +4,10 @@
     <!-- Read the system calendar to show today's events on the home screen. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- The search bar's "alarm" and "timer" commands hand off to the clock app through
+         ACTION_SET_ALARM / ACTION_SET_TIMER, which require this (normal, auto-granted). -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+
     <!-- Required since API 26 for the drawer's long-press "Uninstall" (ACTION_DELETE) to work. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 

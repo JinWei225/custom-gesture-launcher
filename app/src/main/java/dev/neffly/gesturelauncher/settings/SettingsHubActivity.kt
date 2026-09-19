@@ -51,7 +51,6 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var fontSubtitle: TextView
     private lateinit var fontScaleSubtitle: TextView
     private lateinit var searchFilesSwitch: MaterialSwitch
-    private lateinit var searchWebSwitch: MaterialSwitch
     private lateinit var quickSearchSwitch: MaterialSwitch
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
@@ -143,13 +142,6 @@ class SettingsHubActivity : SlidePanelActivity() {
         searchFilesSwitch = findViewById(R.id.searchFilesSwitch)
         findViewById<View>(R.id.searchFilesRow).setOnClickListener { toggleSearchFiles() }
 
-        searchWebSwitch = findViewById(R.id.searchWebSwitch)
-        findViewById<View>(R.id.searchWebRow).setOnClickListener {
-            val enabled = !Prefs.searchWeb(this)
-            Prefs.setSearchWeb(this, enabled)
-            searchWebSwitch.isChecked = enabled
-        }
-
         quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
         findViewById<View>(R.id.quickSearchRow).setOnClickListener {
             val enabled = !Prefs.quickSearchEnabled(this)
@@ -226,7 +218,6 @@ class SettingsHubActivity : SlidePanelActivity() {
             Prefs.setSearchFiles(this, false)
         }
         searchFilesSwitch.isChecked = Prefs.searchFiles(this)
-        searchWebSwitch.isChecked = Prefs.searchWeb(this)
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
         keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)

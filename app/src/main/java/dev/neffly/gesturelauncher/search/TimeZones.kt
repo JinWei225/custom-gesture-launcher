@@ -1,7 +1,6 @@
 package dev.neffly.gesturelauncher.search
 
 import android.content.Context
-import android.text.format.DateFormat
 import dev.neffly.gesturelauncher.R
 import java.text.Normalizer
 import java.time.Clock
@@ -9,7 +8,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.abs
@@ -64,7 +62,7 @@ object TimeZones {
         // "3pm to tokyo", "3pm in tokyo", "3pm est to tokyo"
         CONVERT.matchEntire(q)?.let { m ->
             val (timeText, sourceText, connector, targetText) = m.destructured
-            val time = time(timeText) ?: return null
+            val time = Times.parse(timeText) ?: return null
             val target = zone(targetText) ?: return null
             // With no source named, "to" means the time is local and the answer is there; "in"
             // and "at" mean the time is there and the answer is local — as in "3pm in Tokyo".
@@ -77,11 +75,11 @@ object TimeZones {
         // "3pm tokyo" / "tokyo 3pm"
         TIME_ZONE.matchEntire(q)?.let { m ->
             val (timeText, zoneText) = m.destructured
-            return convert(time(timeText) ?: return null, zone(zoneText) ?: return null, now.zone, now)
+            return convert(Times.parse(timeText) ?: return null, zone(zoneText) ?: return null, now.zone, now)
         }
         ZONE_AT_TIME.matchEntire(q)?.let { m ->
             val (zoneText, timeText) = m.destructured
-            return convert(time(timeText) ?: return null, zone(zoneText) ?: return null, now.zone, now)
+            return convert(Times.parse(timeText) ?: return null, zone(zoneText) ?: return null, now.zone, now)
         }
         // "tokyo to london": the current moment, read across the two.
         ZONE_TO_ZONE.matchEntire(q)?.let { m ->
@@ -99,32 +97,13 @@ object TimeZones {
         return Answer(source.withZoneSameInstant(to), source, fromNow = false, now.toLocalDate())
     }
 
-    private fun time(text: String): LocalTime? {
-        when (text) {
-            "noon" -> return LocalTime.NOON
-            "midnight" -> return LocalTime.MIDNIGHT
-        }
-        val m = TIME_PARTS.matchEntire(text) ?: return null
-        var hour = m.groupValues[1].toInt()
-        val minute = m.groupValues[2].ifEmpty { "0" }.toInt()
-        val meridiem = m.groupValues[3]
-        if (minute > 59) return null
-        if (meridiem.isNotEmpty()) {
-            if (hour !in 1..12) return null
-            hour = hour % 12 + if (meridiem == "p") 12 else 0
-        } else if (hour > 23) {
-            return null
-        }
-        return LocalTime.of(hour, minute)
-    }
-
     private fun zone(name: String): ZoneId? = ALIASES[name.trim()]?.let { ZoneId.of(it) }
 
     // --- display ------------------------------------------------------------
 
     /** The row's title: the time in [Answer.target], with the day when it isn't today here. */
     fun title(context: Context, answer: Answer): String {
-        val time = timeFormatter(context).format(answer.target)
+        val time = Times.formatter(context).format(answer.target)
         return when (ChronoUnit.DAYS.between(answer.today, answer.target.toLocalDate())) {
             1L -> context.getString(R.string.search_time_tomorrow, time)
             -1L -> context.getString(R.string.search_time_yesterday, time)
@@ -138,7 +117,7 @@ object TimeZones {
         val head = if (answer.fromNow) {
             context.getString(R.string.search_time_now_in, target)
         } else {
-            val sourceTime = timeFormatter(context).format(answer.source)
+            val sourceTime = Times.formatter(context).format(answer.source)
             context.getString(
                 R.string.search_time_conversion, sourceTime, zoneLabel(answer.source.zone), target
             )
@@ -169,13 +148,6 @@ object TimeZones {
         return context.getString(direction, span)
     }
 
-    /** Follows the device's 12/24-hour setting, as the home-screen clock does. */
-    private fun timeFormatter(context: Context): DateTimeFormatter =
-        DateTimeFormatter.ofPattern(
-            if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a",
-            Locale.getDefault()
-        )
-
     // --- grammar ------------------------------------------------------------
 
     private const val MAX_LENGTH = 80
@@ -183,9 +155,8 @@ object TimeZones {
 
     private val WHITESPACE = Regex("""\s+""")
 
-    private const val TIME = """(noon|midnight|\d{1,2}(?::\d{2})?(?: ?[ap]\.?m\.?)?)"""
+    private const val TIME = "(${Times.TIME})"
     private const val ZONE = """([a-z][a-z' -]*?)"""
-    private val TIME_PARTS = Regex("""(\d{1,2})(?::(\d{2}))?(?: ?([ap])\.?m\.?)?""")
 
     private val NOW_IN = Regex(
         """(?:what(?:'s| is) the time|what time is it|current time|time now|time|now)(?: (?:in|at))? $ZONE"""

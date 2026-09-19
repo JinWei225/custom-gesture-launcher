@@ -40,11 +40,11 @@ import dev.neffly.gesturelauncher.data.AppTagStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.search.Clipboard
+import dev.neffly.gesturelauncher.search.Commands
 import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchController
 import dev.neffly.gesturelauncher.search.SearchEngine
 import dev.neffly.gesturelauncher.search.SearchResult
-import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
 import dev.neffly.gesturelauncher.ui.BaseActivity
@@ -145,10 +145,10 @@ class AppDrawerActivity : BaseActivity() {
             onClick = { app -> launchAndClearSearch(app) },
             onLongClick = { app, anchor -> showAppMenu(app, anchor) },
             onFileClick = { hit -> FileSearcher.open(this, hit); clearSearch() },
-            onWebClick = { web -> WebSearch.open(this, web.query, web.url); clearSearch() },
             onSettingsClick = { openSettings(); clearSearch() },
             onCalculationClick = { calculation -> open(calculation) },
-            onTimeClick = { time -> open(time) }
+            onTimeClick = { time -> open(time) },
+            onActionClick = { action -> open(action) }
         )
         appList.adapter = adapter
         // Swipe a row right to open it floating instead of full screen. Closing the drawer after
@@ -230,8 +230,8 @@ class AppDrawerActivity : BaseActivity() {
         when (result) {
             is SearchResult.App -> launchAndClearSearch(result.app)
             is SearchResult.File -> { FileSearcher.open(this, result.hit); clearSearch() }
-            is SearchResult.Web -> { WebSearch.open(this, result.query, result.url); clearSearch() }
             is SearchResult.Settings -> { openSettings(); clearSearch() }
+            is SearchResult.Action -> { Commands.open(this, result.command); clearSearch() }
             // The only rows that leave the drawer open: the query stays in the box so a second
             // sum can be typed over it, which is the whole point of a calculator in a search bar.
             is SearchResult.Calculation -> Clipboard.copy(this, result.expression, result.result)
