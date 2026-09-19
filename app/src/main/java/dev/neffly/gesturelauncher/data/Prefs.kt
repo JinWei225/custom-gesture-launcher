@@ -18,7 +18,6 @@ object Prefs {
     private const val KEY_FONT_NAME = "font_name"
     private const val KEY_FONT_SCALE = "font_scale"
     private const val KEY_SEARCH_FILES = "search_files"
-    private const val KEY_SEARCH_WEB = "search_web"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
 

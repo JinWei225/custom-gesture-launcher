@@ -263,31 +263,8 @@ class QuickSearchActivity : BaseActivity() {
         // actually available, so the card can never grow back under the keyboard it just moved to
         // avoid — a result behind the IME can be neither read nor tapped, so it is not worth having.
         val ceiling = minOf((screenHeight * MAX_CARD_FRACTION).toInt(), available)
-        resultList.maxHeightPx = snapToWholeRows(ceiling.coerceAtLeast(minListPx().coerceAtMost(available)))
-    }
-
-    /**
-     * Trims [ceiling] to the tallest run of rows that fits inside it whole.
-     *
-     * Without this the list stops mid-row: the card's bottom edge slices a result in half, which
-     * reads as a rendering fault rather than as "there is more below". Rows are measured rather
-     * than assumed because they aren't uniform — a file or web row carrying a subtitle stands
-     * taller than the minimum an app row sits at.
-     *
-     * Stable across passes rather than oscillating: once the list is exactly as tall as the rows
-     * that fit, the same rows still fit, so the next measure returns the same number. Before
-     * anything is laid out there is nothing to walk and [ceiling] passes through unchanged, which
-     * [renderResults] corrects on the pass after the rows land.
-     */
-    private fun snapToWholeRows(ceiling: Int): Int {
-        var used = 0
-        for (i in 0 until resultList.childCount) {
-            val height = resultList.getChildAt(i)?.height ?: continue
-            if (height <= 0) continue
-            if (used + height > ceiling) break
-            used += height
-        }
-        return if (used > 0) used else ceiling
+        // The list itself trims that to whole rows on every measure (see MaxHeightRecyclerView).
+        resultList.maxHeightPx = ceiling.coerceAtLeast(minListPx().coerceAtMost(available))
     }
 
     /**
