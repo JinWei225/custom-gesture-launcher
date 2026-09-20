@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The page right of home: notes as sent messages, newest at the bottom, and the box that
+     sends the next one. The bottom padding keeps the box clear of the dock. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingBottom="104dp">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/noteList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp"
+        android:scrollbars="none" />
+
+    <TextView
+        android:id="@+id/notesEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:alpha="0.62"
+        android:shadowColor="@color/wallpaper_overlay_shadow"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="10"
+        android:text="@string/notes_empty"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="bottom"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/noteInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_glass_pill"
+            android:hint="@string/note_hint"
+            android:imeOptions="actionSend|flagNoExtractUi"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="5"
+            android:minHeight="48dp"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="12dp"
+            android:textColor="@color/wallpaper_overlay_text"
+            android:textColorHint="@color/wallpaper_overlay_hint"
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/noteSendButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_drawer_button"
+            android:contentDescription="@string/note_send"
+            android:scaleType="center"
+            android:src="@drawable/ic_send"
+            app:tint="@color/wallpaper_overlay_text" />
+    </LinearLayout>
+
+</LinearLayout>

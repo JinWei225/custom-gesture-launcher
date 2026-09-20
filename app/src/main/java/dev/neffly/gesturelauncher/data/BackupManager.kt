@@ -3,6 +3,8 @@ package dev.neffly.gesturelauncher.data
 import android.content.Context
 import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
+import dev.neffly.gesturelauncher.notes.Note
+import dev.neffly.gesturelauncher.notes.NoteStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -34,7 +36,10 @@ data class BackupData(
     val hapticFeedback: Boolean = true,
     /** The raw AppCompatDelegate.MODE_NIGHT_* constant, exactly as [Prefs.themeMode] stores it. */
     val themeMode: Int = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
-    val fontScale: Float = 1f
+    val fontScale: Float = 1f,
+    /** The notes page, oldest first. Widgets are left out: an app-widget id only means
+     *  something to the device that allocated it. */
+    val notes: List<Note> = emptyList()
 )
 
 /** Result of applying an imported [BackupData], for the user-facing summary dialog. */
@@ -58,6 +63,7 @@ object BackupManager {
         appTags = AppTagStore.allTags(context),
         searchFiles = Prefs.searchFiles(context),
         quickSearch = Prefs.quickSearchEnabled(context),
+        notes = NoteStore.load(context),
         hapticFeedback = Prefs.hapticFeedback(context),
         themeMode = Prefs.themeMode(context),
         fontScale = Prefs.fontScale(context)
@@ -79,6 +85,7 @@ object BackupManager {
         if (replace) {
             GestureStore.replaceAll(context, data.gestures)
             AppTagStore.replaceAll(context, data.appTags)
+            NoteStore.save(context, data.notes)
         } else {
             // Upsert by id, not append: a gesture's id is its identity everywhere else (the home
             // screen looks mappings up by it, and update/remove key on it), so merging a backup
@@ -87,6 +94,7 @@ object BackupManager {
             // under the same id. Matches how mergeAll overlays tags below.
             data.gestures.forEach { GestureStore.update(context, it) }
             AppTagStore.mergeAll(context, data.appTags)
+            NoteStore.merge(context, data.notes)
         }
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)

@@ -216,21 +216,33 @@
 
     <!-- Home screen buttons beside search. -->
     <string name="lock_screen">Lock screen</string>
-    <string name="open_widgets">Open widgets</string>
+    <string name="page_left">Previous page</string>
+    <string name="page_right">Next page</string>
     <string name="lock_setup_title">Locking needs accessibility access</string>
     <string name="lock_setup_message">Android only lets an accessibility service lock the screen. Turn on “Gessearch Launcher” in Accessibility, then tap the lock button again. It reads nothing on your screen.</string>
     <string name="lock_setup_open">Open Accessibility</string>
     <string name="lock_unsupported">Locking needs Android 9 or newer</string>
 
     <!-- Widgets page. -->
-    <string name="widgets_title">Widgets</string>
     <string name="add_widget">Add widget</string>
-    <string name="widgets_empty">No widgets yet. Tap + to add one.</string>
     <string name="widget_resize">Resize widget</string>
     <string name="widget_move_up">Move up</string>
     <string name="widget_move_down">Move down</string>
     <string name="widget_remove">Remove</string>
     <string name="widget_bind_failed">Couldn\'t add that widget</string>
+
+    <!-- Notes page. -->
+    <string name="note_hint">Write a note</string>
+    <string name="note_send">Send note</string>
+    <string name="note_save">Save note</string>
+    <string name="notes_empty">Notes you send stay here</string>
+    <string name="note_copy">Copy</string>
+    <string name="note_edit">Edit</string>
+    <string name="note_delete">Delete</string>
+    <string name="note_copied">Copied</string>
+    <string name="note_edited">edited</string>
+    <string name="note_today">Today</string>
+    <string name="note_yesterday">Yesterday</string>
 
     <string name="battery_level">%1$d%%</string>
     <string name="battery_level_charging">%1$d%%, charging</string>

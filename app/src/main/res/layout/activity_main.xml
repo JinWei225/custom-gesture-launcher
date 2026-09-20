@@ -1,235 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home: top 30% = clock + today's events (non-drawable); lower 70% = gesture canvas. -->
+<!-- Home: three pages side by side — widgets, the home page (clock, events, gesture canvas) and
+     notes — under a dock that stays put across them. The pages are built from page_widgets,
+     page_home and page_notes; see MainActivity. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout
-        android:id="@+id/contentColumn"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/homePager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent" />
 
-        <!-- Top widget zone: safe (no gesture capture). -->
-        <LinearLayout
-            android:id="@+id/widgetPanel"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="30"
-            android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="32dp">
-
-            <!-- Date above the time, not beside it.
-                 Font padding is deliberately left ON here despite the gap it leaves between the
-                 two lines: these TextViews carry a 10px blur shadow with no offset, the parent
-                 clips children to their bounds, and that padding is the only slack keeping the
-                 shadow from being cut off at the top of the glyphs. -->
-            <!-- No longer clickable as a whole: the date line and the time open different apps
-                 (calendar and clock), so each is its own target and this is just the column that
-                 stacks them. The negative start margin cancels the horizontal padding both rows
-                 now carry for their touch feedback, so the text still lines up with everything
-                 else in the panel. -->
-            <LinearLayout
-                android:id="@+id/clockWidget"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="-8dp"
-                android:orientation="vertical">
-
-                <!-- The whole line, battery included, opens the calendar: it reads as one row, and
-                     carving the battery out of the middle of it would leave a dead patch between
-                     two live ones. -->
-                <LinearLayout
-                    android:id="@+id/dateRow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:alpha="0.85"
-                    android:background="@drawable/bg_widget_tap"
-                    android:baselineAligned="false"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp">
-
-                    <TextClock
-                        android:id="@+id/clockDate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:format12Hour="EEE, MMM d"
-                        android:format24Hour="EEE, MMM d"
-                        android:shadowColor="@color/wallpaper_overlay_shadow"
-                        android:shadowDx="0"
-                        android:shadowDy="0"
-                        android:shadowRadius="10"
-                        android:textColor="@color/wallpaper_overlay_text"
-                        android:textSize="15sp" />
-
-                    <!-- Level set from ACTION_BATTERY_CHANGED; the percentage beside it carries
-                         the accessibility text, so the icon itself stays decorative.
-
-                         36dp of box around a 24dp icon: ShadowImageView paints the same 10px halo
-                         the text beside it has, and the 6dp padding is the room that halo needs
-                         before the parent clips it — the same slack the clock's font padding
-                         provides. The start margin is reduced by that padding so the icon still
-                         lands where it did. -->
-                    <dev.neffly.gesturelauncher.ui.ShadowImageView
-                        android:id="@+id/batteryIcon"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginStart="8dp"
-                        android:importantForAccessibility="no"
-                        android:padding="6dp"
-                        android:src="@drawable/battery_indicator"
-                        app:tint="@color/wallpaper_overlay_text" />
-
-                    <TextView
-                        android:id="@+id/batteryLevel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:shadowColor="@color/wallpaper_overlay_shadow"
-                        android:shadowDx="0"
-                        android:shadowDy="0"
-                        android:shadowRadius="10"
-                        android:textColor="@color/wallpaper_overlay_text"
-                        android:textSize="15sp"
-                        tools:text="99%" />
-                </LinearLayout>
-
-                <TextClock
-                    android:id="@+id/clockTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_widget_tap"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:fontFamily="sans-serif-black"
-                    android:paddingHorizontal="8dp"
-                    android:format12Hour="h:mm"
-                    android:format24Hour="HH:mm"
-                    android:shadowColor="@color/wallpaper_overlay_shadow"
-                    android:shadowDx="0"
-                    android:shadowDy="0"
-                    android:shadowRadius="10"
-                    android:letterSpacing="-0.03"
-                    android:textColor="@color/wallpaper_overlay_text"
-                    android:textSize="64sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Today's events, filled at runtime. Whole area opens the calendar app. -->
-            <LinearLayout
-                android:id="@+id/eventsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:orientation="vertical"
-                android:paddingVertical="6dp" />
-        </LinearLayout>
-
-        <!-- Only this lower region captures gestures. -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="70">
-
-            <dev.neffly.gesturelauncher.ui.GestureCanvasView
-                android:id="@+id/gestureCanvas"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <!-- Shown only while zero gestures are saved; never intercepts touch (plain,
-                 non-clickable TextView) so strokes still reach the canvas underneath it. -->
-            <TextView
-                android:id="@+id/emptyHint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="32dp"
-                android:alpha="0.62"
-                android:gravity="center"
-                android:shadowColor="@color/wallpaper_overlay_shadow"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="10"
-                android:text="@string/home_hint_empty"
-                android:textColor="@color/wallpaper_overlay_text"
-                android:textSize="15sp"
-                android:visibility="gone" />
-
-            <!-- Shown briefly after a long/deliberate stroke matches nothing, so a real attempt
-                 gets feedback instead of silently doing nothing. Never intercepts touch. -->
-            <TextView
-                android:id="@+id/recognitionHint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="32dp"
-                android:alpha="0.85"
-                android:gravity="center"
-                android:shadowColor="@color/wallpaper_overlay_shadow"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="10"
-                android:textColor="@color/wallpaper_overlay_text"
-                android:textSize="15sp"
-                android:visibility="gone" />
-
-        </FrameLayout>
-
-    </LinearLayout>
-
-    <!-- Kept outside the canvas view so a recognizer crash can't remove it. Search sits nearest
-         the edge, where the thumb already knows to find it; the two newer buttons line up inward
-         from it in the order the user asked for: lock, widgets, search. -->
-    <LinearLayout
-        android:id="@+id/homeButtons"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="36dp"
-        android:orientation="horizontal">
+    <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. Lock at the
+         left corner, the page arrows in the middle, search at the right where the thumb already
+         knows to find it. -->
+    <FrameLayout
+        android:id="@+id/homeDock"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="36dp">
 
         <ImageButton
             android:id="@+id/lockButton"
             android:layout_width="56dp"
             android:layout_height="56dp"
+            android:layout_gravity="start"
             android:background="@drawable/bg_drawer_button"
             android:contentDescription="@string/lock_screen"
             android:scaleType="center"
             android:src="@drawable/ic_lock"
             app:tint="@color/wallpaper_overlay_text" />
 
-        <ImageButton
-            android:id="@+id/widgetsButton"
-            android:layout_width="56dp"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="56dp"
-            android:layout_marginStart="14dp"
-            android:background="@drawable/bg_drawer_button"
-            android:contentDescription="@string/open_widgets"
-            android:scaleType="center"
-            android:src="@drawable/ic_widgets"
-            app:tint="@color/wallpaper_overlay_text" />
+            android:layout_gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/pageLeftButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_drawer_button"
+                android:contentDescription="@string/page_left"
+                android:scaleType="center"
+                android:src="@drawable/ic_chevron_left"
+                app:tint="@color/wallpaper_overlay_text" />
+
+            <ImageButton
+                android:id="@+id/pageRightButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/bg_drawer_button"
+                android:contentDescription="@string/page_right"
+                android:scaleType="center"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@color/wallpaper_overlay_text" />
+        </LinearLayout>
 
         <ImageButton
             android:id="@+id/searchButton"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            android:layout_marginStart="14dp"
+            android:layout_gravity="end"
             android:background="@drawable/bg_drawer_button"
             android:contentDescription="@string/open_search"
             android:scaleType="center"
             android:src="@drawable/ic_search"
             app:tint="@color/wallpaper_overlay_text" />
-    </LinearLayout>
+    </FrameLayout>
 
 </FrameLayout>

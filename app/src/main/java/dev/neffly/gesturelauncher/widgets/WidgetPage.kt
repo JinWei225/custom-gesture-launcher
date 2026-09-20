@@ -16,59 +16,50 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePadding
-import com.google.android.material.appbar.MaterialToolbar
 import dev.neffly.gesturelauncher.R
-import dev.neffly.gesturelauncher.ui.BaseActivity
-import dev.neffly.gesturelauncher.ui.FontEngine
-import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
-import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlin.math.roundToInt
 
 /**
- * A page of app widgets, stacked top to bottom and scrolling as one column.
+ * The home screen's widgets page: app widgets stacked top to bottom, scrolling as one column.
  *
  * Each widget is as wide as the page and as tall as its grip has been dragged to; a long-press on
  * it offers to move it up or down the column, or remove it. Adding goes through
  * [WidgetPickerActivity], then a bind the system has to have allowed this launcher to make.
  *
- * The host is created fresh with each page; the widget ids it allocated are what persist (see
- * [WidgetStore]), and a host with the same id picks them up again. Listening is confined to the
- * time the page is on screen, so widgets that update often cost nothing while it isn't.
+ * Lives inside the home activity rather than being a screen of its own: it is a page of the home
+ * screen, reached by paging sideways from it. The activity forwards the lifecycle moments the host
+ * needs ([onStart], [onStop]) and the configuration result it can only receive itself
+ * ([onActivityResult]). The widget ids the host allocates are what persist (see [WidgetStore]);
+ * a host with the same id picks them up again.
  */
-class WidgetPageActivity : BaseActivity() {
+class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
-    private lateinit var root: View
-    private lateinit var column: LinearLayout
-    private lateinit var emptyLabel: TextView
-    private lateinit var host: WidgetHost
-    private lateinit var manager: AppWidgetManager
+    private val column: LinearLayout = page.findViewById(R.id.widgetColumn)
+    private val addButton: View = page.findViewById(R.id.addWidgetButton)
+    private val manager: AppWidgetManager = AppWidgetManager.getInstance(activity)
 
     /** The context every widget view is built with — see [WidgetContext]. */
-    private lateinit var widgetContext: Context
+    private val widgetContext: Context = WidgetContext(activity)
+    private val host = WidgetHost(widgetContext)
 
-    private var entries: MutableList<WidgetEntry> = mutableListOf()
+    private val entries: MutableList<WidgetEntry> = WidgetStore.load(activity).toMutableList()
 
     /** The id allocated for the widget being added, until binding, or its configuration screen,
      *  says whether it is wanted. */
     private var pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
 
-    private val pickWidget =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    private val pickWidget: ActivityResultLauncher<Intent> =
+        activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val provider: ComponentName? = result.data?.let { data ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     data.getParcelableExtra(WidgetPickerActivity.EXTRA_PROVIDER, ComponentName::class.java)
@@ -77,106 +68,55 @@ class WidgetPageActivity : BaseActivity() {
                     data.getParcelableExtra(WidgetPickerActivity.EXTRA_PROVIDER)
                 }
             }
-            if (result.resultCode != Activity.RESULT_OK || provider == null) return@registerForActivityResult
-            bind(provider)
+            if (result.resultCode == Activity.RESULT_OK && provider != null) bind(provider)
         }
 
     /** The system's "allow this launcher to create widgets" dialog, for the first bind. */
-    private val bindWidget =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    private val bindWidget: ActivityResultLauncher<Intent> =
+        activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val id = pendingId
             pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
             if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return@registerForActivityResult
             if (result.resultCode == Activity.RESULT_OK) onBound(id) else host.deleteAppWidgetId(id)
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // Same arrangement as the drawer: the page animates its own root in, so no OEM "app
-        // opening" zoom can replace the slide, and hands the slide-out to the window so it plays
-        // for Home as well as Back.
-        overrideOwnTransitions(closeExit = R.anim.drawer_slide_out)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContentView(R.layout.activity_widget_page)
-
-        root = findViewById(R.id.widgetPageRoot)
-        Glass.frost(window, root) { veil -> root.setBackgroundColor(veil) }
-        if (savedInstanceState == null) {
-            root.translationY = resources.displayMetrics.heightPixels.toFloat()
-            root.animate()
-                .translationY(0f)
-                .setDuration(SLIDE_DURATION_MS)
-                .setInterpolator(DecelerateInterpolator())
-                .start()
-        }
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
-            v.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-            insets
-        }
-
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar.setNavigationOnClickListener { finish() }
-        toolbar.inflateMenu(R.menu.widget_page_menu)
-        FontEngine.applyTo(toolbar.menu)
-        toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_add_widget -> { pick(); true }
-                else -> false
-            }
-        }
-
-        column = findViewById(R.id.widgetColumn)
-        emptyLabel = findViewById(R.id.emptyLabel)
-        manager = AppWidgetManager.getInstance(this)
-        widgetContext = WidgetContext(this)
-        host = WidgetHost(widgetContext)
-
-        entries = WidgetStore.load(this).toMutableList()
+    init {
+        addButton.setOnClickListener { pick() }
         showAll()
     }
 
-    override fun onStart() {
-        super.onStart()
-        host.startListening()
-    }
+    fun onStart() = host.startListening()
 
-    override fun onStop() {
-        super.onStop()
-        host.stopListening()
-    }
+    fun onStop() = host.stopListening()
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_CONFIGURE) return
+    /** Returns true when the result was a widget configuration screen's, see [REQUEST_CONFIGURE]. */
+    fun onActivityResult(requestCode: Int, resultCode: Int): Boolean {
+        if (requestCode != REQUEST_CONFIGURE) return false
         val id = pendingId
         pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
-        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return true
         val info = manager.getAppWidgetInfo(id)
         if (resultCode == Activity.RESULT_OK && info != null) add(id, info) else host.deleteAppWidgetId(id)
+        return true
     }
 
     // --- the column ---------------------------------------------------------
 
     /** Builds the column from [entries], dropping any whose provider has gone. */
     private fun showAll() {
-        column.removeAllViews()
         val gone = entries.filter { manager.getAppWidgetInfo(it.id) == null }
         if (gone.isNotEmpty()) {
             gone.forEach { host.deleteAppWidgetId(it.id) }
             entries.removeAll(gone)
-            WidgetStore.save(this, entries)
+            WidgetStore.save(activity, entries)
         }
-        for (entry in entries) column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)))
-        emptyLabel.isVisible = entries.isEmpty()
+        for ((index, entry) in entries.withIndex()) {
+            column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)), index)
+        }
     }
 
     private fun itemFor(entry: WidgetEntry, info: AppWidgetProviderInfo): View {
-        val item = LayoutInflater.from(this).inflate(R.layout.item_widget, column, false)
+        val item = LayoutInflater.from(activity).inflate(R.layout.item_widget, column, false)
         val frame = item.findViewById<FrameLayout>(R.id.widgetFrame)
         frame.updateLayoutParams<ViewGroup.LayoutParams> { height = dp(entry.heightDp) }
 
@@ -199,8 +139,8 @@ class WidgetPageActivity : BaseActivity() {
             if (index < entries.lastIndex) add(R.string.widget_move_down to { moveWidget(index, index + 1) })
             add(R.string.widget_remove to { removeWidget(index) })
         }
-        AlertDialog.Builder(this)
-            .setItems(actions.map { getString(it.first) }.toTypedArray()) { _, which ->
+        AlertDialog.Builder(activity)
+            .setItems(actions.map { activity.getString(it.first) }.toTypedArray()) { _, which ->
                 actions[which].second()
             }
             .showWithFont()
@@ -211,22 +151,21 @@ class WidgetPageActivity : BaseActivity() {
         val item = column.getChildAt(from)
         column.removeViewAt(from)
         column.addView(item, to)
-        WidgetStore.save(this, entries)
+        WidgetStore.save(activity, entries)
     }
 
     private fun removeWidget(index: Int) {
         host.deleteAppWidgetId(entries[index].id)
         entries.removeAt(index)
         column.removeViewAt(index)
-        WidgetStore.save(this, entries)
-        emptyLabel.isVisible = entries.isEmpty()
+        WidgetStore.save(activity, entries)
     }
 
     // --- adding -------------------------------------------------------------
 
     private fun pick() {
-        pickWidget.launch(WidgetPickerActivity.intent(this))
-        overrideNextTransition()
+        pickWidget.launch(WidgetPickerActivity.intent(activity))
+        activity.overrideNextTransition()
     }
 
     /**
@@ -247,7 +186,7 @@ class WidgetPageActivity : BaseActivity() {
         runCatching { bindWidget.launch(intent) }.onFailure {
             pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
             host.deleteAppWidgetId(id)
-            Toast.makeText(this, R.string.widget_bind_failed, Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, R.string.widget_bind_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -262,36 +201,36 @@ class WidgetPageActivity : BaseActivity() {
             add(id, info)
             return
         }
-        // The configuration screen reports back through onActivityResult: the host API predates
-        // the result contracts and has no other way to be started.
+        // The configuration screen reports back through the activity's onActivityResult: the
+        // host API predates the result contracts and has no other way to be started.
         pendingId = id
         runCatching {
-            host.startAppWidgetConfigureActivityForResult(this, id, 0, REQUEST_CONFIGURE, null)
+            host.startAppWidgetConfigureActivityForResult(activity, id, 0, REQUEST_CONFIGURE, null)
         }.onFailure {
             pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
             host.deleteAppWidgetId(id)
-            Toast.makeText(this, R.string.widget_bind_failed, Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, R.string.widget_bind_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun add(id: Int, info: AppWidgetProviderInfo) {
         // The provider's minimum is a floor, not a preference: most declare a height sized for a
         // launcher cell, and a widget that is all header at that size is what the grip is for.
-        val heightDp = (info.minHeight / resources.displayMetrics.density).roundToInt()
+        val heightDp = (info.minHeight / activity.resources.displayMetrics.density).roundToInt()
             .coerceIn(MIN_HEIGHT_DP, maxHeightDp())
         val entry = WidgetEntry(id, heightDp)
         entries.add(entry)
-        WidgetStore.save(this, entries)
-        column.addView(itemFor(entry, info))
-        emptyLabel.isVisible = false
+        WidgetStore.save(activity, entries)
+        // Above the add button, which stays the column's last child.
+        column.addView(itemFor(entry, info), entries.lastIndex)
     }
 
     // --- sizing -------------------------------------------------------------
 
     /** Tells the widget the size it has, so providers that adapt their layout to it can. */
     private fun reportSize(view: WidgetHostView, heightDp: Int) {
-        val widthDp = ((column.width - column.paddingLeft - column.paddingRight) /
-            resources.displayMetrics.density).roundToInt()
+        val density = activity.resources.displayMetrics.density
+        val widthDp = ((column.width - column.paddingLeft - column.paddingRight) / density).roundToInt()
         if (widthDp <= 0) {
             // Not laid out yet — the first widgets are built before the column has a width.
             column.post { reportSize(view, heightDp) }
@@ -307,15 +246,18 @@ class WidgetPageActivity : BaseActivity() {
 
     /** Tall enough to fill the page and no taller: a widget that outgrows the screen has nowhere
      *  left to show its bottom. */
-    private fun maxHeightDp(): Int =
-        ((resources.displayMetrics.heightPixels * MAX_HEIGHT_FRACTION) / resources.displayMetrics.density).roundToInt()
+    private fun maxHeightDp(): Int {
+        val metrics = activity.resources.displayMetrics
+        return ((metrics.heightPixels * MAX_HEIGHT_FRACTION) / metrics.density).roundToInt()
+    }
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
+    private fun dp(value: Int): Int = (value * activity.resources.displayMetrics.density).roundToInt()
 
     /**
      * Drags the widget's frame taller or shorter with the grip under it, and keeps what it lands
-     * on. The scroll view is told to keep its hands off for the duration, or a drag downward
-     * would scroll the page as well as grow the widget.
+     * on. Everything above is told to keep its hands off for the duration — the scroll view, and
+     * the pager it sits in — or a drag would scroll the page, or turn it, as well as grow the
+     * widget.
      */
     private inner class Resizer(
         private val frame: View,
@@ -340,11 +282,11 @@ class WidgetPageActivity : BaseActivity() {
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     handle.isPressed = false
-                    val heightDp = (frame.layoutParams.height / resources.displayMetrics.density).roundToInt()
+                    val heightDp = (frame.layoutParams.height / activity.resources.displayMetrics.density).roundToInt()
                     val index = entries.indexOfFirst { it.id == id }
                     if (index >= 0 && heightDp != entries[index].heightDp) {
                         entries[index] = entries[index].copy(heightDp = heightDp)
-                        WidgetStore.save(this@WidgetPageActivity, entries)
+                        WidgetStore.save(activity, entries)
                         reportSize(view, heightDp)
                     }
                     if (event.actionMasked == MotionEvent.ACTION_UP) handle.performClick()
@@ -355,7 +297,7 @@ class WidgetPageActivity : BaseActivity() {
     }
 
     /**
-     * This activity, with a plain layout inflater.
+     * The activity, with a plain layout inflater.
      *
      * AppCompat installs a factory on the activity's inflater that swaps every `ImageView` for an
      * `AppCompatImageView`, and so on. A widget's layout is inflated through the context its host
@@ -388,9 +330,7 @@ class WidgetPageActivity : BaseActivity() {
         const val HOST_ID = 0x4753
 
         /** Widget configuration screens report back by request code, see [onActivityResult]. */
-
         const val REQUEST_CONFIGURE = 1
-        const val SLIDE_DURATION_MS = 260L
         const val MIN_HEIGHT_DP = 56
         const val MAX_HEIGHT_FRACTION = 0.85f
     }

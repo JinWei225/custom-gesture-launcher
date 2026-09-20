@@ -33,6 +33,8 @@
          ============================================================================ -->
     <color name="wallpaper_overlay_text">#FFFFFFFF</color>
     <color name="wallpaper_overlay_shadow">#B0000000</color>
+    <!-- The note box's hint, on the same glass as the dock buttons. -->
+    <color name="wallpaper_overlay_hint">#99FFFFFF</color>
 
     <!-- ============================================================================
          Material 3 palette — LIGHT.

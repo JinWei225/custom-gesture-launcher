@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home page of the pager: top 30% = clock + today's events (non-drawable); lower 70% =
+     gesture canvas. The pages either side of it are page_widgets and page_notes. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/contentColumn"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Top widget zone: safe (no gesture capture). -->
+    <LinearLayout
+        android:id="@+id/widgetPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="30"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="32dp">
+
+        <!-- Date above the time, not beside it.
+             Font padding is deliberately left ON here despite the gap it leaves between the
+             two lines: these TextViews carry a 10px blur shadow with no offset, the parent
+             clips children to their bounds, and that padding is the only slack keeping the
+             shadow from being cut off at the top of the glyphs. -->
+        <!-- No longer clickable as a whole: the date line and the time open different apps
+             (calendar and clock), so each is its own target and this is just the column that
+             stacks them. The negative start margin cancels the horizontal padding both rows
+             now carry for their touch feedback, so the text still lines up with everything
+             else in the panel. -->
+        <LinearLayout
+            android:id="@+id/clockWidget"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-8dp"
+            android:orientation="vertical">
+
+            <!-- The whole line, battery included, opens the calendar: it reads as one row, and
+                 carving the battery out of the middle of it would leave a dead patch between
+                 two live ones. -->
+            <LinearLayout
+                android:id="@+id/dateRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.85"
+                android:background="@drawable/bg_widget_tap"
+                android:baselineAligned="false"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
+
+                <TextClock
+                    android:id="@+id/clockDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="EEE, MMM d"
+                    android:format24Hour="EEE, MMM d"
+                    android:shadowColor="@color/wallpaper_overlay_shadow"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:textColor="@color/wallpaper_overlay_text"
+                    android:textSize="15sp" />
+
+                <!-- Level set from ACTION_BATTERY_CHANGED; the percentage beside it carries
+                     the accessibility text, so the icon itself stays decorative.
+
+                     36dp of box around a 24dp icon: ShadowImageView paints the same 10px halo
+                     the text beside it has, and the 6dp padding is the room that halo needs
+                     before the parent clips it — the same slack the clock's font padding
+                     provides. The start margin is reduced by that padding so the icon still
+                     lands where it did. -->
+                <dev.neffly.gesturelauncher.ui.ShadowImageView
+                    android:id="@+id/batteryIcon"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    android:importantForAccessibility="no"
+                    android:padding="6dp"
+                    android:src="@drawable/battery_indicator"
+                    app:tint="@color/wallpaper_overlay_text" />
+
+                <TextView
+                    android:id="@+id/batteryLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:shadowColor="@color/wallpaper_overlay_shadow"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:textColor="@color/wallpaper_overlay_text"
+                    android:textSize="15sp"
+                    tools:text="99%" />
+            </LinearLayout>
+
+            <TextClock
+                android:id="@+id/clockTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_widget_tap"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="sans-serif-black"
+                android:paddingHorizontal="8dp"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:shadowColor="@color/wallpaper_overlay_shadow"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="10"
+                android:letterSpacing="-0.03"
+                android:textColor="@color/wallpaper_overlay_text"
+                android:textSize="64sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Today's events, filled at runtime. Whole area opens the calendar app. -->
+        <LinearLayout
+            android:id="@+id/eventsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="vertical"
+            android:paddingVertical="6dp" />
+    </LinearLayout>
+
+    <!-- Only this lower region captures gestures. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="70">
+
+        <dev.neffly.gesturelauncher.ui.GestureCanvasView
+            android:id="@+id/gestureCanvas"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Shown only while zero gestures are saved; never intercepts touch (plain,
+             non-clickable TextView) so strokes still reach the canvas underneath it. -->
+        <TextView
+            android:id="@+id/emptyHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="32dp"
+            android:alpha="0.62"
+            android:gravity="center"
+            android:shadowColor="@color/wallpaper_overlay_shadow"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="10"
+            android:text="@string/home_hint_empty"
+            android:textColor="@color/wallpaper_overlay_text"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <!-- Shown briefly after a long/deliberate stroke matches nothing, so a real attempt
+             gets feedback instead of silently doing nothing. Never intercepts touch. -->
+        <TextView
+            android:id="@+id/recognitionHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="32dp"
+            android:alpha="0.85"
+            android:gravity="center"
+            android:shadowColor="@color/wallpaper_overlay_shadow"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="10"
+            android:textColor="@color/wallpaper_overlay_text"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+</LinearLayout>

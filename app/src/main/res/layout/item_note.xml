@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One note, as a sent message: a bubble on the right with the time under it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="end"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <TextView
+        android:id="@+id/noteText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_note_bubble"
+        android:maxWidth="320dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textIsSelectable="false"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/noteTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="6dp"
+        android:alpha="0.62"
+        android:shadowColor="@color/wallpaper_overlay_shadow"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="10"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="11sp" />
+
+</LinearLayout>

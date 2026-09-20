@@ -78,6 +78,7 @@
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.GestureLauncher.Home">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -94,14 +95,8 @@
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.GestureLauncher.Drawer" />
 
-        <!-- The widgets page, reached from the home screen's widgets button. Glass over the home
-             screen like the drawer, so it shares the drawer's theme. -->
-        <activity
-            android:name=".widgets.WidgetPageActivity"
-            android:exported="false"
-            android:label="@string/widgets_title"
-            android:theme="@style/Theme.GestureLauncher.Drawer" />
-
+        <!-- Picks a widget for the home screen's widgets page. Glass over home like the drawer,
+             so it shares the drawer's theme. -->
         <activity
             android:name=".widgets.WidgetPickerActivity"
             android:exported="false"

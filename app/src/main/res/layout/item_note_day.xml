@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The day a run of notes was written on, centred between runs. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dayLabel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:alpha="0.75"
+    android:gravity="center"
+    android:paddingTop="14dp"
+    android:paddingBottom="6dp"
+    android:shadowColor="@color/wallpaper_overlay_shadow"
+    android:shadowDx="0"
+    android:shadowDy="0"
+    android:shadowRadius="10"
+    android:textColor="@color/wallpaper_overlay_text"
+    android:textSize="12sp" />

@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +49,11 @@ import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.showWithFont
-import dev.neffly.gesturelauncher.widgets.WidgetPageActivity
+import dev.neffly.gesturelauncher.widgets.WidgetPage
+import dev.neffly.gesturelauncher.notes.NotesPage
+import dev.neffly.gesturelauncher.ui.StaticPagesAdapter
+import androidx.viewpager2.widget.ViewPager2
+import android.view.LayoutInflater
 import dev.neffly.gesturelauncher.data.anyMultiStroke
 import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
@@ -64,11 +69,21 @@ import java.util.Date
 import kotlin.math.roundToInt
 
 /**
- * Home screen: the system wallpaper behind a gesture canvas that is confined to the lower ~70% of
- * the screen. The top ~30% is a non-drawable widget zone (clock + today's events). An always-present
- * drawer button is rendered independently of the recognizer.
+ * Home screen: three pages over the system wallpaper, under a dock that stays put.
+ *
+ * The middle page is home proper — a gesture canvas confined to its lower ~70%, with a
+ * non-drawable clock + today's-events zone above. Left of it is the widgets page, right of it the
+ * notes page. The dock's arrows turn the pages, and on the two side pages so does a swipe; on the
+ * home page a horizontal swipe is a stroke, so the pager takes no touch there. The dock's other
+ * two buttons, lock and search, are rendered independently of the recognizer.
  */
 class MainActivity : BaseActivity() {
+
+    private lateinit var pager: ViewPager2
+    private lateinit var pageLeft: ImageButton
+    private lateinit var pageRight: ImageButton
+    private lateinit var widgetPage: WidgetPage
+    private lateinit var notesPage: NotesPage
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -147,33 +162,48 @@ class MainActivity : BaseActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
 
-        // A launcher home screen stays put on Back. Registered via the dispatcher (not an
-        // onBackPressed override) so predictive back on Android 14+ sees it too.
-        onBackPressedDispatcher.addCallback(this) { /* no-op */ }
+        // A launcher home screen stays put on Back — but a side page goes back to home first.
+        // Registered via the dispatcher (not an onBackPressed override) so predictive back on
+        // Android 14+ sees it too.
+        onBackPressedDispatcher.addCallback(this) {
+            if (pager.currentItem != PAGE_HOME) pager.setCurrentItem(PAGE_HOME, true)
+        }
 
-        canvas = findViewById(R.id.gestureCanvas)
+        val inflater = LayoutInflater.from(this)
+        pager = findViewById(R.id.homePager)
+        val widgets = inflater.inflate(R.layout.page_widgets, pager, false)
+        val home = inflater.inflate(R.layout.page_home, pager, false)
+        val notes = inflater.inflate(R.layout.page_notes, pager, false)
+        setUpPager(listOf(widgets, home, notes))
+        widgetPage = WidgetPage(this, widgets)
+        notesPage = NotesPage(this, notes)
+
+        canvas = home.findViewById(R.id.gestureCanvas)
         canvas.autoClearMillis = 180L
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
 
-        emptyHint = findViewById(R.id.emptyHint)
-        recognitionHint = findViewById(R.id.recognitionHint)
-        eventsContainer = findViewById(R.id.eventsContainer)
-        batteryIcon = findViewById(R.id.batteryIcon)
-        batteryLevel = findViewById(R.id.batteryLevel)
+        emptyHint = home.findViewById(R.id.emptyHint)
+        recognitionHint = home.findViewById(R.id.recognitionHint)
+        eventsContainer = home.findViewById(R.id.eventsContainer)
+        batteryIcon = home.findViewById(R.id.batteryIcon)
+        batteryLevel = home.findViewById(R.id.batteryLevel)
 
-        // Keep widgets below the status bar and the canvas above the navigation bar.
-        val column = findViewById<View>(R.id.contentColumn)
-        ViewCompat.setOnApplyWindowInsetsListener(column) { v, insets ->
+        // Keep the pages below the status bar and above the navigation bar, and the whole screen
+        // — dock included — above the keyboard the notes page opens.
+        val root = findViewById<View>(R.id.homeRoot)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(top = bars.top, bottom = bars.bottom)
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            pager.updatePadding(top = bars.top, bottom = bars.bottom)
+            root.updatePadding(bottom = (ime - bars.bottom).coerceAtLeast(0))
             insets
         }
 
         // The two lines of the clock widget go to the two apps they are actually about: the date
         // (and the events under it) to the calendar, the time to the clock. The column that stacks
         // them is no longer a single target — see the layout.
-        val dateRow = findViewById<View>(R.id.dateRow)
-        val clockTime = findViewById<View>(R.id.clockTime)
+        val dateRow = home.findViewById<View>(R.id.dateRow)
+        val clockTime = home.findViewById<View>(R.id.clockTime)
         // The date opens the calendar outright. The events list below it is the one that asks for
         // the permission, because the permission is what fills *it* — being made to grant calendar
         // access just to open the calendar app would be a toll on the wrong gate.
@@ -201,11 +231,61 @@ class MainActivity : BaseActivity() {
         }
         val lockButton = findViewById<ImageButton>(R.id.lockButton)
         lockButton.setOnClickListener { lockScreen() }
-        val widgetsButton = findViewById<ImageButton>(R.id.widgetsButton)
-        widgetsButton.setOnClickListener { openWidgets() }
+        pageLeft = findViewById(R.id.pageLeftButton)
+        pageRight = findViewById(R.id.pageRightButton)
+        pageLeft.setOnClickListener { pager.setCurrentItem(pager.currentItem - 1, true) }
+        pageRight.setOnClickListener { pager.setCurrentItem(pager.currentItem + 1, true) }
+        showArrows(pager.currentItem)
 
         tappableWidgets =
-            listOf(dateRow, clockTime, eventsContainer, lockButton, widgetsButton, searchButton)
+            listOf(dateRow, clockTime, eventsContainer, lockButton, pageLeft, pageRight, searchButton)
+    }
+
+    /**
+     * Three pages, all kept alive: the widgets keep updating and the note box keeps its draft
+     * while another page is in front. Swiping only ever leaves a side page — on the home page a
+     * horizontal drag is a stroke for the canvas, which the pager must never take first.
+     */
+    private fun setUpPager(pages: List<View>) {
+        pager.adapter = StaticPagesAdapter(pages)
+        pager.offscreenPageLimit = pages.size - 1
+        pager.setCurrentItem(PAGE_HOME, false)
+        pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                pager.isUserInputEnabled = position != PAGE_HOME
+                showArrows(position)
+                if (position != PAGE_NOTES) hideKeyboard()
+            }
+        })
+        pager.isUserInputEnabled = false
+    }
+
+    /** An arrow with no page beyond it is dimmed and dead, not gone: the dock keeps its shape. */
+    private fun showArrows(page: Int) {
+        pageLeft.isEnabled = page > 0
+        pageLeft.alpha = if (pageLeft.isEnabled) 1f else DISABLED_ARROW_ALPHA
+        pageRight.isEnabled = page < PAGE_COUNT - 1
+        pageRight.alpha = if (pageRight.isEnabled) 1f else DISABLED_ARROW_ALPHA
+    }
+
+    private fun hideKeyboard() {
+        val focused = currentFocus ?: return
+        WindowInsetsControllerCompat(window, focused).hide(WindowInsetsCompat.Type.ime())
+        focused.clearFocus()
+    }
+
+    /** Home, pressed while on a side page, comes back to the home page — as any launcher does. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (::pager.isInitialized && pager.currentItem != PAGE_HOME) pager.setCurrentItem(PAGE_HOME, true)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        // A widget's configuration screen can only report back this way — see WidgetPage.
+        widgetPage.onActivityResult(requestCode, resultCode)
     }
 
     /**
@@ -227,10 +307,6 @@ class MainActivity : BaseActivity() {
             .showWithFont()
     }
 
-    private fun openWidgets() {
-        startActivity(Intent(this, WidgetPageActivity::class.java))
-        overrideNextTransition()
-    }
 
     /**
      * Drops any touch feedback that the tap which left this screen froze part-way.
@@ -278,10 +354,12 @@ class MainActivity : BaseActivity() {
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             ?.let { showBattery(it) }
         watchCalendar()
+        widgetPage.onStart()
     }
 
     override fun onStop() {
         super.onStop()
+        widgetPage.onStop()
         unwatchCalendar()
         runCatching { unregisterReceiver(batteryReceiver) }
     }
@@ -312,6 +390,7 @@ class MainActivity : BaseActivity() {
         clearFrozenTapFeedback()
         rebuildTemplates()
         refreshEvents()
+        notesPage.refresh()
         // Start (or restart) the "healthy" heartbeat.
         handler.removeCallbacks(heartbeat)
         handler.postDelayed(heartbeat, 10_000L)
@@ -580,6 +659,12 @@ class MainActivity : BaseActivity() {
     }
 
     companion object {
+        /** Page order in the pager: widgets, home, notes. */
+        private const val PAGE_HOME = 1
+        private const val PAGE_NOTES = 2
+        private const val PAGE_COUNT = 3
+        private const val DISABLED_ARROW_ALPHA = 0.35f
+
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L
         private const val RECOGNITION_HINT_MILLIS = 1200L
