@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app a run of widgets belongs to. Same left edge as item_widget_pick's preview. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="6dp">
+
+    <ImageView
+        android:id="@+id/appIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/appLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/colorPrimary" />
+
+</LinearLayout>

@@ -24,6 +24,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -43,7 +44,11 @@ import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
+import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
+import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.showWithFont
+import dev.neffly.gesturelauncher.widgets.WidgetPageActivity
 import dev.neffly.gesturelauncher.data.anyMultiStroke
 import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
@@ -185,7 +190,7 @@ class MainActivity : BaseActivity() {
         // shortcuts) that only live there. The drawer is also the guaranteed way in when the
         // overlay is switched off, which is why that case falls back to it rather than doing
         // nothing — this button must never be a dead end.
-        val searchButton = findViewById<ImageButton>(R.id.drawerButton)
+        val searchButton = findViewById<ImageButton>(R.id.searchButton)
         searchButton.setOnClickListener {
             if (Prefs.quickSearchEnabled(this)) openQuickSearch() else openDrawer()
         }
@@ -194,8 +199,37 @@ class MainActivity : BaseActivity() {
             openDrawer()
             true
         }
+        val lockButton = findViewById<ImageButton>(R.id.lockButton)
+        lockButton.setOnClickListener { lockScreen() }
+        val widgetsButton = findViewById<ImageButton>(R.id.widgetsButton)
+        widgetsButton.setOnClickListener { openWidgets() }
 
-        tappableWidgets = listOf(dateRow, clockTime, eventsContainer, searchButton)
+        tappableWidgets =
+            listOf(dateRow, clockTime, eventsContainer, lockButton, widgetsButton, searchButton)
+    }
+
+    /**
+     * Locks through the accessibility service, and when that isn't possible says why rather than
+     * doing nothing: a lock button that silently fails reads as broken, where one that names the
+     * grant it needs — and opens the screen that gives it — is one tap from working.
+     */
+    private fun lockScreen() {
+        if (LauncherAccessibilityService.lockScreen()) return
+        if (!LauncherAccessibilityService.canLock) {
+            Toast.makeText(this, R.string.lock_unsupported, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.lock_setup_title)
+            .setMessage(R.string.lock_setup_message)
+            .setPositiveButton(R.string.lock_setup_open) { _, _ -> openAccessibilitySettings() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
+    }
+
+    private fun openWidgets() {
+        startActivity(Intent(this, WidgetPageActivity::class.java))
+        overrideNextTransition()
     }
 
     /**

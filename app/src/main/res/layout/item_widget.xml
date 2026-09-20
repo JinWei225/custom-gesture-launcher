@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One widget on the page: the host view fills widgetFrame, whose height is the widget's own,
+     and the grip below it is what drags that height. The grip is its own view rather than an
+     edge of the widget so a drag on it never has to be told apart from a touch the widget wants. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/widgetFrame"
+        android:layout_width="match_parent"
+        android:layout_height="120dp" />
+
+    <FrameLayout
+        android:id="@+id/resizeHandle"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:contentDescription="@string/widget_resize"
+        android:focusable="true">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_widget_handle" />
+    </FrameLayout>
+
+</LinearLayout>

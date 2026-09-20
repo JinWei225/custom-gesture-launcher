@@ -94,6 +94,20 @@
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.GestureLauncher.Drawer" />
 
+        <!-- The widgets page, reached from the home screen's widgets button. Glass over the home
+             screen like the drawer, so it shares the drawer's theme. -->
+        <activity
+            android:name=".widgets.WidgetPageActivity"
+            android:exported="false"
+            android:label="@string/widgets_title"
+            android:theme="@style/Theme.GestureLauncher.Drawer" />
+
+        <activity
+            android:name=".widgets.WidgetPickerActivity"
+            android:exported="false"
+            android:label="@string/add_widget"
+            android:theme="@style/Theme.GestureLauncher.Drawer" />
+
         <!-- Floating quick search over any app.
 
              ACTION_ASSIST is the only supported way to reach a long-press of the power button:
@@ -167,24 +181,25 @@
         <!-- Alt+Space from a physical keyboard opens quick search.
 
              An accessibility service is the only route an ordinary app has to a key press aimed at
-             someone else's window — see KeyboardShortcutService for why nothing lighter works. It
-             is off until the user enables it in the system's accessibility screen, and the settings
-             hub's toggle governs whether it acts once they have.
+             someone else's window, or to locking the screen — see LauncherAccessibilityService for
+             why nothing lighter works. It is off until the user enables it in the system's
+             accessibility screen; the settings hub's toggle governs the keyboard shortcut once
+             they have, and the home screen's lock button explains what it needs.
 
              exported + the BIND_ACCESSIBILITY_SERVICE permission are both mandatory for the system
              to bind it: exported so AccessibilityManagerService can reach it, and the permission so
              that nothing else can. -->
         <service
-            android:name=".shortcut.KeyboardShortcutService"
+            android:name=".accessibility.LauncherAccessibilityService"
             android:exported="true"
-            android:label="@string/keyboard_shortcut_service_label"
+            android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/keyboard_shortcut_service" />
+                android:resource="@xml/accessibility_service" />
         </service>
 
         <!-- Live app-list refresh uses LauncherApps.registerCallback (see App.onCreate) — the

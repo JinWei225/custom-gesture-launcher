@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Configuration for KeyboardShortcutService.
+<!-- Configuration for LauncherAccessibilityService.
 
      Deliberately the smallest set of capabilities that still delivers key events.
      canRequestFilterKeyEvents + flagRequestFilterKeyEvents is the whole point; everything else is
-     either required by the platform or turned off.
+     either required by the platform or turned off. Locking the screen is a global action, which
+     needs nothing declared here beyond the service being bound.
 
      accessibilityEventTypes cannot be empty — a service that subscribes to nothing is never bound
      — so it names the cheapest single type and the service ignores what arrives. packageNames then
@@ -18,6 +19,6 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:canRequestFilterKeyEvents="true"
-    android:description="@string/keyboard_shortcut_service_description"
+    android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:summary="@string/keyboard_shortcut_service_summary" />
+    android:summary="@string/accessibility_service_summary" />

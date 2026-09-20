@@ -22,7 +22,7 @@ import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.FilePermissions
-import dev.neffly.gesturelauncher.shortcut.KeyboardShortcutService
+import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
@@ -286,7 +286,7 @@ class SettingsHubActivity : SlidePanelActivity() {
             keyboardShortcutAccessSubtitle
         )
         keyboardShortcutAccessSubtitle.setText(
-            if (KeyboardShortcutService.isGranted(this)) R.string.keyboard_shortcut_access_granted
+            if (LauncherAccessibilityService.isGranted(this)) R.string.keyboard_shortcut_access_granted
             else R.string.keyboard_shortcut_access_missing
         )
     }

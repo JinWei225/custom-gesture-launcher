@@ -207,10 +207,30 @@
     <string name="keyboard_shortcut_row_subtitle">Press Alt + Space on a physical keyboard to open quick search</string>
     <string name="keyboard_shortcut_access">Keyboard access</string>
     <string name="keyboard_shortcut_access_granted">Ready — Alt + Space works anywhere. Tap to review or turn the access off.</string>
-    <string name="keyboard_shortcut_access_missing">Tap to open Accessibility, then turn on “Gessearch Launcher keyboard shortcut”. Without it Android won\'t deliver key presses from other apps.</string>
-    <string name="keyboard_shortcut_service_label">Gessearch Launcher keyboard shortcut</string>
-    <string name="keyboard_shortcut_service_summary">Watches for Alt + Space to open quick search</string>
-    <string name="keyboard_shortcut_service_description">Lets Gessearch Launcher open its floating search bar when you press Alt + Space on a physical keyboard.\n\nAndroid only delivers key presses from other apps to an accessibility service, which is why this permission is needed. The service reads nothing on your screen — it only watches for that one key combination.</string>
+    <string name="keyboard_shortcut_access_missing">Tap to open Accessibility, then turn on “Gessearch Launcher”. Without it Android won\'t deliver key presses from other apps.</string>
+
+    <!-- The one accessibility service, shared by the keyboard shortcut and the lock button. -->
+    <string name="accessibility_service_label">Gessearch Launcher</string>
+    <string name="accessibility_service_summary">Alt + Space opens quick search; the home screen\'s lock button locks the screen</string>
+    <string name="accessibility_service_description">Lets Gessearch Launcher open its floating search bar when you press Alt + Space on a physical keyboard, and lock the screen from the button on its home screen.\n\nAndroid only lets an accessibility service see key presses from other apps or lock the screen, which is why this permission is needed. The service reads nothing on your screen.</string>
+
+    <!-- Home screen buttons beside search. -->
+    <string name="lock_screen">Lock screen</string>
+    <string name="open_widgets">Open widgets</string>
+    <string name="lock_setup_title">Locking needs accessibility access</string>
+    <string name="lock_setup_message">Android only lets an accessibility service lock the screen. Turn on “Gessearch Launcher” in Accessibility, then tap the lock button again. It reads nothing on your screen.</string>
+    <string name="lock_setup_open">Open Accessibility</string>
+    <string name="lock_unsupported">Locking needs Android 9 or newer</string>
+
+    <!-- Widgets page. -->
+    <string name="widgets_title">Widgets</string>
+    <string name="add_widget">Add widget</string>
+    <string name="widgets_empty">No widgets yet. Tap + to add one.</string>
+    <string name="widget_resize">Resize widget</string>
+    <string name="widget_move_up">Move up</string>
+    <string name="widget_move_down">Move down</string>
+    <string name="widget_remove">Remove</string>
+    <string name="widget_bind_failed">Couldn\'t add that widget</string>
 
     <string name="battery_level">%1$d%%</string>
     <string name="battery_level_charging">%1$d%%, charging</string>

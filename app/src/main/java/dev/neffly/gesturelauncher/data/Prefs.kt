@@ -131,7 +131,7 @@ object Prefs {
 
     /** Whether Alt+Space on a physical keyboard opens quick search (default OFF).
      *
-     *  Read by [dev.neffly.gesturelauncher.shortcut.KeyboardShortcutService] on every key event, so
+     *  Read by [dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService] on every key event, so
      *  the accessibility service can stay bound while the feature is off — turning the shortcut off
      *  should not make the user go back into the accessibility screen, and turning it on again
      *  should not make them grant access a second time. */

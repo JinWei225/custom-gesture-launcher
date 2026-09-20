@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The grip under each widget on the widgets page: a short pill, sized so it reads as a handle
+     and not as part of the widget above it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="2dp" />
+    <solid android:color="?attr/colorOutline" />
+    <size android:width="40dp" android:height="4dp" />
+</shape>
