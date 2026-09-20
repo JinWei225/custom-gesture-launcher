@@ -39,21 +39,24 @@ class MaxHeightRecyclerView @JvmOverloads constructor(
         }
         super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST))
         // Under an AT_MOST spec the layout manager has just laid the rows out to fill the ceiling,
-        // so the children are exactly the rows that fit — the last of them possibly only in part.
-        // Rows are measured rather than assumed because they aren't uniform: a row with a subtitle
-        // stands taller than the minimum an app row sits at.
+        // so its children are exactly the rows that fit — the last of them possibly only in part.
+        // Rows are read off the layout rather than assumed because they aren't uniform: a row with
+        // a subtitle stands taller than the minimum an app row sits at.
+        //
+        // The layout manager's children, not the view group's: a row on its way out — removed by
+        // the last keystroke, still fading — stays in the view tree as a hidden child until its
+        // animation ends, and a measure in that window puts the live rows *after* it. Summing
+        // heights across all children would count the ghost, and the list would come up short.
         val layout = layoutManager ?: return
-        val room = measuredHeight - paddingTop - paddingBottom
-        var used = 0
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            val params = child.layoutParams as LayoutParams
-            val height = layout.getDecoratedMeasuredHeight(child) + params.topMargin + params.bottomMargin
-            if (used + height > room) break
-            used += height
+        val floor = measuredHeight - paddingBottom
+        var fit = paddingTop
+        for (i in 0 until layout.childCount) {
+            val child = layout.getChildAt(i) ?: continue
+            val bottom = layout.getDecoratedBottom(child) + (child.layoutParams as LayoutParams).bottomMargin
+            if (bottom in (fit + 1)..floor) fit = bottom
         }
-        if (used in 1 until room) {
-            setMeasuredDimension(measuredWidth, used + paddingTop + paddingBottom)
+        if (fit in (paddingTop + 1) until floor) {
+            setMeasuredDimension(measuredWidth, fit + paddingBottom)
         }
     }
 }
