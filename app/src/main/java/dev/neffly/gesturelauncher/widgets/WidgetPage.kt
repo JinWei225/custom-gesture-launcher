@@ -22,21 +22,20 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
-import dev.neffly.gesturelauncher.ui.showWithFont
 import kotlin.math.roundToInt
 
 /**
  * The home screen's widgets page: app widgets stacked top to bottom, scrolling as one column.
  *
- * Each widget is as wide as the page and as tall as its grip has been dragged to; a long-press on
- * it offers to move it up or down the column, or remove it. Adding goes through
- * [WidgetPickerActivity], then a bind the system has to have allowed this launcher to make.
+ * Each widget is as wide as the page and as tall as its grip has been dragged to. Rearranging is
+ * an edit mode: Edit shows a row under every widget with move up, move down, the grip and
+ * remove, and Done hides them again. Adding goes through [WidgetPickerActivity], then a bind the
+ * system has to have allowed this launcher to make.
  *
  * Lives inside the home activity rather than being a screen of its own: it is a page of the home
  * screen, reached by paging sideways from it. The activity forwards the lifecycle moments the host
@@ -53,12 +52,12 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
     /** The context every widget view is built with — see [WidgetContext]. */
     private val widgetContext: Context = WidgetContext(activity)
-    private val host = WidgetHost(widgetContext)
+    private val host = AppWidgetHost(widgetContext, HOST_ID)
 
     private val entries: MutableList<WidgetEntry> = WidgetStore.load(activity).toMutableList()
 
-    /** Whether the grips are showing. Resizing is rare next to reading, and a row of grips
-     *  between every pair of widgets is clutter the rest of the time. */
+    /** Whether the edit rows are showing. Rearranging is rare next to reading, and a row of
+     *  controls between every pair of widgets is clutter the rest of the time. */
     private var editing = false
 
     /** The id allocated for the widget being added, until binding, or its configuration screen,
@@ -96,12 +95,26 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
     private fun setEditing(on: Boolean) {
         editing = on
         for (i in 0 until entries.size) {
-            column.getChildAt(i).findViewById<View>(R.id.resizeHandle).isVisible = on
+            column.getChildAt(i).findViewById<View>(R.id.editRow).isVisible = on
         }
         editButton.setText(if (on) R.string.widgets_done else R.string.widgets_edit)
         editButton.setCompoundDrawablesRelativeWithIntrinsicBounds(
             if (on) R.drawable.ic_check else R.drawable.ic_edit, 0, 0, 0
         )
+    }
+
+    /** The first widget can't move up and the last can't move down: those arrows dim. */
+    private fun refreshEditRows() {
+        for (i in 0 until entries.size) {
+            val row = column.getChildAt(i)
+            row.findViewById<View>(R.id.moveUpButton).setEnabledLook(i > 0)
+            row.findViewById<View>(R.id.moveDownButton).setEnabledLook(i < entries.lastIndex)
+        }
+    }
+
+    private fun View.setEnabledLook(enabled: Boolean) {
+        isEnabled = enabled
+        alpha = if (enabled) 1f else DISABLED_ALPHA
     }
 
     fun onStart() = host.startListening()
@@ -132,6 +145,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         for ((index, entry) in entries.withIndex()) {
             column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)), index)
         }
+        refreshEditRows()
     }
 
     private fun itemFor(entry: WidgetEntry, info: AppWidgetProviderInfo): View {
@@ -141,38 +155,36 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
         // Through the host, not built by hand: the host only delivers a provider's updates to the
         // views it created itself.
-        val view = host.createView(widgetContext, entry.id, info) as WidgetHostView
-        view.setOnLongClickListener { showMenu(entry.id); true }
+        val view = host.createView(widgetContext, entry.id, info)
         frame.addView(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         reportSize(view, entry.heightDp)
 
-        val handle = item.findViewById<View>(R.id.resizeHandle)
-        handle.isVisible = editing
-        handle.setOnTouchListener(Resizer(frame, view, entry.id))
+        item.findViewById<View>(R.id.editRow).isVisible = editing
+        item.findViewById<View>(R.id.resizeHandle).setOnTouchListener(Resizer(frame, view, entry.id))
+        // Looked up at the tap, not captured now: the row's place in the column changes as
+        // widgets move around it.
+        item.findViewById<View>(R.id.moveUpButton).setOnClickListener {
+            indexOf(entry.id)?.let { moveWidget(it, it - 1) }
+        }
+        item.findViewById<View>(R.id.moveDownButton).setOnClickListener {
+            indexOf(entry.id)?.let { moveWidget(it, it + 1) }
+        }
+        item.findViewById<View>(R.id.removeButton).setOnClickListener {
+            indexOf(entry.id)?.let { removeWidget(it) }
+        }
         return item
     }
 
-    private fun showMenu(id: Int) {
-        val index = entries.indexOfFirst { it.id == id }
-        if (index < 0) return
-        val actions = buildList<Pair<Int, () -> Unit>> {
-            if (index > 0) add(R.string.widget_move_up to { moveWidget(index, index - 1) })
-            if (index < entries.lastIndex) add(R.string.widget_move_down to { moveWidget(index, index + 1) })
-            add(R.string.widget_remove to { removeWidget(index) })
-        }
-        AlertDialog.Builder(activity)
-            .setItems(actions.map { activity.getString(it.first) }.toTypedArray()) { _, which ->
-                actions[which].second()
-            }
-            .showWithFont()
-    }
+    private fun indexOf(id: Int): Int? = entries.indexOfFirst { it.id == id }.takeIf { it >= 0 }
 
     private fun moveWidget(from: Int, to: Int) {
+        if (to !in entries.indices) return
         entries.add(to, entries.removeAt(from))
         val item = column.getChildAt(from)
         column.removeViewAt(from)
         column.addView(item, to)
         WidgetStore.save(activity, entries)
+        refreshEditRows()
     }
 
     private fun removeWidget(index: Int) {
@@ -180,6 +192,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         entries.removeAt(index)
         column.removeViewAt(index)
         WidgetStore.save(activity, entries)
+        refreshEditRows()
     }
 
     // --- adding -------------------------------------------------------------
@@ -242,14 +255,15 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         val entry = WidgetEntry(id, heightDp)
         entries.add(entry)
         WidgetStore.save(activity, entries)
-        // Above the add button, which stays the column's last child.
+        // Above the buttons, which stay the column's last child.
         column.addView(itemFor(entry, info), entries.lastIndex)
+        refreshEditRows()
     }
 
     // --- sizing -------------------------------------------------------------
 
     /** Tells the widget the size it has, so providers that adapt their layout to it can. */
-    private fun reportSize(view: WidgetHostView, heightDp: Int) {
+    private fun reportSize(view: AppWidgetHostView, heightDp: Int) {
         val density = activity.resources.displayMetrics.density
         val widthDp = ((column.width - column.paddingLeft - column.paddingRight) / density).roundToInt()
         if (widthDp <= 0) {
@@ -282,7 +296,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
      */
     private inner class Resizer(
         private val frame: View,
-        private val view: WidgetHostView,
+        private val view: AppWidgetHostView,
         private val id: Int
     ) : View.OnTouchListener {
         private var startY = 0f
@@ -337,15 +351,6 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
             if (name == LAYOUT_INFLATER_SERVICE) inflater else super.getSystemService(name)
     }
 
-    /** The host whose views are [WidgetHostView]s, so every widget on the page can be long-pressed. */
-    private class WidgetHost(context: Context) : AppWidgetHost(context, HOST_ID) {
-        override fun onCreateView(
-            context: Context,
-            appWidgetId: Int,
-            appWidget: AppWidgetProviderInfo?
-        ): AppWidgetHostView = WidgetHostView(context)
-    }
-
     private companion object {
         /** Identifies this host's widget ids to the system; must never change once widgets exist. */
         const val HOST_ID = 0x4753
@@ -354,5 +359,6 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         const val REQUEST_CONFIGURE = 1
         const val MIN_HEIGHT_DP = 56
         const val MAX_HEIGHT_FRACTION = 0.85f
+        const val DISABLED_ALPHA = 0.35f
     }
 }

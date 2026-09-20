@@ -1,12 +1,7 @@
 package dev.neffly.gesturelauncher.drawer
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ApplicationInfo
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -19,9 +14,6 @@ import android.view.inputmethod.EditorInfo
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.view.menu.MenuBuilder
-import androidx.appcompat.view.ContextThemeWrapper
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
@@ -50,6 +42,7 @@ import dev.neffly.gesturelauncher.ui.AlphabetIndexView
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.Glass
+import dev.neffly.gesturelauncher.ui.GlassMenu
 import dev.neffly.gesturelauncher.ui.SwipeToFloat
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
@@ -384,68 +377,31 @@ class AppDrawerActivity : BaseActivity() {
         }.getOrDefault(false)
         val shortcuts = AppShortcutHelper.queryShortcuts(this, app.packageName)
 
-        // Wrapped rather than styled on the activity's theme: the overlay carries the glass
-        // background and must not leak to the toolbar overflow (see the note in themes.xml).
-        val glass = ContextThemeWrapper(this, R.style.ThemeOverlay_GestureLauncher_GlassPopup)
-        PopupMenu(glass, anchor).apply {
-            menu.add(0, ID_APP_INFO, 0, R.string.app_info).icon = menuIcon(R.drawable.ic_info)
-            menu.add(0, ID_LABEL, 1, R.string.add_alias).icon = menuIcon(R.drawable.ic_label)
+        val items = buildList {
+            add(GlassMenu.item(anchor, R.string.app_info, R.drawable.ic_info) { openAppInfo(app) })
+            add(GlassMenu.item(anchor, R.string.add_alias, R.drawable.ic_label) { editLabel(app) })
             if (!isSystemApp) {
-                menu.add(0, ID_UNINSTALL, 2, R.string.uninstall).icon = menuIcon(R.drawable.ic_delete)
+                add(GlassMenu.item(anchor, R.string.uninstall, R.drawable.ic_delete, destructive = true) {
+                    uninstall(app)
+                })
             }
-            shortcuts.forEachIndexed { index, shortcut ->
+            for (shortcut in shortcuts) {
                 // Both labels are nullable in the platform API, and a row with nothing to read is
-                // worse than no row — skipping one leaves a gap in the ids, which is harmless
-                // because the click handler maps an id back to its list index either way.
-                val label = shortcut.longLabel ?: shortcut.shortLabel ?: return@forEachIndexed
-                val icon = AppShortcutHelper.icon(this@AppDrawerActivity, shortcut)?.let { menuIcon(it) }
-                    ?: menuIcon(R.drawable.ic_arrow_forward)
-                menu.add(1, ID_SHORTCUT_BASE + index, index + 3, label).icon = icon
+                // worse than no row.
+                val label = shortcut.longLabel ?: shortcut.shortLabel ?: continue
+                // A shortcut's own icon is a picture and keeps its colours; one without gets the
+                // same glyph treatment as the rows above.
+                val icon = AppShortcutHelper.icon(this@AppDrawerActivity, shortcut)
+                add(
+                    GlassMenu.Item(
+                        label,
+                        icon ?: ContextCompat.getDrawable(this@AppDrawerActivity, R.drawable.ic_arrow_forward),
+                        tintIcon = icon == null
+                    ) { AppShortcutHelper.launch(this@AppDrawerActivity, shortcut) }
+                )
             }
-            forceShowIcons()
-            FontEngine.applyTo(menu)
-            setOnMenuItemClickListener { item ->
-                when {
-                    item.itemId == ID_APP_INFO -> { openAppInfo(app); true }
-                    item.itemId == ID_LABEL -> { editLabel(app); true }
-                    item.itemId == ID_UNINSTALL -> { uninstall(app); true }
-                    item.itemId >= ID_SHORTCUT_BASE -> {
-                        shortcuts.getOrNull(item.itemId - ID_SHORTCUT_BASE)
-                            ?.let { AppShortcutHelper.launch(this@AppDrawerActivity, it) }
-                        true
-                    }
-                    else -> false
-                }
-            }
-            show()
         }
-    }
-
-    private fun menuIcon(resId: Int): Drawable? =
-        ContextCompat.getDrawable(this, resId)?.let { menuIcon(it) }
-
-    /** Menu-item icons don't get a uniform size for free: our vector drawables are tight 24dp
-     *  glyphs, but a real app shortcut's icon from LauncherApps.getShortcutIconDrawable() is a
-     *  full adaptive-icon-sized bitmap with its own opaque background baked in — left as-is, the
-     *  two groups render at wildly different sizes and read as misaligned. Rasterize every menu
-     *  icon into an identical square bitmap so they all occupy the same bounds regardless of
-     *  source size. */
-    private fun menuIcon(source: Drawable): Drawable {
-        val sizePx = (MENU_ICON_DP * resources.displayMetrics.density).toInt()
-        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        source.setBounds(0, 0, sizePx, sizePx)
-        source.draw(canvas)
-        return BitmapDrawable(resources, bitmap)
-    }
-
-    /** AppCompat's PopupMenu never renders MenuItem icons unless this (unfortunately
-     *  restricted-API) flag is set — there is no public API for it. Its getMenu() always hands
-     *  back the MenuBuilder it built internally, so the cast is the whole story; the icons are
-     *  cosmetic anyway, and the menu works either way. */
-    @SuppressLint("RestrictedApi")
-    private fun PopupMenu.forceShowIcons() {
-        (menu as? MenuBuilder)?.setOptionalIconsVisible(true)
+        GlassMenu.show(anchor, items, xOffsetDp = MENU_INSET_DP)
     }
 
     private fun editLabel(app: AppInfo) {
@@ -489,14 +445,12 @@ class AppDrawerActivity : BaseActivity() {
     }
 
     companion object {
-        private const val ID_APP_INFO = 1
-        private const val ID_UNINSTALL = 2
-        private const val ID_LABEL = 3
-        private const val ID_SHORTCUT_BASE = 100
         /** Drives the slide *in*. The slide out is @anim/drawer_slide_out, whose duration this
          *  is kept equal to. */
         private const val SLIDE_DURATION_MS = 260L
-        private const val MENU_ICON_DP = 24
+
+        /** The app menu's start edge sits in from the row's, under the label rather than the icon. */
+        private const val MENU_INSET_DP = 20
 
         /** Scroll distance, in dp, over which the header goes from translucent to near-solid. */
         private const val HEADER_FADE_SPAN_DP = 90f

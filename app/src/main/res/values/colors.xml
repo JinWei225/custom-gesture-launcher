@@ -35,6 +35,9 @@
     <color name="wallpaper_overlay_shadow">#B0000000</color>
     <!-- The note box's hint, on the same glass as the dock buttons. -->
     <color name="wallpaper_overlay_hint">#99FFFFFF</color>
+    <!-- A destructive row in a menu over the wallpaper: red, but light enough to read on the
+         dark glass. -->
+    <color name="wallpaper_overlay_danger">#FFFF8A80</color>
 
     <!-- ============================================================================
          Material 3 palette — LIGHT.

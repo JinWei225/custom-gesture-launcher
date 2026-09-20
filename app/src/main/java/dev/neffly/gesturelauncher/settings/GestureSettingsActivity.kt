@@ -3,7 +3,6 @@ package dev.neffly.gesturelauncher.settings
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +15,7 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.GlassMenu
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
 /** Management hub: list existing gestures, add new ones, edit (redraw / change app) and delete. */
@@ -56,37 +56,25 @@ class GestureSettingsActivity : BaseActivity() {
     }
 
     private fun showRowMenu(mapping: GestureMapping, anchor: View) {
-        PopupMenu(this, anchor).apply {
-            menu.add(0, ID_REDRAW, 0, R.string.redraw_gesture)
+        val items = buildList {
+            add(GlassMenu.item(anchor, R.string.redraw_gesture, R.drawable.ic_gesture) {
+                startActivity(GestureTrainingActivity.redrawIntent(this@GestureSettingsActivity, mapping.id))
+            })
             when (mapping.action) {
-                GestureAction.LAUNCH_APP -> menu.add(0, ID_CHANGE, 1, R.string.change_app)
-                GestureAction.OPEN_URL -> menu.add(0, ID_CHANGE, 1, R.string.edit_url)
+                GestureAction.LAUNCH_APP -> add(GlassMenu.item(anchor, R.string.change_app, R.drawable.ic_swap) {
+                    startActivity(GestureTrainingActivity.changeAppIntent(this@GestureSettingsActivity, mapping.id))
+                })
+                GestureAction.OPEN_URL -> add(GlassMenu.item(anchor, R.string.edit_url, R.drawable.ic_link) {
+                    startActivity(GestureUrlEntryActivity.editIntent(this@GestureSettingsActivity, mapping.id))
+                })
                 // Nothing to change beyond redrawing the shape.
                 GestureAction.OPEN_DRAWER, GestureAction.QUICK_SEARCH -> {}
             }
-            menu.add(0, ID_DELETE, 2, R.string.delete)
-            FontEngine.applyTo(menu)
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    ID_REDRAW -> {
-                        startActivity(GestureTrainingActivity.redrawIntent(this@GestureSettingsActivity, mapping.id))
-                        true
-                    }
-                    ID_CHANGE -> {
-                        val intent = if (mapping.action == GestureAction.OPEN_URL) {
-                            GestureUrlEntryActivity.editIntent(this@GestureSettingsActivity, mapping.id)
-                        } else {
-                            GestureTrainingActivity.changeAppIntent(this@GestureSettingsActivity, mapping.id)
-                        }
-                        startActivity(intent)
-                        true
-                    }
-                    ID_DELETE -> { deleteWithUndo(mapping); true }
-                    else -> false
-                }
-            }
-            show()
+            add(GlassMenu.item(anchor, R.string.delete, R.drawable.ic_delete, destructive = true) {
+                deleteWithUndo(mapping)
+            })
         }
+        GlassMenu.show(anchor, items, xOffsetDp = MENU_INSET_DP)
     }
 
     private fun deleteWithUndo(mapping: GestureMapping) {
@@ -102,8 +90,7 @@ class GestureSettingsActivity : BaseActivity() {
     }
 
     companion object {
-        private const val ID_REDRAW = 1
-        private const val ID_CHANGE = 2
-        private const val ID_DELETE = 3
+        /** The menu's start edge sits in from the row's, under the label rather than the icon. */
+        private const val MENU_INSET_DP = 20
     }
 }

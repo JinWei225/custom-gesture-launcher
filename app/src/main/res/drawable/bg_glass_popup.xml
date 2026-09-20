@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Background for the app long-press menu, matching the drawer's and quick-search card's glass.
+<!-- Background for a GlassMenu over the drawer or a settings screen, matching the drawer's and
+     quick-search card's glass. (Over the wallpaper it uses bg_glass_popup_dark instead.)
 
-     The heavy veil ([glass_veil_flat]) rather than the light one ui/Glass.kt normally picks: a
-     PopupMenu draws into a PopupWindow, and there is no public way to reach that window to ask for
+     The heavy veil ([glass_veil_flat]) rather than the light one ui/Glass.kt normally picks: the
+     menu draws into a PopupWindow, and there is no public way to reach that window to ask for
      blur-behind. Without a blur the light veil would leave the menu's text sitting on sharp
      wallpaper or on the drawer rows underneath, so this takes the same "cover wins over effect"
      branch Glass.frost falls back to when the system refuses the blur.

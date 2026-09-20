@@ -16,4 +16,22 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
+
+    <!-- A tappable glyph drawn straight over the wallpaper: white with the clock's halo, a rounded
+         ripple and no disc. The dock's page arrows and the widget edit row's buttons. -->
+    <style name="Widget.GestureLauncher.WallpaperGlyph" parent="">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:background">@drawable/bg_widget_tap</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:padding">9dp</item>
+        <item name="tint">@color/wallpaper_overlay_text</item>
+    </style>
+
+    <!-- Window animation for GlassMenu's popup. -->
+    <style name="Animation.GestureLauncher.GlassMenu" parent="">
+        <item name="android:windowEnterAnimation">@anim/glass_menu_in</item>
+        <item name="android:windowExitAnimation">@anim/glass_menu_out</item>
+    </style>
 </resources>

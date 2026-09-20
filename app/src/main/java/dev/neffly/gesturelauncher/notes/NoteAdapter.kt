@@ -20,7 +20,7 @@ import java.util.Calendar
  * appearing rather than the whole list rebinding.
  */
 class NoteAdapter(
-    private val onLongPress: (Note) -> Unit
+    private val onLongPress: (note: Note, bubble: View) -> Unit
 ) : ListAdapter<NoteAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
@@ -67,7 +67,7 @@ class NoteAdapter(
         }
     }
 
-    class NoteVH(view: View, onLongPress: (Note) -> Unit) : RecyclerView.ViewHolder(view) {
+    class NoteVH(view: View, onLongPress: (Note, View) -> Unit) : RecyclerView.ViewHolder(view) {
         private val text: TextView = view.findViewById(R.id.noteText)
         private val time: TextView = view.findViewById(R.id.noteTime)
         private var note: Note? = null
@@ -75,7 +75,7 @@ class NoteAdapter(
         init {
             // On the bubble, not the row: the row spans the page, and a press on the empty space
             // beside a short note should be nothing.
-            text.setOnLongClickListener { note?.let(onLongPress); true }
+            text.setOnLongClickListener { note?.let { onLongPress(it, text) }; true }
         }
 
         fun bind(note: Note) {

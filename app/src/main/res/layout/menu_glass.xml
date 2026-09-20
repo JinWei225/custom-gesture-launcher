@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The card a GlassMenu's rows stack in; its background is set in code for the surface it opens
+     over. Its width is the widest row's, within a floor that keeps two-word menus from looking
+     like a chip. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minWidth="180dp"
+    android:orientation="vertical"
+    android:padding="6dp" />

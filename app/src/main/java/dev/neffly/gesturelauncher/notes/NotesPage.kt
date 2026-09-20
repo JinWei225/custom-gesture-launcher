@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -11,7 +12,6 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -19,7 +19,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
-import dev.neffly.gesturelauncher.ui.showWithFont
+import dev.neffly.gesturelauncher.ui.GlassMenu
 
 /**
  * The home screen's notes page: a box at the bottom, and everything ever sent from it stacked
@@ -36,7 +36,7 @@ class NotesPage(private val activity: AppCompatActivity, page: View) {
     private val send: ImageButton = page.findViewById(R.id.noteSendButton)
 
     private val notes: MutableList<Note> = NoteStore.load(activity).toMutableList()
-    private val adapter = NoteAdapter { note -> showMenu(note) }
+    private val adapter = NoteAdapter { note, bubble -> showMenu(note, bubble) }
 
     /** The note in the box for editing, or null when the box is composing a new one. */
     private var editing: Note? = null
@@ -93,17 +93,17 @@ class NotesPage(private val activity: AppCompatActivity, page: View) {
         show(scrollToEnd = editing == null)
     }
 
-    private fun showMenu(note: Note) {
-        val actions = listOf(
-            R.string.note_copy to { copy(note) },
-            R.string.note_edit to { edit(note) },
-            R.string.note_delete to { delete(note) }
+    private fun showMenu(note: Note, bubble: View) {
+        GlassMenu.show(
+            bubble,
+            listOf(
+                GlassMenu.item(bubble, R.string.note_copy, R.drawable.ic_copy) { copy(note) },
+                GlassMenu.item(bubble, R.string.note_edit, R.drawable.ic_edit) { edit(note) },
+                GlassMenu.item(bubble, R.string.note_delete, R.drawable.ic_delete, destructive = true) { delete(note) }
+            ),
+            overWallpaper = true,
+            gravity = Gravity.END
         )
-        AlertDialog.Builder(activity)
-            .setItems(actions.map { activity.getString(it.first) }.toTypedArray()) { _, which ->
-                actions[which].second()
-            }
-            .showWithFont()
     }
 
     private fun copy(note: Note) {

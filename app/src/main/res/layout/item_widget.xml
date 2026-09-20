@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One widget on the page: the host view fills widgetFrame, whose height is the widget's own,
-     and the grip below it is what drags that height. The grip is its own view rather than an
-     edge of the widget so a drag on it never has to be told apart from a touch the widget wants. -->
+<!-- One widget on the page: the host view fills widgetFrame, whose height is the widget's own.
+     The row under it shows only in edit mode (see WidgetPage.setEditing): move up and down at
+     the start, the grip that drags the height in the middle, remove at the end. The grip is its
+     own view rather than an edge of the widget so a drag on it never has to be told apart from
+     a touch the widget wants. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="4dp"
@@ -13,20 +16,53 @@
         android:layout_width="match_parent"
         android:layout_height="120dp" />
 
-    <!-- Shown only while the page is in edit mode; see WidgetPage.setEditing. -->
     <FrameLayout
-        android:id="@+id/resizeHandle"
+        android:id="@+id/editRow"
         android:layout_width="match_parent"
-        android:layout_height="28dp"
-        android:contentDescription="@string/widget_resize"
-        android:focusable="true"
+        android:layout_height="40dp"
         android:visibility="gone">
 
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="start"
+            android:orientation="horizontal">
+
+            <dev.neffly.gesturelauncher.ui.ShadowImageView
+                android:id="@+id/moveUpButton"
+                style="@style/Widget.GestureLauncher.WallpaperGlyph"
+                android:contentDescription="@string/widget_move_up"
+                android:src="@drawable/ic_arrow_upward" />
+
+            <dev.neffly.gesturelauncher.ui.ShadowImageView
+                android:id="@+id/moveDownButton"
+                style="@style/Widget.GestureLauncher.WallpaperGlyph"
+                android:contentDescription="@string/widget_move_down"
+                android:src="@drawable/ic_arrow_downward" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/resizeHandle"
+            android:layout_width="160dp"
+            android:layout_height="match_parent"
             android:layout_gravity="center"
-            android:background="@drawable/bg_widget_handle" />
+            android:contentDescription="@string/widget_resize"
+            android:focusable="true">
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_widget_handle" />
+        </FrameLayout>
+
+        <dev.neffly.gesturelauncher.ui.ShadowImageView
+            android:id="@+id/removeButton"
+            style="@style/Widget.GestureLauncher.WallpaperGlyph"
+            android:layout_gravity="end"
+            android:contentDescription="@string/widget_remove"
+            android:src="@drawable/ic_delete"
+            app:tint="@color/wallpaper_overlay_danger" />
     </FrameLayout>
 
 </LinearLayout>
