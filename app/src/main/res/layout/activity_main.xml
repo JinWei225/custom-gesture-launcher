@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Home: three pages side by side — widgets, the home page (clock, events, gesture canvas) and
-     notes — under a dock that stays put across them. The pages are built from page_widgets,
+     notes — under a dock that belongs to the home page. The pages are built from page_widgets,
      page_home and page_notes; see MainActivity. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -13,10 +13,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. Lock at the
-         left corner, the page arrows in the middle, search at the right where the thumb already
-         knows to find it. The bottom margin is set in code, above whatever navigation bar the
-         device has; on the side pages lock and search step aside (see MainActivity.showDock). -->
+    <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. One search
+         disc at whichever corner the user chose, and beside it a strip with nothing drawn in it:
+         a drag there turns the pages and a double tap locks the screen (see DockStrip). Which
+         corner, and so where the strip runs, is set in code from the setting; the bottom margin
+         too, above whatever navigation bar the device has. The dock fades out on the side pages
+         so it doesn't sit over the widgets and the note box. -->
     <FrameLayout
         android:id="@+id/homeDock"
         android:layout_width="match_parent"
@@ -24,58 +26,16 @@
         android:layout_gravity="bottom"
         android:layout_marginHorizontal="20dp">
 
-        <ImageButton
-            android:id="@+id/lockButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_gravity="start"
-            android:background="@drawable/bg_drawer_button"
-            android:contentDescription="@string/lock_screen"
-            android:scaleType="center"
-            android:src="@drawable/ic_lock"
-            app:tint="@color/wallpaper_overlay_text" />
-
-        <!-- Bare chevrons rather than discs: they are wayfinding, not actions, and two more discs
-             made the dock read as five equal buttons. ShadowImageView gives the glyphs the same
-             halo the clock has, so they hold up over a pale wallpaper without a fill behind them.
-             The padding is where that halo lands. -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="56dp"
-            android:layout_gravity="center"
-            android:orientation="horizontal">
-
-            <dev.neffly.gesturelauncher.ui.ShadowImageView
-                android:id="@+id/pageLeftButton"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_widget_tap"
-                android:clickable="true"
-                android:contentDescription="@string/page_left"
-                android:focusable="true"
-                android:padding="14dp"
-                android:src="@drawable/ic_chevron_left"
-                app:tint="@color/wallpaper_overlay_text" />
-
-            <dev.neffly.gesturelauncher.ui.ShadowImageView
-                android:id="@+id/pageRightButton"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginStart="24dp"
-                android:background="@drawable/bg_widget_tap"
-                android:clickable="true"
-                android:contentDescription="@string/page_right"
-                android:focusable="true"
-                android:padding="14dp"
-                android:src="@drawable/ic_chevron_right"
-                app:tint="@color/wallpaper_overlay_text" />
-        </LinearLayout>
+        <View
+            android:id="@+id/dockStrip"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/dock_strip" />
 
         <ImageButton
             android:id="@+id/searchButton"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            android:layout_gravity="end"
             android:background="@drawable/bg_drawer_button"
             android:contentDescription="@string/open_search"
             android:scaleType="center"

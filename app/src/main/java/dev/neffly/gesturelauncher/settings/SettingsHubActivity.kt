@@ -46,6 +46,7 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var gesturesSubtitle: TextView
     private lateinit var autoKeyboardSwitch: MaterialSwitch
     private lateinit var hapticFeedbackSwitch: MaterialSwitch
+    private lateinit var searchSideSubtitle: TextView
     private lateinit var themeSubtitle: TextView
     private lateinit var batterySubtitle: TextView
     private lateinit var fontSubtitle: TextView
@@ -130,6 +131,9 @@ class SettingsHubActivity : SlidePanelActivity() {
             Prefs.setHapticFeedback(this, enabled)
             hapticFeedbackSwitch.isChecked = enabled
         }
+        searchSideSubtitle = findViewById(R.id.searchSideSubtitle)
+        findViewById<View>(R.id.searchSideRow).setOnClickListener { showSearchSideDialog() }
+
         themeSubtitle = findViewById(R.id.themeSubtitle)
         findViewById<View>(R.id.themeRow).setOnClickListener { showThemeDialog() }
 
@@ -193,6 +197,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
+        searchSideSubtitle.setText(searchSideLabel(Prefs.searchOnLeft(this)))
         themeSubtitle.setText(themeLabelFor(Prefs.themeMode(this)))
         // Re-read on every resume, not just at create: the usual flow is tapping the row, changing
         // it in system settings, and coming straight back here.
@@ -389,6 +394,26 @@ class SettingsHubActivity : SlidePanelActivity() {
     private fun applyFont(typeface: Typeface?) {
         FontEngine.set(typeface)
         recreate()
+    }
+
+    @StringRes
+    private fun searchSideLabel(left: Boolean): Int =
+        if (left) R.string.search_side_left else R.string.search_side_right
+
+    /** Which corner of the home screen's dock holds the search button. The home screen reads the
+     *  choice on its next resume, which is the moment this panel closes. */
+    private fun showSearchSideDialog() {
+        val sides = booleanArrayOf(true, false)
+        val labels = sides.map { getString(searchSideLabel(it)) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_search_side)
+            .setSingleChoiceItems(labels, sides.indexOf(Prefs.searchOnLeft(this))) { dialog, which ->
+                Prefs.setSearchOnLeft(this, sides[which])
+                searchSideSubtitle.setText(searchSideLabel(sides[which]))
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
     }
 
     /** Label for a MODE_NIGHT_* constant. Anything unrecognised (an older build's value, or a

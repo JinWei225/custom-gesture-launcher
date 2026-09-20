@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The page left of home: widgets stacked downward, each an item_widget, with the add button
-     at the end of the column. Drawn straight over the wallpaper like the home page. The bottom
-     padding keeps the last widget clear of the dock. -->
+     at the end of the column. Drawn straight over the wallpaper like the home page. -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/widgetScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
-    android:paddingBottom="112dp"
+    android:paddingBottom="16dp"
     android:scrollbars="none">
 
     <LinearLayout

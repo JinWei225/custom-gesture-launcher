@@ -245,6 +245,33 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/searchSideRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/menu_search_side"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <!-- Text is set in SettingsHubActivity.onResume: it names the chosen corner. -->
+                <TextView
+                    android:id="@+id/searchSideSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/themeRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

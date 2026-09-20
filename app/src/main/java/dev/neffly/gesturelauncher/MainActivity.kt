@@ -33,6 +33,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,7 @@ import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.showWithFont
 import dev.neffly.gesturelauncher.widgets.WidgetPage
 import dev.neffly.gesturelauncher.notes.NotesPage
@@ -70,22 +72,21 @@ import java.util.Date
 import kotlin.math.roundToInt
 
 /**
- * Home screen: three pages over the system wallpaper, under a dock that stays put.
+ * Home screen: three pages over the system wallpaper, under the home page's dock.
  *
  * The middle page is home proper — a gesture canvas confined to its lower ~70%, with a
  * non-drawable clock + today's-events zone above. Left of it is the widgets page, right of it the
- * notes page. The dock's arrows turn the pages, and on the two side pages so does a swipe; on the
- * home page a horizontal swipe is a stroke, so the pager takes no touch there. The dock's other
- * two buttons, lock and search, are rendered independently of the recognizer.
+ * notes page. The dock is the search button in one corner and, beside it, a strip that turns the
+ * pages when dragged and locks the screen when double-tapped ([DockStrip]); on the two side pages
+ * a swipe anywhere turns them, and on the home page a horizontal swipe is a stroke, so the pager
+ * takes no touch there. The dock is rendered independently of the recognizer.
  */
 class MainActivity : BaseActivity() {
 
     private lateinit var pager: ViewPager2
     private lateinit var dock: View
-    private lateinit var lockButton: ImageButton
+    private lateinit var dockStrip: View
     private lateinit var searchButton: ImageButton
-    private lateinit var pageLeft: ImageView
-    private lateinit var pageRight: ImageView
     private lateinit var widgetPage: WidgetPage
     private lateinit var notesPage: NotesPage
 
@@ -245,16 +246,31 @@ class MainActivity : BaseActivity() {
             openDrawer()
             true
         }
-        lockButton = findViewById(R.id.lockButton)
-        lockButton.setOnClickListener { lockScreen() }
-        pageLeft = findViewById(R.id.pageLeftButton)
-        pageRight = findViewById(R.id.pageRightButton)
-        pageLeft.setOnClickListener { pager.setCurrentItem(pager.currentItem - 1, true) }
-        pageRight.setOnClickListener { pager.setCurrentItem(pager.currentItem + 1, true) }
+        dockStrip = findViewById(R.id.dockStrip)
+        DockStrip(dockStrip, pager) { lockScreen() }
+        placeSearch()
         showDock(pager.currentItem, animate = false)
 
-        tappableWidgets =
-            listOf(dateRow, clockTime, eventsContainer, lockButton, pageLeft, pageRight, searchButton)
+        tappableWidgets = listOf(dateRow, clockTime, eventsContainer, searchButton)
+    }
+
+    /**
+     * Puts the search disc in the corner the setting names and runs the strip over the rest of
+     * the dock, so the drag-and-double-tap area is always the part beside the button and never
+     * under it. Applied on every resume: the setting is changed on a screen over this one.
+     */
+    private fun placeSearch() {
+        val left = Prefs.searchOnLeft(this)
+        val gravity = if (left) Gravity.START else Gravity.END
+        val params = searchButton.layoutParams as FrameLayout.LayoutParams
+        if (params.gravity == gravity) return
+        params.gravity = gravity
+        searchButton.layoutParams = params
+        val inset = searchButton.layoutParams.width + dp(STRIP_GAP_DP)
+        dockStrip.updateLayoutParams<FrameLayout.LayoutParams> {
+            marginStart = if (left) inset else 0
+            marginEnd = if (left) 0 else inset
+        }
     }
 
     /**
@@ -277,36 +293,31 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Sets the dock for [page]. An arrow with no page beyond it is dimmed and dead, not gone, so
-     * the pair keeps its place. Lock and search belong to the home page: on a side page they
-     * would only sit over the widgets and notes, so they fade out there and back in on return.
+     * The dock belongs to the home page: on a side page it would only sit over the widgets and
+     * the note box, and a swipe there already turns the page, so it fades out — and stops taking
+     * touches — there and comes back on return.
      */
     private fun showDock(page: Int, animate: Boolean) {
-        pageLeft.isEnabled = page > 0
-        pageLeft.alpha = if (pageLeft.isEnabled) 1f else DISABLED_ARROW_ALPHA
-        pageRight.isEnabled = page < PAGE_COUNT - 1
-        pageRight.alpha = if (pageRight.isEnabled) 1f else DISABLED_ARROW_ALPHA
         val home = page == PAGE_HOME
-        for (button in listOf(lockButton, searchButton)) {
-            button.animate().cancel()
-            if (!animate) {
-                button.alpha = if (home) 1f else 0f
-                button.visibility = if (home) View.VISIBLE else View.INVISIBLE
-                continue
-            }
-            if (home) button.visibility = View.VISIBLE
-            button.animate()
-                .alpha(if (home) 1f else 0f)
-                .setDuration(DOCK_FADE_MS)
-                .withEndAction { if (!home) button.visibility = View.INVISIBLE }
-                .start()
+        dock.animate().cancel()
+        if (!animate) {
+            dock.alpha = if (home) 1f else 0f
+            dock.visibility = if (home) View.VISIBLE else View.INVISIBLE
+            return
         }
+        if (home) dock.visibility = View.VISIBLE
+        dock.animate()
+            .alpha(if (home) 1f else 0f)
+            .setDuration(DOCK_FADE_MS)
+            .withEndAction { if (!home) dock.visibility = View.INVISIBLE }
+            .start()
     }
 
+    /** Asked of the window, not of the focused view: by the time a page change reports in, the
+     *  note box can already have lost focus while the keyboard it opened is still up. */
     private fun hideKeyboard() {
-        val focused = currentFocus ?: return
-        WindowInsetsControllerCompat(window, focused).hide(WindowInsetsCompat.Type.ime())
-        focused.clearFocus()
+        WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.ime())
+        currentFocus?.clearFocus()
     }
 
     /** Home, pressed while on a side page, comes back to the home page — as any launcher does. */
@@ -325,7 +336,7 @@ class MainActivity : BaseActivity() {
 
     /**
      * Locks through the accessibility service, and when that isn't possible says why rather than
-     * doing nothing: a lock button that silently fails reads as broken, where one that names the
+     * doing nothing: a double tap that silently fails reads as broken, where one that names the
      * grant it needs — and opens the screen that gives it — is one tap from working.
      */
     private fun lockScreen() {
@@ -423,6 +434,7 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         clearFrozenTapFeedback()
+        placeSearch()
         rebuildTemplates()
         refreshEvents()
         notesPage.refresh()
@@ -697,11 +709,12 @@ class MainActivity : BaseActivity() {
         /** Page order in the pager: widgets, home, notes. */
         private const val PAGE_HOME = 1
         private const val PAGE_NOTES = 2
-        private const val PAGE_COUNT = 3
-        private const val DISABLED_ARROW_ALPHA = 0.35f
         private const val DOCK_FADE_MS = 180L
         /** Between the dock and the navigation bar (or the gesture strip). */
         private const val DOCK_GAP_DP = 24
+        /** Between the search disc and the strip, so a drag that starts on the disc's edge is a
+         *  tap on it rather than a page turn. */
+        private const val STRIP_GAP_DP = 8
 
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L

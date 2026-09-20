@@ -22,6 +22,7 @@ object Prefs {
     private const val KEY_SEARCH_FILES = "search_files"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
+    private const val KEY_SEARCH_ON_LEFT = "search_on_left"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -140,5 +141,14 @@ object Prefs {
 
     fun setKeyboardShortcutEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_KEYBOARD_SHORTCUT, value).apply()
+    }
+
+    /** Which corner of the home screen's dock the search button sits in (default right). The
+     *  strip that turns the pages and locks the screen takes the rest of the dock. */
+    fun searchOnLeft(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_SEARCH_ON_LEFT, false)
+
+    fun setSearchOnLeft(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SEARCH_ON_LEFT, value).apply()
     }
 }

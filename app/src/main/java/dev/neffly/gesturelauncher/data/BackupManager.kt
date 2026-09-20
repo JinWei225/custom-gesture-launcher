@@ -37,6 +37,7 @@ data class BackupData(
     /** The raw AppCompatDelegate.MODE_NIGHT_* constant, exactly as [Prefs.themeMode] stores it. */
     val themeMode: Int = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
     val fontScale: Float = 1f,
+    val searchOnLeft: Boolean = false,
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
      *  something to the device that allocated it. */
     val notes: List<Note> = emptyList()
@@ -66,7 +67,8 @@ object BackupManager {
         notes = NoteStore.load(context),
         hapticFeedback = Prefs.hapticFeedback(context),
         themeMode = Prefs.themeMode(context),
-        fontScale = Prefs.fontScale(context)
+        fontScale = Prefs.fontScale(context),
+        searchOnLeft = Prefs.searchOnLeft(context)
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -102,6 +104,7 @@ object BackupManager {
         Prefs.setQuickSearchEnabled(context, data.quickSearch)
         Prefs.setThemeMode(context, data.themeMode)
         Prefs.setFontScale(context, data.fontScale)
+        Prefs.setSearchOnLeft(context, data.searchOnLeft)
         // File search is deliberately not restored on: the permission it needs is device-specific
         // and won't have been granted here, so a restored "on" would just be a broken promise.
         // The settings row grants it in one tap.

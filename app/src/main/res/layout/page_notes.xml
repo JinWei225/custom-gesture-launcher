@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The page right of home: notes as sent messages, newest at the bottom, and the box that
-     sends the next one. The bottom padding keeps the box clear of the dock. -->
+     sends the next one, at the very bottom — the dock is gone on this page, so the box sits
+     where it was and the list above it gets the room. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:paddingBottom="104dp">
+    android:paddingBottom="12dp">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/noteList"
