@@ -33,7 +33,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -263,22 +262,18 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Puts the search disc in the corner the setting names and runs the strip over the rest of
-     * the dock, so the drag-and-double-tap area is always the part beside the button and never
-     * under it. Applied on every resume: the setting is changed on a screen over this one.
+     * Puts the search disc in the corner the setting names. The strip runs the whole dock
+     * underneath it, so its dots stay centred on the screen — over the home button — whichever
+     * corner the disc is in; the disc takes the touches that land on it, and the rest of the
+     * strip is the drag-and-double-tap area. Applied on every resume: the setting is changed on
+     * a screen over this one.
      */
     private fun placeSearch() {
-        val left = Prefs.searchOnLeft(this)
-        val gravity = if (left) Gravity.START else Gravity.END
+        val gravity = if (Prefs.searchOnLeft(this)) Gravity.START else Gravity.END
         val params = searchButton.layoutParams as FrameLayout.LayoutParams
         if (params.gravity == gravity) return
         params.gravity = gravity
         searchButton.layoutParams = params
-        val inset = searchButton.layoutParams.width + dp(STRIP_GAP_DP)
-        dockStrip.updateLayoutParams<FrameLayout.LayoutParams> {
-            marginStart = if (left) inset else 0
-            marginEnd = if (left) 0 else inset
-        }
     }
 
     /**
@@ -730,9 +725,6 @@ class MainActivity : BaseActivity() {
         /** The band at the canvas's bottom edge where a swipe up from the navigation bar lands —
          *  see GestureCanvasView.bottomDeadZone. Wide enough for a fast swipe's first sample. */
         private const val CANVAS_DEAD_ZONE_DP = 32
-        /** Between the search disc and the strip, so a drag that starts on the disc's edge is a
-         *  tap on it rather than a page turn. */
-        private const val STRIP_GAP_DP = 8
 
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L

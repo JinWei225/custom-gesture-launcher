@@ -13,12 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. One search
-         disc at whichever corner the user chose, and beside it a strip showing the page dots: a
-         drag there turns the pages and a double tap locks the screen (see DockStrip). Which
-         corner, and so where the strip runs, is set in code from the setting; the bottom margin
-         too, above whatever navigation bar the device has. The strip stays on every page; the
-         search disc belongs to the home page and fades out on the other two. -->
+    <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. A strip
+         the width of the dock showing the page dots at its centre — a drag on it turns the pages
+         and a double tap locks the screen (see DockStrip) — and over it one search disc at
+         whichever corner the user chose, which takes its own touches. The corner is set in code
+         from the setting; the bottom margin too, above whatever navigation bar the device has.
+         The strip stays on every page; the search disc belongs to the home page and fades out
+         on the other two. -->
     <FrameLayout
         android:id="@+id/homeDock"
         android:layout_width="match_parent"
