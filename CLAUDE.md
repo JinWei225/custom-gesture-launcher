@@ -6,3 +6,4 @@
 - Lean on the dependencies already in the project before writing your own implementation or adding packages. Do not assume a library lacks a capability without checking its documentation and types. 
 - Make architectural decisions for the long term. Do not accept a stopgap that only works for now and is meant to be replaced later.
 
+- Releases are git tags `vX.Y.Z`. Bump the patch number (1.7.1, 1.7.2, …) for small features and fixes; reserve the minor number for larger changes.
