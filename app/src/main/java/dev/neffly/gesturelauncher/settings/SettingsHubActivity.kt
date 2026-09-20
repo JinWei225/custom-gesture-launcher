@@ -429,23 +429,32 @@ class SettingsHubActivity : SlidePanelActivity() {
             .showWithFont()
     }
 
+    /** The file goes through a document provider, which can be a cloud one — so the write runs
+     *  off the main thread, and only the toast comes back. */
     private fun doExport(uri: Uri) {
-        val result = BackupManager.writeTo(this, uri, BackupManager.buildBackup(this))
-        val message = if (result.isSuccess) R.string.export_success else R.string.export_failed
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        val backup = BackupManager.buildBackup(this)
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                BackupManager.writeTo(this@SettingsHubActivity, uri, backup)
+            }
+            val message = if (result.isSuccess) R.string.export_success else R.string.export_failed
+            Toast.makeText(this@SettingsHubActivity, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun doImport(uri: Uri) {
-        BackupManager.readFrom(this, uri).fold(
-            onSuccess = { data -> showImportConfirmDialog(data) },
-            onFailure = {
-                AlertDialog.Builder(this)
-                    .setTitle(R.string.import_confirm_title)
-                    .setMessage(R.string.import_invalid_file)
-                    .setPositiveButton(R.string.ok, null)
-                    .showWithFont()
-            }
-        )
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { BackupManager.readFrom(this@SettingsHubActivity, uri) }.fold(
+                onSuccess = { data -> showImportConfirmDialog(data) },
+                onFailure = {
+                    AlertDialog.Builder(this@SettingsHubActivity)
+                        .setTitle(R.string.import_confirm_title)
+                        .setMessage(R.string.import_invalid_file)
+                        .setPositiveButton(R.string.ok, null)
+                        .showWithFont()
+                }
+            )
+        }
     }
 
     private fun showImportConfirmDialog(data: BackupData) {

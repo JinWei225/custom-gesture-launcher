@@ -38,11 +38,24 @@ class CommandsTest {
         assertNull(parse("team discussion event"))
     }
 
+    /** The space after the keyword is what asks for the command: "maps" is a search for the Maps
+     *  app, "maps " is the start of a search on it. */
     @Test
-    fun `a bare keyword is an empty command`() {
-        assertEquals(Command.Alarm(null, emptySet(), ""), parse("alarm"))
-        assertEquals(Command.Timer(null, ""), parse("Timer"))
+    fun `a keyword needs a trailing space to trigger`() {
+        assertNull(parse("alarm"))
+        assertNull(parse("Timer"))
+        assertNull(parse("google"))
+        assertNull(parse("maps"))
+        assertNull(parse("  maps"))
+    }
+
+    @Test
+    fun `a keyword and a space is an empty command`() {
+        assertEquals(Command.Alarm(null, emptySet(), ""), parse("alarm "))
+        assertEquals(Command.Timer(null, ""), parse("Timer "))
         assertEquals(Command.Event("", null, null, null), parse("event "))
+        assertEquals(Command.Web("", null), parse("google "))
+        assertEquals(Command.Map(""), parse("maps  "))
     }
 
     // --- alarm --------------------------------------------------------------
@@ -212,10 +225,10 @@ class CommandsTest {
         assertEquals(Command.Web("how tall is K2", null), parse("web how tall is K2"))
         assertEquals(Command.Web("how tall is K2", null), parse("google how tall is K2"))
         assertEquals(Command.Web("docs.google.com", "https://docs.google.com"), parse("web docs.google.com"))
-        assertEquals(Command.Web("", null), parse("web"))
+        assertEquals(Command.Web("", null), parse("web "))
         assertEquals(Command.Map("petrol station near me"), parse("map petrol station near me"))
         assertEquals(Command.Map("KLCC"), parse("maps KLCC"))
-        assertEquals(Command.Map(""), parse("map"))
+        assertEquals(Command.Map(""), parse("map "))
         assertNull(parse("mapping tools"))
         assertNull(parse("googled it"))
     }

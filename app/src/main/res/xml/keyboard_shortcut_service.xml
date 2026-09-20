@@ -6,11 +6,15 @@
      either required by the platform or turned off.
 
      accessibilityEventTypes cannot be empty — a service that subscribes to nothing is never bound
-     — so it names the cheapest single type and the service ignores what arrives.
+     — so it names the cheapest single type and the service ignores what arrives. packageNames then
+     limits even that to this app's own windows: without it every window change on the device,
+     from every app, was a binder call into this process to run an empty method. Key events are
+     not filtered by package, so the shortcut still works everywhere.
      canRetrieveWindowContent is absent, which is what stops this from being able to read the
      screen: the shortcut needs to know that a key was pressed, never what is on top of it. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
+    android:packageNames="dev.neffly.gesturelauncher"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:canRequestFilterKeyEvents="true"

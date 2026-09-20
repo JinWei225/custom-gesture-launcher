@@ -57,16 +57,21 @@ object SearchEngine {
     private const val MIN_SETTINGS_QUERY = 3
     private const val SETTINGS_KEYWORDS = "launcher settings"
 
-    /** Blocking MediaStore lookup; empty unless the toggle is on and the permission is held. */
+    /** Whether a query is worth sending to MediaStore at all: the toggle is on and the permission
+     *  behind it is held. Cheap, so [SearchController] can ask before scheduling any work. */
+    fun searchesFiles(context: Context): Boolean =
+        Prefs.searchFiles(context) && FilePermissions.isGranted(context)
+
+    /** Blocking MediaStore lookup; empty unless [searchesFiles]. */
     fun files(context: Context, query: String): List<SearchResult.File> {
-        if (!Prefs.searchFiles(context)) return emptyList()
+        if (!searchesFiles(context)) return emptyList()
         return FileSearcher.search(context, query).map { SearchResult.File(it) }
     }
 
     /** Search-field hint naming only the sources that are actually switched on. */
     @StringRes
     fun hint(context: Context): Int =
-        if (Prefs.searchFiles(context) && FilePermissions.isGranted(context)) {
+        if (searchesFiles(context)) {
             R.string.search_apps_and_files
         } else {
             R.string.search_apps

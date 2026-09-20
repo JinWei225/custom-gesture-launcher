@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 
 /**
- * SharedPreferences wrapper for the crash-counter safety net and the tunable recognition threshold.
+ * SharedPreferences wrapper for every setting the app keeps: the crash-counter safety net, the
+ * recognition threshold, the search and quick-search toggles, theme, font and font scale. One
+ * file, so the first read pages everything in — see App.onCreate.
  */
 object Prefs {
 

@@ -40,20 +40,29 @@ class SearchController(
     fun onQueryChanged(newQuery: String) {
         query = newQuery
         fileJob?.cancel()
-        if (fileQuery != newQuery) {
+        // Hits already fetched for this exact query stay valid: a refresh after the app list
+        // reloads must not send the same LIKE over MediaStore a second time.
+        val hitsCurrent = fileQuery == newQuery
+        if (!hitsCurrent) {
             fileHits = emptyList()
             fileQuery = null
         }
         emit()
-        if (newQuery.isBlank()) return
+        // Checked here rather than inside the job: with file search off — the default — a
+        // keystroke would otherwise still pay for a coroutine, the debounce, a thread hop and a
+        // second full emit, all to splice in an empty list.
+        if (newQuery.isBlank() || hitsCurrent || !SearchEngine.searchesFiles(context)) return
         fileJob = scope.launch {
             delay(FILE_DEBOUNCE_MS)
             val hits = withContext(Dispatchers.IO) { SearchEngine.files(context, newQuery) }
             // The box may have moved on while the query ran; anything stale is discarded.
             if (query != newQuery) return@launch
+            val changed = hits != fileHits
             fileHits = hits
             fileQuery = newQuery
-            emit()
+            // Nothing found and nothing showing: the list on screen is already right, and
+            // re-ranking everything to reach the same list is the other half of a keystroke's cost.
+            if (changed) emit()
         }
     }
 

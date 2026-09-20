@@ -170,8 +170,9 @@
         <item name="searchRowGlyphInset">4dp</item>
     </style>
 
-    <!-- Home screen: draw behind system bars and show the wallpaper.
-         WallpaperManager is used primarily; windowShowWallpaper is the fallback.
+    <!-- Home screen: draw behind system bars and show the wallpaper. windowShowWallpaper is the
+         whole mechanism — the system draws the wallpaper behind this transparent window, and the
+         activity never touches WallpaperManager.
 
          Extends the base theme (rather than Material3 directly, as it used to) so that the
          dialogs and touch ripples MainActivity inflates resolve against the same palette as
@@ -187,10 +188,13 @@
     <style name="Theme.GestureLauncher.Home" parent="Theme.GestureLauncher">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- Transparent bar colours plus MainActivity's setDecorFitsSystemWindows(false) are what
+             put the wallpaper behind the bars. The legacy windowTranslucentStatus/Navigation flags
+             used to sit beside them: they are the pre-Lollipop way of asking for the same thing,
+             are overridden by explicit bar colours, and on some OEM skins add a scrim gradient of
+             their own — so they are gone. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>

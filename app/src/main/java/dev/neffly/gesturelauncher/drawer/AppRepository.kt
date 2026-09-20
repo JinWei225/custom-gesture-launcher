@@ -33,10 +33,19 @@ object AppRepository {
     @Volatile
     private var cacheFromDisk = false
 
-    // Serializes the actual PackageManager scan so a background preload (see App.onCreate) and an
-    // activity's own loadApps() call racing against each other don't both pay the full scan cost —
-    // the second caller just waits for the first's result instead of duplicating the work.
+    // Serializes the actual PackageManager scan so two screens' loadApps() calls racing each other
+    // — the drawer's onResume and its package-change listener, say — don't both pay the full scan
+    // cost: the second caller just waits for the first's result instead of duplicating the work.
     private val loadLock = Any()
+
+    /**
+     * Bumped by every [invalidate]. A scan records it before it starts and publishes its result
+     * only if nothing was invalidated meanwhile — otherwise a package callback landing mid-scan
+     * (batch Play updates are exactly when one does) would be answered by a list built before the
+     * change, marked as current, and the invalidation lost until the next callback.
+     */
+    @Volatile
+    private var generation = 0
 
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
 
@@ -54,6 +63,7 @@ object AppRepository {
 
     /** Drops the cached app list (and stale icons), e.g. after a LauncherApps package callback. */
     fun invalidate() {
+        generation++
         cache = null
         cacheFromDisk = false
         IconCache.clear()
@@ -99,6 +109,7 @@ object AppRepository {
         if (!forceReload && !cacheFromDisk) cache?.let { return it }
         synchronized(loadLock) {
             if (!forceReload && !cacheFromDisk) cache?.let { return it }
+            val scanned = generation
             val launcherApps =
                 context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
             val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
@@ -116,10 +127,15 @@ object AppRepository {
                         tag = AppTagStore.tag(context, activity.componentName)
                     )
                 }.sortedWith(DRAWER_ORDER)
-            cache = apps
-            cacheFromDisk = false
-            // Cheap: a no-op unless the list actually changed since the last scan.
-            AppListSnapshot.write(context, apps)
+            // Left needing a scan, not cached, when the list changed under us — the caller's
+            // listener has already been told and will come back for a fresh one. The result is
+            // still returned: it is the best list anyone has right now.
+            if (generation == scanned) {
+                cache = apps
+                cacheFromDisk = false
+                // Cheap: a no-op unless the list actually changed since the last scan.
+                AppListSnapshot.write(context, apps)
+            }
             return apps
         }
     }
@@ -137,8 +153,6 @@ object AppRepository {
             }.onFailure { Log.w("AppRepository", "work-profile launch failed for ${app.componentName}", it) }
         }
     }
-
-    fun cached(): List<AppInfo> = cache ?: emptyList()
 
     /**
      * The intent that opens [componentName], or null when the package offers none.

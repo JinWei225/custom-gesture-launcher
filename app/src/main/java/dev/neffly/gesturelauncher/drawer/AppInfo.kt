@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.drawer
 
 import android.content.ComponentName
 import android.os.UserHandle
+import dev.neffly.gesturelauncher.search.SearchScoring
 
 /** A launchable app entry for the drawer / app picker. [label] is always the real OS-provided
  *  name — never overwritten. [tag] is an optional user-set searchable shortcut (see AppTagStore),
@@ -15,8 +16,15 @@ data class AppInfo(
     val user: UserHandle,
     val tag: String? = null
 ) {
-    /** Stable identity for icon caching and list diffing: component + profile. */
-    val key: String get() = "${componentName.flattenToString()}#$user"
+    /** Stable identity for icon caching and list diffing: component + profile. Computed once:
+     *  DiffUtil and the icon cache ask for it on every bind and comparison. */
+    val key: String = "${componentName.flattenToString()}#$user"
+
+    /** [label] and [tag] folded for matching — see [SearchScoring.normalize]. Done here, once per
+     *  scan, rather than per keystroke: ranking normalizes every label on every character typed,
+     *  and the fold (an NFKD pass plus a regex) was the bulk of that work. */
+    val normalizedLabel: String = SearchScoring.normalize(label)
+    val normalizedTag: String? = tag?.let(SearchScoring::normalize)
 }
 
 /** Bucket used by the drawer's alphabet fast-scroll index: A-Z as themselves, everything else

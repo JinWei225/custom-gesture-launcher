@@ -28,6 +28,7 @@ import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.data.SPoint
 import dev.neffly.gesturelauncher.data.toPt
+import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
@@ -299,15 +300,7 @@ class GestureTrainingActivity : BaseActivity() {
     private fun detectCollision(): String? {
         val others = GestureStore.all(this).filter { it.id != editingId }
         if (others.isEmpty()) return null
-        val templates = others.flatMap { m ->
-            m.templates.mapIndexed { idx, stroke ->
-                GestureTemplate(
-                    m.id,
-                    stroke.toPt(),
-                    m.subStrokeLengths.getOrNull(idx)?.size?.coerceAtLeast(1) ?: 1
-                )
-            }
-        }
+        val templates = others.toTemplates()
         val threshold = Prefs.matchThreshold(this)
         var bestScore = 0.0
         var bestId: String? = null

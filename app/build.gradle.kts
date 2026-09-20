@@ -48,7 +48,12 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.findByName("release")
-            isMinifyEnabled = false
+            // R8 on: a home screen is cold-started more than any other app on the phone, and a
+            // shrunk dex is less to load and verify each time. The two reflective lookups in the
+            // app (ActivityInfo.resizeMode, miui.app.MiuiFreeFormManager) target platform classes
+            // and are untouched; kotlinx.serialization is covered by proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

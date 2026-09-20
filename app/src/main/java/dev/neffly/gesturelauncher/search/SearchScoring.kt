@@ -24,7 +24,7 @@ internal object SearchScoring {
      */
     fun normalize(s: String): String =
         Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFKD)
-            .replace(Regex("\\p{M}+"), "")
+            .replace(COMBINING_MARKS, "")
             .trim()
 
     /**
@@ -72,18 +72,20 @@ internal object SearchScoring {
     fun rankApps(apps: List<AppInfo>, query: String): List<AppInfo> {
         val q = normalize(query)
         if (q.isEmpty()) return apps
+        // Labels and tags arrive pre-normalized (see AppInfo): this runs on every keystroke, and
+        // folding every label each time was most of what a keystroke cost.
         return apps.mapNotNull { app ->
-            val tagNorm = app.tag?.let { normalize(it) }
+            val tagNorm = app.normalizedTag
             val score = if (tagNorm != null && tagNorm == q) {
                 TAG_EXACT_SCORE
             } else {
                 val tagScore = tagNorm?.let { fuzzyScore(it, q) }?.plus(TAG_MATCH_BONUS)
-                val labelScore = fuzzyScore(normalize(app.label), q)
+                val labelScore = fuzzyScore(app.normalizedLabel, q)
                 listOfNotNull(tagScore, labelScore).maxOrNull()
             }
             score?.let { app to it }
         }.sortedWith(compareByDescending<Pair<AppInfo, Int>> { it.second }
-            .thenBy { normalize(it.first.label) })
+            .thenBy { it.first.normalizedLabel })
             .map { it.first }
     }
 
@@ -106,4 +108,7 @@ internal object SearchScoring {
     // '/' is here for file names, which the app-label side never contains.
     private val SEPARATORS = charArrayOf(' ', '-', '_', '.', '/')
     private const val NO_MATCH = Int.MIN_VALUE / 2
+
+    /** Every combining mark NFKD split off — compiled once, not per label per keystroke. */
+    private val COMBINING_MARKS = Regex("\\p{M}+")
 }

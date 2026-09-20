@@ -14,6 +14,7 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.data.anyMultiStroke
+import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.ui.BaseActivity
@@ -62,15 +63,26 @@ class GestureSensitivityActivity : BaseActivity() {
         sensitivitySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                 renderThreshold(progress)
-                if (fromUser) Prefs.setMatchThreshold(this@GestureSensitivityActivity, (progress + 60) / 100f)
+                // A keyboard or switch-access step never gets a tracking-touch pair, so it is
+                // saved here; a finger on the bar is saved once, below, when it lifts.
+                if (fromUser && sb?.isPressed == false) saveThreshold(progress)
             }
             override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
+            // Persisted once the finger lifts, not per tick: every progress change during a drag
+            // was a SharedPreferences write to disk. The test stroke reads the pref, and no one
+            // can draw one while still holding the slider.
+            override fun onStopTrackingTouch(sb: SeekBar?) {
+                sb?.let { saveThreshold(it.progress) }
+            }
         })
     }
 
     private fun renderThreshold(progress: Int) {
         sensitivityValue.text = "${progress + 60}%"
+    }
+
+    private fun saveThreshold(progress: Int) {
+        Prefs.setMatchThreshold(this, (progress + 60) / 100f)
     }
 
     override fun onResume() {
@@ -82,8 +94,11 @@ class GestureSensitivityActivity : BaseActivity() {
         val mappings = GestureStore.all(this)
         mappingsById = mappings.associateBy { it.id }
         templates = mappings.toTemplates()
+        // Both knobs, exactly as the home screen sets them: this screen exists to show what home
+        // would do, and finalizing early on the last expected sub-stroke is part of that.
         canvas.multiStrokeGapMillis =
             if (mappings.anyMultiStroke()) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
+        canvas.maxExpectedSubStrokes = mappings.maxExpectedSubStrokes()
     }
 
     private fun onTestStroke(points: List<PointF>, subStrokeCount: Int) {

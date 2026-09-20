@@ -35,10 +35,10 @@ object AppListSnapshot {
     /**
      * Content hash of what's currently on disk, so an unchanged scan writes nothing.
      *
-     * This is the whole battery story for this class: the reconciling scan runs on every cold
-     * start, but the app list almost never actually differs, so the common path costs zero writes.
-     * Seeded by [read] as well as [write] — otherwise the first scan after a cold start would
-     * always rewrite an identical file.
+     * This is the whole battery story for this class: the reconciling scan runs on the first
+     * drawer or search open of every process, but the app list almost never actually differs, so
+     * the common path costs zero writes. Seeded by [read] as well as [write] — otherwise that
+     * first scan would always rewrite an identical file.
      */
     @Volatile
     private var signature: Int = 0

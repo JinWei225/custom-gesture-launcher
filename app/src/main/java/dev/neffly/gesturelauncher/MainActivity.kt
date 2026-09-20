@@ -45,6 +45,7 @@ import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.data.anyMultiStroke
+import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
@@ -82,7 +83,10 @@ class MainActivity : BaseActivity() {
 
     private val requestCalendar =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) refreshEvents() else openCalendar()
+            // The permission dialog only pauses this screen, so onStart — where the observer is
+            // normally hooked up — won't run again until the next Home press; without this the
+            // list would show once and then stop following calendar edits.
+            if (granted) { watchCalendar(); refreshEvents() } else openCalendar()
         }
 
     private val heartbeat = Runnable {
@@ -97,15 +101,31 @@ class MainActivity : BaseActivity() {
     private var eventsCacheAtMillis = 0L
     private var eventsCacheDay = -1L
 
+    /** The lines currently in [eventsContainer], so a resume that would draw the same three rows
+     *  again doesn't rebuild the views — this runs on every Home press. */
+    private var renderedRows: List<String> = emptyList()
+
+    /** Last battery state drawn, as (percent, charging). ACTION_BATTERY_CHANGED also fires for
+     *  voltage and temperature, every few seconds on a charger, and none of those move the
+     *  indicator. */
+    private var renderedBattery: Pair<Int, Boolean>? = null
+
     /** ACTION_BATTERY_CHANGED is only delivered to receivers registered at runtime, so the
      *  indicator beside the date is driven from here rather than from the manifest. */
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = showBattery(intent)
     }
 
-    private val calendarObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+    private var calendarWatched = false
+
+    /** A sync touches the provider once per row it writes, so a burst of these arrives for one
+     *  logical change; the forced re-query is coalesced to the end of the burst. */
+    private val calendarChanged = Runnable { refreshEvents(force = true) }
+
+    private val calendarObserver = object : ContentObserver(handler) {
         override fun onChange(selfChange: Boolean) {
-            refreshEvents(force = true)
+            handler.removeCallbacks(calendarChanged)
+            handler.postDelayed(calendarChanged, CALENDAR_DEBOUNCE_MILLIS)
         }
     }
 
@@ -223,18 +243,29 @@ class MainActivity : BaseActivity() {
         // indicator is already correct on the first frame instead of blank until the next change.
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             ?.let { showBattery(it) }
-        if (hasCalendarPermission()) {
-            // Refresh when an event is added/changed from another app while home is visible.
-            contentResolver.registerContentObserver(
-                CalendarContract.CONTENT_URI, true, calendarObserver
-            )
-        }
+        watchCalendar()
     }
 
     override fun onStop() {
         super.onStop()
-        runCatching { contentResolver.unregisterContentObserver(calendarObserver) }
+        unwatchCalendar()
         runCatching { unregisterReceiver(batteryReceiver) }
+    }
+
+    /** Refreshes when an event is added/changed from another app while home is visible. A no-op
+     *  without the permission, and idempotent, so it can be called from onStart and from the
+     *  permission grant alike. */
+    private fun watchCalendar() {
+        if (calendarWatched || !hasCalendarPermission()) return
+        contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, calendarObserver)
+        calendarWatched = true
+    }
+
+    private fun unwatchCalendar() {
+        handler.removeCallbacks(calendarChanged)
+        if (!calendarWatched) return
+        runCatching { contentResolver.unregisterContentObserver(calendarObserver) }
+        calendarWatched = false
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -268,9 +299,7 @@ class MainActivity : BaseActivity() {
         // nothing more to wait for beyond it.
         canvas.multiStrokeGapMillis =
             if (mappings.anyMultiStroke()) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
-        canvas.maxExpectedSubStrokes = mappings.maxOfOrNull { m ->
-            m.subStrokeLengths.maxOfOrNull { it.size } ?: 1
-        } ?: 0
+        canvas.maxExpectedSubStrokes = mappings.maxExpectedSubStrokes()
         emptyHint.visibility = if (mappings.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -392,6 +421,8 @@ class MainActivity : BaseActivity() {
      * cue the clock design uses, and cheaper to read at a glance than three identical lines.
      */
     private fun renderRows(lines: List<String>) {
+        if (lines == renderedRows && eventsContainer.childCount == lines.size) return
+        renderedRows = lines
         eventsContainer.removeAllViews()
         lines.forEachIndexed { index, line ->
             val leading = index == 0
@@ -455,6 +486,7 @@ class MainActivity : BaseActivity() {
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
         if (level < 0 || scale <= 0) {
+            renderedBattery = null
             batteryIcon.visibility = View.GONE
             batteryLevel.visibility = View.GONE
             return
@@ -466,6 +498,10 @@ class MainActivity : BaseActivity() {
         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
         val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
             status == BatteryManager.BATTERY_STATUS_FULL
+        val state = percent to charging
+        // setText always relayouts the row, even for the same text — so unchanged is skipped here.
+        if (state == renderedBattery) return
+        renderedBattery = state
 
         batteryIcon.visibility = View.VISIBLE
         batteryLevel.visibility = View.VISIBLE
@@ -511,6 +547,7 @@ class MainActivity : BaseActivity() {
 
     companion object {
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
+        private const val CALENDAR_DEBOUNCE_MILLIS = 500L
         private const val RECOGNITION_HINT_MILLIS = 1200L
 
         /** Known clock/alarm packages, tried in order when ACTION_SHOW_ALARMS can't be dispatched. */

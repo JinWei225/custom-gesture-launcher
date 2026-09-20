@@ -61,15 +61,24 @@ sealed class Command {
  * done with it. Every partial reading is still a valid action: an alarm with no time opens the
  * clock app at its new-alarm screen, an event with only a title opens the calendar editor.
  *
- * The keyword is the whole trigger. Everything else the bar does stays quiet unless the query
- * is unmistakably for it; here the user asks by name, which is what lets "event" be followed by
- * free text without the row appearing under ordinary searches.
+ * The keyword and a space after it are the whole trigger. Everything else the bar does stays
+ * quiet unless the query is unmistakably for it; here the user asks by name, which is what lets
+ * "event" be followed by free text without the row appearing under ordinary searches — and the
+ * space is what keeps the keyword itself, typed to find the app of that name, an ordinary search.
  */
 object Commands {
 
-    /** [query]'s command, or null when it doesn't start with a keyword. */
+    /**
+     * [query]'s command, or null when it doesn't start with a keyword *followed by a space*.
+     *
+     * The space is the opt-in. Without it, "maps" typed to open Google Maps put an empty "search
+     * on Maps" row above the app itself, and "google", "alarm" and "timer" did the same to their
+     * apps — the commonest way to reach those four apps was answered with a command nobody had
+     * asked for. Which is why the query is trimmed at the start only: the trailing space is the
+     * signal, and it has to survive normalization to be seen.
+     */
     fun parse(query: String, clock: Clock = Clock.systemDefaultZone()): Command? {
-        val q = Normalizer.normalize(query, Normalizer.Form.NFKC).replace(WHITESPACE, " ").trim()
+        val q = Normalizer.normalize(query, Normalizer.Form.NFKC).replace(WHITESPACE, " ").trimStart()
         if (q.length > MAX_LENGTH) return null
         val m = KEYWORD.matchEntire(q) ?: return null
         val slots = Slots(m.groupValues[2])
@@ -322,7 +331,7 @@ object Commands {
     private const val SEPARATOR = " · "
 
     private val WHITESPACE = Regex("""\s+""")
-    private val KEYWORD = Regex("""(alarm|timer|event|web|google|maps?)(?: (.*))?""", RegexOption.IGNORE_CASE)
+    private val KEYWORD = Regex("""(alarm|timer|event|web|google|maps?) (.*)""", RegexOption.IGNORE_CASE)
 
     /** Token edges for a time: not glued to a word or another clock field. */
     private const val LEFT = """(?<![\w:])"""

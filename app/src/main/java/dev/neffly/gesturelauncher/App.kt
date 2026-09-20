@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
 import android.content.pm.LauncherApps
+import android.content.res.Configuration
 import android.os.UserHandle
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -74,11 +76,20 @@ class App : Application() {
         // OEM theme engines (e.g. Xiaomi/HyperOS "Themes") re-skin icons in place — no package is
         // installed/updated/removed, so the LauncherApps callback above never fires. What they do
         // trigger is a CONFIGURATION_CHANGED broadcast, which doesn't support manifest registration
-        // at all, hence context-registered here. Clearing the icon cache on every such broadcast is
-        // deliberately broad (it also fires on rotation), but it's just an in-memory evictAll — worst
-        // case a handful of visible icons re-fetch from PackageManager (cheap; see IconCache).
+        // at all, hence context-registered here. The broadcast also fires on rotation, a fold and
+        // a keyboard docking, none of which can change an icon, and clearing the cache there made
+        // every visible row re-fetch from PackageManager for nothing. The diff is therefore
+        // checked, and the clear skipped only when every changed field is one from that list —
+        // anything else, an OEM's own configuration bits included, still clears, so a theme
+        // engine this code doesn't know about fails towards fresh icons rather than stale ones.
+        var lastConfig = Configuration(resources.configuration)
         val configReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) = IconCache.clear()
+            override fun onReceive(context: Context, intent: Intent) {
+                val current = Configuration(context.resources.configuration)
+                val diff = lastConfig.diff(current)
+                lastConfig = current
+                if ((diff and ICON_NEUTRAL_CHANGES.inv()) != 0) IconCache.clear()
+            }
         }
         ContextCompat.registerReceiver(
             this,
@@ -87,32 +98,29 @@ class App : Application() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        // Warm the drawer's app-list cache early. MainActivity (the HOME app) is a background/cached
-        // process, so the OS commonly kills and recreates it after time away, dropping AppRepository's
-        // in-memory cache. Priming it here overlaps with the home screen appearing, so the first
-        // drawer open skips the synchronous scan. (Icons are lazy — see IconCache — so this is
-        // label-only and cheap.)
-        //
-        // Sequential, and the disk snapshot goes first: it lands in milliseconds and makes the
-        // drawer instantly renderable, while the LauncherApps scan behind it takes long enough on a
-        // phone with a lot of apps that the user can beat it to the drawer button. The scan then
-        // reconciles. AppDrawerActivity primes for itself too, for the case where it's restored
-        // from recents before this coroutine has run at all.
-        appScope.launch {
-            AppRepository.primeFromDisk(applicationContext)
-            AppRepository.load(applicationContext, forceReload = false)
-            // Icons are the other half of a cold start: IconCache is in-memory too, so after a kill
-            // every visible row would fetch from PackageManager as it binds. Warming just the first
-            // screenful (bounded well under IconCache.MAX_ENTRIES) is work the drawer would do
-            // anyway, moved a few hundred ms earlier.
-            AppRepository.cached().take(ICON_PREWARM_COUNT).forEach {
-                IconCache.load(applicationContext, it)
-            }
-        }
+        // Seed the drawer's app list from the last scan's disk snapshot, so the first drawer or
+        // search open after a process kill paints a full list on its first frame. Only the
+        // snapshot: the LauncherApps scan that reconciles it, and the icon fetches behind it, used
+        // to run here too, on every process start — work a home screen that only ever launches a
+        // gesture never needed. Both now happen where they are first wanted, from the drawer's and
+        // quick search's own loadApps(), off the main thread and behind the snapshot they refine.
+        appScope.launch { AppRepository.primeFromDisk(applicationContext) }
     }
 
     private companion object {
-        /** Roughly a screenful of drawer rows. */
-        const val ICON_PREWARM_COUNT = 24
+        /** Configuration fields that can change without any app icon changing with them: the
+         *  geometry of the screen and window, and the input hardware. */
+        const val ICON_NEUTRAL_CHANGES = ActivityInfo.CONFIG_ORIENTATION or
+            ActivityInfo.CONFIG_SCREEN_SIZE or
+            ActivityInfo.CONFIG_SMALLEST_SCREEN_SIZE or
+            ActivityInfo.CONFIG_SCREEN_LAYOUT or
+            // The window-bounds bit rotation and multi-window set. Hidden from the SDK, so it is
+            // the literal value of ActivityInfo.CONFIG_WINDOW_CONFIGURATION.
+            0x20000000 or
+            ActivityInfo.CONFIG_KEYBOARD or
+            ActivityInfo.CONFIG_KEYBOARD_HIDDEN or
+            ActivityInfo.CONFIG_NAVIGATION or
+            ActivityInfo.CONFIG_TOUCHSCREEN or
+            ActivityInfo.CONFIG_FONT_SCALE
     }
 }

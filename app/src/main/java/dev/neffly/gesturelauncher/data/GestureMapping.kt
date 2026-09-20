@@ -62,6 +62,11 @@ fun List<GestureMapping>.toTemplates(): List<GestureTemplate> = flatMap { mappin
  *  multi-stroke gap worth the latency it costs every other gesture. */
 fun List<GestureMapping>.anyMultiStroke(): Boolean = any { it.isMultiStroke }
 
+/** The most pen-lift sub-strokes any trained sample has — once a session reaches it there is
+ *  nothing further to wait for. 0 with no gestures; 1 for samples saved before counts existed. */
+fun List<GestureMapping>.maxExpectedSubStrokes(): Int =
+    maxOfOrNull { m -> m.subStrokeLengths.maxOfOrNull { it.size } ?: 1 } ?: 0
+
 /** The recognizer works in doubles; the canvas and the stored gestures both work in floats. */
 @JvmName("pointFToPt")
 fun List<PointF>.toPt(): List<Pt> = map { Pt(it.x.toDouble(), it.y.toDouble()) }
