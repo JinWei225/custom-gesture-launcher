@@ -51,6 +51,7 @@ import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
+import dev.neffly.gesturelauncher.ui.PageDotsView
 import dev.neffly.gesturelauncher.ui.showWithFont
 import dev.neffly.gesturelauncher.widgets.WidgetPage
 import dev.neffly.gesturelauncher.notes.NotesPage
@@ -85,7 +86,7 @@ class MainActivity : BaseActivity() {
 
     private lateinit var pager: ViewPager2
     private lateinit var dock: View
-    private lateinit var dockStrip: View
+    private lateinit var dockStrip: PageDotsView
     private lateinit var searchButton: ImageButton
     private lateinit var widgetPage: WidgetPage
     private lateinit var notesPage: NotesPage
@@ -190,6 +191,7 @@ class MainActivity : BaseActivity() {
 
         canvas = home.findViewById(R.id.gestureCanvas)
         canvas.autoClearMillis = 180L
+        canvas.bottomDeadZone = dp(CANVAS_DEAD_ZONE_DP)
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
 
         emptyHint = home.findViewById(R.id.emptyHint)
@@ -198,21 +200,25 @@ class MainActivity : BaseActivity() {
         batteryIcon = home.findViewById(R.id.batteryIcon)
         batteryLevel = home.findViewById(R.id.batteryLevel)
 
-        // Keep the pages below the status bar and above the navigation bar, the dock clear of
-        // that bar by a fixed gap whichever navigation mode the device is in, and the whole
-        // screen — dock included — above the keyboard the notes page opens.
+        // Keep the pages below the status bar and above the navigation bar — or above the
+        // keyboard the notes page opens, which is when the note box, and only it, sits on the
+        // keyboard: the dock stays put underneath it, and the room the notes page keeps clear
+        // for the dock is given back to the list. The dock itself stays clear of the bar by a
+        // fixed gap whichever navigation mode the device is in.
         val root = findViewById<View>(R.id.homeRoot)
+        val notesDockClearance = notes.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            pager.updatePadding(top = bars.top, bottom = bars.bottom)
+            val keyboard = ime > bars.bottom
+            pager.updatePadding(top = bars.top, bottom = if (keyboard) ime else bars.bottom)
+            notes.updatePadding(bottom = if (keyboard) dp(NOTES_KEYBOARD_GAP_DP) else notesDockClearance)
             val dockMargin = bars.bottom + dp(DOCK_GAP_DP)
             val params = dock.layoutParams as FrameLayout.LayoutParams
             if (params.bottomMargin != dockMargin) {
                 params.bottomMargin = dockMargin
                 dock.layoutParams = params
             }
-            root.updatePadding(bottom = (ime - bars.bottom).coerceAtLeast(0))
             insets
         }
 
@@ -247,6 +253,8 @@ class MainActivity : BaseActivity() {
             true
         }
         dockStrip = findViewById(R.id.dockStrip)
+        dockStrip.count = PAGE_COUNT
+        dockStrip.position = PAGE_HOME.toFloat()
         DockStrip(dockStrip, pager) { lockScreen() }
         placeSearch()
         showDock(pager.currentItem, animate = false)
@@ -283,6 +291,10 @@ class MainActivity : BaseActivity() {
         pager.offscreenPageLimit = pages.size - 1
         pager.setCurrentItem(PAGE_HOME, false)
         pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+                dockStrip.position = position + positionOffset
+            }
+
             override fun onPageSelected(position: Int) {
                 pager.isUserInputEnabled = position != PAGE_HOME
                 showDock(position, animate = true)
@@ -293,23 +305,23 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * The dock belongs to the home page: on a side page it would only sit over the widgets and
-     * the note box, and a swipe there already turns the page, so it fades out — and stops taking
-     * touches — there and comes back on return.
+     * The strip and its dots stay on every page — they are how the pages are told apart. The
+     * search disc belongs to the home page: on a side page it would only sit over the widgets
+     * and notes, so it fades out — and stops taking touches — there and comes back on return.
      */
     private fun showDock(page: Int, animate: Boolean) {
         val home = page == PAGE_HOME
-        dock.animate().cancel()
+        searchButton.animate().cancel()
         if (!animate) {
-            dock.alpha = if (home) 1f else 0f
-            dock.visibility = if (home) View.VISIBLE else View.INVISIBLE
+            searchButton.alpha = if (home) 1f else 0f
+            searchButton.visibility = if (home) View.VISIBLE else View.INVISIBLE
             return
         }
-        if (home) dock.visibility = View.VISIBLE
-        dock.animate()
+        if (home) searchButton.visibility = View.VISIBLE
+        searchButton.animate()
             .alpha(if (home) 1f else 0f)
             .setDuration(DOCK_FADE_MS)
-            .withEndAction { if (!home) dock.visibility = View.INVISIBLE }
+            .withEndAction { if (!home) searchButton.visibility = View.INVISIBLE }
             .start()
     }
 
@@ -709,9 +721,15 @@ class MainActivity : BaseActivity() {
         /** Page order in the pager: widgets, home, notes. */
         private const val PAGE_HOME = 1
         private const val PAGE_NOTES = 2
+        private const val PAGE_COUNT = 3
         private const val DOCK_FADE_MS = 180L
         /** Between the dock and the navigation bar (or the gesture strip). */
         private const val DOCK_GAP_DP = 24
+        /** Between the note box and the keyboard, while the keyboard is up. */
+        private const val NOTES_KEYBOARD_GAP_DP = 8
+        /** The band at the canvas's bottom edge where a swipe up from the navigation bar lands —
+         *  see GestureCanvasView.bottomDeadZone. Wide enough for a fast swipe's first sample. */
+        private const val CANVAS_DEAD_ZONE_DP = 32
         /** Between the search disc and the strip, so a drag that starts on the disc's edge is a
          *  tap on it rather than a page turn. */
         private const val STRIP_GAP_DP = 8

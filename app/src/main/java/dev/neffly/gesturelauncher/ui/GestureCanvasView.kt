@@ -92,6 +92,16 @@ class GestureCanvasView @JvmOverloads constructor(
             invalidate()
         }
 
+    /**
+     * Height, in pixels, of a band along the bottom edge in which a touch is not a stroke.
+     *
+     * The navigation bar is a "slippery" window: a swipe up that begins on it is handed to the
+     * window under the finger as a fresh ACTION_DOWN at the point where it crossed over — which,
+     * for a canvas that runs down to the bar, is this edge. Without this a swipe up from the
+     * buttons drew a stroke and got "not recognized" for it.
+     */
+    var bottomDeadZone = 0
+
     init {
         isFocusable = true
         isClickable = true
@@ -100,6 +110,7 @@ class GestureCanvasView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                if (event.y > height - bottomDeadZone) return false
                 removeCallbacks(clearRunnable)
                 removeCallbacks(finalizeRunnable)
                 if (finalizePending) {

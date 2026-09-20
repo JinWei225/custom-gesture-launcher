@@ -14,11 +14,11 @@
         android:layout_height="match_parent" />
 
     <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. One search
-         disc at whichever corner the user chose, and beside it a strip with nothing drawn in it:
-         a drag there turns the pages and a double tap locks the screen (see DockStrip). Which
+         disc at whichever corner the user chose, and beside it a strip showing the page dots: a
+         drag there turns the pages and a double tap locks the screen (see DockStrip). Which
          corner, and so where the strip runs, is set in code from the setting; the bottom margin
-         too, above whatever navigation bar the device has. The dock fades out on the side pages
-         so it doesn't sit over the widgets and the note box. -->
+         too, above whatever navigation bar the device has. The strip stays on every page; the
+         search disc belongs to the home page and fades out on the other two. -->
     <FrameLayout
         android:id="@+id/homeDock"
         android:layout_width="match_parent"
@@ -26,7 +26,7 @@
         android:layout_gravity="bottom"
         android:layout_marginHorizontal="20dp">
 
-        <View
+        <dev.neffly.gesturelauncher.ui.PageDotsView
             android:id="@+id/dockStrip"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
