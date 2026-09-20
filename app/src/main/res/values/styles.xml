@@ -29,9 +29,13 @@
         <item name="tint">@color/wallpaper_overlay_text</item>
     </style>
 
-    <!-- Window animation for GlassMenu's popup. -->
+    <!-- Window animations for GlassMenu's popup, below its anchor and above it. -->
     <style name="Animation.GestureLauncher.GlassMenu" parent="">
         <item name="android:windowEnterAnimation">@anim/glass_menu_in</item>
         <item name="android:windowExitAnimation">@anim/glass_menu_out</item>
+    </style>
+
+    <style name="Animation.GestureLauncher.GlassMenu.Up">
+        <item name="android:windowEnterAnimation">@anim/glass_menu_in_up</item>
     </style>
 </resources>

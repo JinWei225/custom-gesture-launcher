@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- glass_menu_in for a menu opened above its anchor: it unfolds from its bottom edge, where
+     the press was. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_cubic">
+    <scale
+        android:duration="160"
+        android:fromXScale="0.85"
+        android:fromYScale="0.85"
+        android:pivotX="12%"
+        android:pivotY="100%"
+        android:toXScale="1"
+        android:toYScale="1" />
+    <alpha
+        android:duration="120"
+        android:fromAlpha="0"
+        android:toAlpha="1" />
+</set>

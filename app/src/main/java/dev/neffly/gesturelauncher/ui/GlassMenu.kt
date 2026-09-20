@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.ui
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import android.view.Gravity
@@ -15,6 +16,9 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.ImageViewCompat
 import dev.neffly.gesturelauncher.R
 import kotlin.math.roundToInt
@@ -54,8 +58,16 @@ object GlassMenu {
         onClick = onClick
     )
 
-    /** Opens the menu below [anchor], or above it when there is no room, its [gravity] edge
-     *  inset by [xOffsetDp] from the anchor's. */
+    /**
+     * Opens the menu below [anchor], or above it when there is no room below, its [gravity] edge
+     * inset by [xOffsetDp] from the anchor's.
+     *
+     * Placed by hand rather than with showAsDropDown: that one, finding no room below a note at
+     * the bottom of its list, scrolls the list to make some and then lets the screen edge cut
+     * the last row off. The keyboard, if it is up, is left up — the menu takes focus for the
+     * Back key but tells the window manager it has no use for the input method, so the box that
+     * was being typed in keeps it, and the page doesn't jump.
+     */
     fun show(
         anchor: View,
         items: List<Item>,
@@ -108,8 +120,37 @@ object GlassMenu {
         popup.setBackgroundDrawable(null)
         popup.elevation = 0f
         popup.isOutsideTouchable = true
-        popup.animationStyle = R.style.Animation_GestureLauncher_GlassMenu
-        popup.showAsDropDown(anchor, dp(context, xOffsetDp), -dp(context, 6), gravity)
+        popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+
+        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        content.measure(unspecified, unspecified)
+        val width = content.measuredWidth
+        val height = content.measuredHeight
+        popup.width = width
+        popup.height = height
+
+        // Everything in window coordinates: the anchor's place, and the part of the window not
+        // under the keyboard or the system bars. From the insets rather than the "visible display
+        // frame", which on this OEM's keyboard stops short of its toolbar.
+        val root = anchor.rootView
+        val covered = ViewCompat.getRootWindowInsets(anchor)
+            ?.getInsets(WindowInsetsCompat.Type.ime() or WindowInsetsCompat.Type.systemBars())
+            ?: Insets.NONE
+        val room = Rect(covered.left, covered.top, root.width - covered.right, root.height - covered.bottom)
+        val at = IntArray(2).also { anchor.getLocationInWindow(it) }
+        val overlap = dp(context, 6)
+        val inset = dp(context, xOffsetDp)
+        val x = (if (gravity == Gravity.END) at[0] + anchor.width - width - inset else at[0] + inset)
+            .coerceIn(room.left, (room.right - width).coerceAtLeast(room.left))
+        val below = at[1] + anchor.height - overlap
+        val fitsBelow = below + height <= room.bottom
+        val y = if (fitsBelow) below else (at[1] - height + overlap).coerceAtLeast(room.top)
+        popup.animationStyle = if (fitsBelow) {
+            R.style.Animation_GestureLauncher_GlassMenu
+        } else {
+            R.style.Animation_GestureLauncher_GlassMenu_Up
+        }
+        popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y)
     }
 
     private fun themeColor(context: Context, attr: Int): Int {
