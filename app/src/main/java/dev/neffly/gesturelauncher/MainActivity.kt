@@ -21,6 +21,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -80,8 +81,11 @@ import kotlin.math.roundToInt
 class MainActivity : BaseActivity() {
 
     private lateinit var pager: ViewPager2
-    private lateinit var pageLeft: ImageButton
-    private lateinit var pageRight: ImageButton
+    private lateinit var dock: View
+    private lateinit var lockButton: ImageButton
+    private lateinit var searchButton: ImageButton
+    private lateinit var pageLeft: ImageView
+    private lateinit var pageRight: ImageView
     private lateinit var widgetPage: WidgetPage
     private lateinit var notesPage: NotesPage
 
@@ -171,10 +175,15 @@ class MainActivity : BaseActivity() {
 
         val inflater = LayoutInflater.from(this)
         pager = findViewById(R.id.homePager)
+        dock = findViewById(R.id.homeDock)
         val widgets = inflater.inflate(R.layout.page_widgets, pager, false)
         val home = inflater.inflate(R.layout.page_home, pager, false)
         val notes = inflater.inflate(R.layout.page_notes, pager, false)
-        setUpPager(listOf(widgets, home, notes))
+        val pages = listOf(widgets, home, notes)
+        // Built after setContentView, so the pass BaseActivity makes over the content view never
+        // saw them; without this the clock, the battery and the notes keep the system font.
+        pages.forEach { FontEngine.applyTo(it) }
+        setUpPager(pages)
         widgetPage = WidgetPage(this, widgets)
         notesPage = NotesPage(this, notes)
 
@@ -188,13 +197,20 @@ class MainActivity : BaseActivity() {
         batteryIcon = home.findViewById(R.id.batteryIcon)
         batteryLevel = home.findViewById(R.id.batteryLevel)
 
-        // Keep the pages below the status bar and above the navigation bar, and the whole screen
-        // — dock included — above the keyboard the notes page opens.
+        // Keep the pages below the status bar and above the navigation bar, the dock clear of
+        // that bar by a fixed gap whichever navigation mode the device is in, and the whole
+        // screen — dock included — above the keyboard the notes page opens.
         val root = findViewById<View>(R.id.homeRoot)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             pager.updatePadding(top = bars.top, bottom = bars.bottom)
+            val dockMargin = bars.bottom + dp(DOCK_GAP_DP)
+            val params = dock.layoutParams as FrameLayout.LayoutParams
+            if (params.bottomMargin != dockMargin) {
+                params.bottomMargin = dockMargin
+                dock.layoutParams = params
+            }
             root.updatePadding(bottom = (ime - bars.bottom).coerceAtLeast(0))
             insets
         }
@@ -220,7 +236,7 @@ class MainActivity : BaseActivity() {
         // shortcuts) that only live there. The drawer is also the guaranteed way in when the
         // overlay is switched off, which is why that case falls back to it rather than doing
         // nothing — this button must never be a dead end.
-        val searchButton = findViewById<ImageButton>(R.id.searchButton)
+        searchButton = findViewById(R.id.searchButton)
         searchButton.setOnClickListener {
             if (Prefs.quickSearchEnabled(this)) openQuickSearch() else openDrawer()
         }
@@ -229,13 +245,13 @@ class MainActivity : BaseActivity() {
             openDrawer()
             true
         }
-        val lockButton = findViewById<ImageButton>(R.id.lockButton)
+        lockButton = findViewById(R.id.lockButton)
         lockButton.setOnClickListener { lockScreen() }
         pageLeft = findViewById(R.id.pageLeftButton)
         pageRight = findViewById(R.id.pageRightButton)
         pageLeft.setOnClickListener { pager.setCurrentItem(pager.currentItem - 1, true) }
         pageRight.setOnClickListener { pager.setCurrentItem(pager.currentItem + 1, true) }
-        showArrows(pager.currentItem)
+        showDock(pager.currentItem, animate = false)
 
         tappableWidgets =
             listOf(dateRow, clockTime, eventsContainer, lockButton, pageLeft, pageRight, searchButton)
@@ -253,19 +269,38 @@ class MainActivity : BaseActivity() {
         pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 pager.isUserInputEnabled = position != PAGE_HOME
-                showArrows(position)
+                showDock(position, animate = true)
                 if (position != PAGE_NOTES) hideKeyboard()
             }
         })
         pager.isUserInputEnabled = false
     }
 
-    /** An arrow with no page beyond it is dimmed and dead, not gone: the dock keeps its shape. */
-    private fun showArrows(page: Int) {
+    /**
+     * Sets the dock for [page]. An arrow with no page beyond it is dimmed and dead, not gone, so
+     * the pair keeps its place. Lock and search belong to the home page: on a side page they
+     * would only sit over the widgets and notes, so they fade out there and back in on return.
+     */
+    private fun showDock(page: Int, animate: Boolean) {
         pageLeft.isEnabled = page > 0
         pageLeft.alpha = if (pageLeft.isEnabled) 1f else DISABLED_ARROW_ALPHA
         pageRight.isEnabled = page < PAGE_COUNT - 1
         pageRight.alpha = if (pageRight.isEnabled) 1f else DISABLED_ARROW_ALPHA
+        val home = page == PAGE_HOME
+        for (button in listOf(lockButton, searchButton)) {
+            button.animate().cancel()
+            if (!animate) {
+                button.alpha = if (home) 1f else 0f
+                button.visibility = if (home) View.VISIBLE else View.INVISIBLE
+                continue
+            }
+            if (home) button.visibility = View.VISIBLE
+            button.animate()
+                .alpha(if (home) 1f else 0f)
+                .setDuration(DOCK_FADE_MS)
+                .withEndAction { if (!home) button.visibility = View.INVISIBLE }
+                .start()
+        }
     }
 
     private fun hideKeyboard() {
@@ -664,6 +699,9 @@ class MainActivity : BaseActivity() {
         private const val PAGE_NOTES = 2
         private const val PAGE_COUNT = 3
         private const val DISABLED_ARROW_ALPHA = 0.35f
+        private const val DOCK_FADE_MS = 180L
+        /** Between the dock and the navigation bar (or the gesture strip). */
+        private const val DOCK_GAP_DP = 24
 
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L

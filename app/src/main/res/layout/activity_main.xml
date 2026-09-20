@@ -15,14 +15,14 @@
 
     <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. Lock at the
          left corner, the page arrows in the middle, search at the right where the thumb already
-         knows to find it. -->
+         knows to find it. The bottom margin is set in code, above whatever navigation bar the
+         device has; on the side pages lock and search step aside (see MainActivity.showDock). -->
     <FrameLayout
         android:id="@+id/homeDock"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_gravity="bottom"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="36dp">
+        android:layout_marginHorizontal="20dp">
 
         <ImageButton
             android:id="@+id/lockButton"
@@ -35,30 +35,38 @@
             android:src="@drawable/ic_lock"
             app:tint="@color/wallpaper_overlay_text" />
 
+        <!-- Bare chevrons rather than discs: they are wayfinding, not actions, and two more discs
+             made the dock read as five equal buttons. ShadowImageView gives the glyphs the same
+             halo the clock has, so they hold up over a pale wallpaper without a fill behind them.
+             The padding is where that halo lands. -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="56dp"
             android:layout_gravity="center"
             android:orientation="horizontal">
 
-            <ImageButton
+            <dev.neffly.gesturelauncher.ui.ShadowImageView
                 android:id="@+id/pageLeftButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:background="@drawable/bg_drawer_button"
+                android:background="@drawable/bg_widget_tap"
+                android:clickable="true"
                 android:contentDescription="@string/page_left"
-                android:scaleType="center"
+                android:focusable="true"
+                android:padding="14dp"
                 android:src="@drawable/ic_chevron_left"
                 app:tint="@color/wallpaper_overlay_text" />
 
-            <ImageButton
+            <dev.neffly.gesturelauncher.ui.ShadowImageView
                 android:id="@+id/pageRightButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_drawer_button"
+                android:layout_marginStart="24dp"
+                android:background="@drawable/bg_widget_tap"
+                android:clickable="true"
                 android:contentDescription="@string/page_right"
-                android:scaleType="center"
+                android:focusable="true"
+                android:padding="14dp"
                 android:src="@drawable/ic_chevron_right"
                 app:tint="@color/wallpaper_overlay_text" />
         </LinearLayout>

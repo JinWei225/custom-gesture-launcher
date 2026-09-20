@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.ui.FontEngine
 import java.util.Calendar
 
 /**
@@ -36,11 +37,11 @@ class NoteAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == TYPE_DAY) {
-            DayVH(inflater.inflate(R.layout.item_note_day, parent, false))
-        } else {
-            NoteVH(inflater.inflate(R.layout.item_note, parent, false), onLongPress)
-        }
+        val layout = if (viewType == TYPE_DAY) R.layout.item_note_day else R.layout.item_note
+        val view = inflater.inflate(layout, parent, false)
+        // Rows are built long after the activity's pass over its content view.
+        FontEngine.applyTo(view)
+        return if (viewType == TYPE_DAY) DayVH(view) else NoteVH(view, onLongPress)
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {

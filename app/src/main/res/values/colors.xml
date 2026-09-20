@@ -111,6 +111,9 @@
          only thing keeping its white glyph legible over a pale wallpaper is the fill itself.
          ============================================================================ -->
     <color name="wallpaper_glass_fill">#73000000</color>
+    <!-- Heavier than the discs' fill: the note bubbles and the note box carry text that has to
+         stay readable over any wallpaper, where a disc only has to show one glyph. -->
+    <color name="wallpaper_glass_fill_dark">#BF000000</color>
     <color name="wallpaper_glass_stroke">#8CFFFFFF</color>
 
     <color name="glass_veil">#8CFCF8F0</color>

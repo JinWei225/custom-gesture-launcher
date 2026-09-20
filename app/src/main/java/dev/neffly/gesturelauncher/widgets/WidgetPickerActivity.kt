@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
@@ -98,11 +99,10 @@ class WidgetPickerActivity : SlidePanelActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inflater = LayoutInflater.from(parent.context)
-            return if (viewType == TYPE_APP) {
-                AppVH(inflater.inflate(R.layout.item_widget_pick_app, parent, false))
-            } else {
-                WidgetVH(inflater.inflate(R.layout.item_widget_pick, parent, false))
-            }
+            val layout = if (viewType == TYPE_APP) R.layout.item_widget_pick_app else R.layout.item_widget_pick
+            val view = inflater.inflate(layout, parent, false)
+            FontEngine.applyTo(view)
+            return if (viewType == TYPE_APP) AppVH(view) else WidgetVH(view)
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {

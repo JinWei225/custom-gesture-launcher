@@ -13,12 +13,14 @@
         android:layout_width="match_parent"
         android:layout_height="120dp" />
 
+    <!-- Shown only while the page is in edit mode; see WidgetPage.setEditing. -->
     <FrameLayout
         android:id="@+id/resizeHandle"
         android:layout_width="match_parent"
         android:layout_height="28dp"
         android:contentDescription="@string/widget_resize"
-        android:focusable="true">
+        android:focusable="true"
+        android:visibility="gone">
 
         <View
             android:layout_width="40dp"

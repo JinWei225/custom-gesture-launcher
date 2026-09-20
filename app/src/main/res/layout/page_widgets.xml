@@ -19,21 +19,28 @@
         android:paddingHorizontal="16dp"
         android:paddingTop="16dp">
 
-        <TextView
-            android:id="@+id/addWidgetButton"
+        <!-- The column's last child, always: WidgetPage inserts widgets above it. -->
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="44dp"
+            android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:background="@drawable/bg_glass_pill"
-            android:drawablePadding="8dp"
-            android:drawableTint="@color/wallpaper_overlay_text"
-            android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="20dp"
-            android:text="@string/add_widget"
-            android:textColor="@color/wallpaper_overlay_text"
-            android:textSize="15sp"
-            app:drawableStartCompat="@drawable/ic_add" />
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/addWidgetButton"
+                style="@style/Widget.GestureLauncher.WallpaperPill"
+                android:text="@string/add_widget"
+                app:drawableStartCompat="@drawable/ic_add" />
+
+            <!-- Edit shows the grips under the widgets; the same button reads Done while they
+                 are showing. -->
+            <TextView
+                android:id="@+id/editWidgetsButton"
+                style="@style/Widget.GestureLauncher.WallpaperPill"
+                android:layout_marginStart="12dp"
+                android:text="@string/widgets_edit"
+                app:drawableStartCompat="@drawable/ic_edit" />
+        </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

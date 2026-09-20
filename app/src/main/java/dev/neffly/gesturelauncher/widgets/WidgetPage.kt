@@ -18,11 +18,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
@@ -46,6 +48,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
     private val column: LinearLayout = page.findViewById(R.id.widgetColumn)
     private val addButton: View = page.findViewById(R.id.addWidgetButton)
+    private val editButton: TextView = page.findViewById(R.id.editWidgetsButton)
     private val manager: AppWidgetManager = AppWidgetManager.getInstance(activity)
 
     /** The context every widget view is built with — see [WidgetContext]. */
@@ -53,6 +56,10 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
     private val host = WidgetHost(widgetContext)
 
     private val entries: MutableList<WidgetEntry> = WidgetStore.load(activity).toMutableList()
+
+    /** Whether the grips are showing. Resizing is rare next to reading, and a row of grips
+     *  between every pair of widgets is clutter the rest of the time. */
+    private var editing = false
 
     /** The id allocated for the widget being added, until binding, or its configuration screen,
      *  says whether it is wanted. */
@@ -82,7 +89,19 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
     init {
         addButton.setOnClickListener { pick() }
+        editButton.setOnClickListener { setEditing(!editing) }
         showAll()
+    }
+
+    private fun setEditing(on: Boolean) {
+        editing = on
+        for (i in 0 until entries.size) {
+            column.getChildAt(i).findViewById<View>(R.id.resizeHandle).isVisible = on
+        }
+        editButton.setText(if (on) R.string.widgets_done else R.string.widgets_edit)
+        editButton.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            if (on) R.drawable.ic_check else R.drawable.ic_edit, 0, 0, 0
+        )
     }
 
     fun onStart() = host.startListening()
@@ -127,7 +146,9 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         frame.addView(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         reportSize(view, entry.heightDp)
 
-        item.findViewById<View>(R.id.resizeHandle).setOnTouchListener(Resizer(frame, view, entry.id))
+        val handle = item.findViewById<View>(R.id.resizeHandle)
+        handle.isVisible = editing
+        handle.setOnTouchListener(Resizer(frame, view, entry.id))
         return item
     }
 
