@@ -15,6 +15,27 @@
         app:navigationIcon="@drawable/ic_arrow_back"
         app:title="@string/add_widget" />
 
+    <!-- The same field as the drawer's; the hint sits on the EditText because the borderless
+         style turns the floating label off. -->
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.GestureLauncher.SearchField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        app:endIconMode="clear_text"
+        app:startIconDrawable="@drawable/ic_search">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/widgetSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:hint="@string/widget_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

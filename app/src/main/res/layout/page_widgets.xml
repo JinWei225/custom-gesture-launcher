@@ -1,46 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The page left of home: widgets stacked downward, each an item_widget, with the add button
-     at the end of the column. Drawn straight over the wallpaper like the home page. The bottom
-     padding keeps the last widget clear of the dock. -->
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- The page left of home: widgets stacked downward, each an item_widget, under a menu glyph
+     pinned to the top corner that holds "add" and "edit". Drawn straight over the wallpaper like
+     the home page. The column's top padding keeps the first widget clear of the glyph, and its
+     bottom padding keeps the last one clear of the dock. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/widgetScroll"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:clipToPadding="false"
-    android:paddingBottom="112dp"
-    android:scrollbars="none">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:id="@+id/widgetColumn"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/widgetScroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="112dp"
+        android:scrollbars="none">
 
-        <!-- The column's last child, always: WidgetPage inserts widgets above it. -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/widgetColumn"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="64dp" />
+    </androidx.core.widget.NestedScrollView>
 
-            <TextView
-                android:id="@+id/addWidgetButton"
-                style="@style/Widget.GestureLauncher.WallpaperPill"
-                android:text="@string/add_widget"
-                app:drawableStartCompat="@drawable/ic_add" />
+    <dev.neffly.gesturelauncher.ui.ShadowImageView
+        android:id="@+id/widgetMenuButton"
+        style="@style/Widget.GestureLauncher.WallpaperGlyph"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="@string/widgets_menu"
+        android:padding="12dp"
+        android:src="@drawable/ic_more_vert" />
 
-            <!-- Edit shows the grips under the widgets; the same button reads Done while they
-                 are showing. -->
-            <TextView
-                android:id="@+id/editWidgetsButton"
-                style="@style/Widget.GestureLauncher.WallpaperPill"
-                android:layout_marginStart="12dp"
-                android:text="@string/widgets_edit"
-                app:drawableStartCompat="@drawable/ic_edit" />
-        </LinearLayout>
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</FrameLayout>

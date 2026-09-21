@@ -12,13 +12,13 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.ui.GlassMenu
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import kotlin.math.roundToInt
 
@@ -46,8 +47,7 @@ import kotlin.math.roundToInt
 class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
     private val column: LinearLayout = page.findViewById(R.id.widgetColumn)
-    private val addButton: View = page.findViewById(R.id.addWidgetButton)
-    private val editButton: TextView = page.findViewById(R.id.editWidgetsButton)
+    private val menuButton: View = page.findViewById(R.id.widgetMenuButton)
     private val manager: AppWidgetManager = AppWidgetManager.getInstance(activity)
 
     /** The context every widget view is built with — see [WidgetContext]. */
@@ -87,9 +87,25 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         }
 
     init {
-        addButton.setOnClickListener { pick() }
-        editButton.setOnClickListener { setEditing(!editing) }
+        menuButton.setOnClickListener { showMenu() }
         showAll()
+    }
+
+    /** Add, and Edit — which reads Done while the edit rows are showing. */
+    private fun showMenu() {
+        GlassMenu.show(
+            menuButton,
+            listOf(
+                GlassMenu.item(menuButton, R.string.add_widget, R.drawable.ic_add) { pick() },
+                if (editing) {
+                    GlassMenu.item(menuButton, R.string.widgets_done, R.drawable.ic_check) { setEditing(false) }
+                } else {
+                    GlassMenu.item(menuButton, R.string.widgets_edit, R.drawable.ic_edit) { setEditing(true) }
+                }
+            ),
+            overWallpaper = true,
+            gravity = Gravity.END
+        )
     }
 
     private fun setEditing(on: Boolean) {
@@ -97,10 +113,6 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         for (i in 0 until entries.size) {
             column.getChildAt(i).findViewById<View>(R.id.editRow).isVisible = on
         }
-        editButton.setText(if (on) R.string.widgets_done else R.string.widgets_edit)
-        editButton.setCompoundDrawablesRelativeWithIntrinsicBounds(
-            if (on) R.drawable.ic_check else R.drawable.ic_edit, 0, 0, 0
-        )
     }
 
     /** The first widget can't move up and the last can't move down: those arrows dim. */
@@ -142,9 +154,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
             entries.removeAll(gone)
             WidgetStore.save(activity, entries)
         }
-        for ((index, entry) in entries.withIndex()) {
-            column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)), index)
-        }
+        for (entry in entries) column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)))
         refreshEditRows()
     }
 
@@ -255,8 +265,7 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
         val entry = WidgetEntry(id, heightDp)
         entries.add(entry)
         WidgetStore.save(activity, entries)
-        // Above the buttons, which stay the column's last child.
-        column.addView(itemFor(entry, info), entries.lastIndex)
+        column.addView(itemFor(entry, info))
         refreshEditRows()
     }
 

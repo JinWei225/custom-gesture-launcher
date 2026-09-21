@@ -19,10 +19,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.Glass
@@ -37,8 +41,9 @@ import kotlinx.coroutines.withContext
  *
  * The launcher's own rather than the platform's `ACTION_APPWIDGET_PICK`: on HyperOS the Settings
  * activity behind that action crashes while inflating its list, so the platform picker is a
- * dead end on the very devices this launcher is used on. Hands the chosen provider back as
- * [EXTRA_PROVIDER]; binding it is the page's job.
+ * dead end on the very devices this launcher is used on. The field under the title narrows the
+ * list to the apps, or widgets, whose names contain what's typed. Hands the chosen provider back
+ * as [EXTRA_PROVIDER]; binding it is the page's job.
  */
 class WidgetPickerActivity : SlidePanelActivity() {
 
@@ -62,40 +67,71 @@ class WidgetPickerActivity : SlidePanelActivity() {
 
         val list = findViewById<RecyclerView>(R.id.providerList)
         list.layoutManager = LinearLayoutManager(this)
-        list.adapter = ProviderAdapter(rows())
+        val adapter = ProviderAdapter()
+        list.adapter = adapter
+        val groups = groups()
+        adapter.submitList(rowsFor(groups, ""))
+        findViewById<TextInputEditText>(R.id.widgetSearch).doAfterTextChanged { text ->
+            adapter.submitList(rowsFor(groups, text?.toString().orEmpty()))
+            list.scrollToPosition(0)
+        }
     }
 
-    /** App headers with their widgets under them, apps and widgets each in label order. */
-    private fun rows(): List<Row> {
+    /** Every app with widgets, in label order, each with its widgets in label order. */
+    private fun groups(): List<Group> {
         val pm = packageManager
         val providers = AppWidgetManager.getInstance(this).installedProviders
         val byApp = providers.groupBy { it.provider.packageName }
         val apps = byApp.keys.mapNotNull { pkg ->
             runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
         }.sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
-        return buildList {
-            for (app in apps) {
-                add(Row.App(pm.getApplicationLabel(app).toString(), app.loadIcon(pm)))
+        return apps.map { app ->
+            Group(
+                Row.App(pm.getApplicationLabel(app).toString(), app.loadIcon(pm)),
                 byApp.getValue(app.packageName)
                     .map { Row.Widget(it, it.loadLabel(pm)) }
                     .sortedBy { it.label.lowercase() }
-                    .forEach { add(it) }
+            )
+        }
+    }
+
+    /**
+     * The rows that match [query]: an app whose name matches keeps all its widgets, and an app
+     * whose name doesn't keeps the widgets whose names do. Blank shows everything.
+     */
+    private fun rowsFor(groups: List<Group>, query: String): List<Row> {
+        val q = query.trim()
+        return buildList {
+            for (group in groups) {
+                val widgets = if (q.isEmpty() || group.app.label.contains(q, ignoreCase = true)) {
+                    group.widgets
+                } else {
+                    group.widgets.filter { it.label.contains(q, ignoreCase = true) }
+                }
+                if (widgets.isEmpty()) continue
+                add(group.app)
+                addAll(widgets)
             }
         }
     }
+
+    private class Group(val app: Row.App, val widgets: List<Row.Widget>)
 
     private sealed class Row {
         class App(val label: String, val icon: Drawable) : Row()
         class Widget(val info: AppWidgetProviderInfo, val label: String) : Row()
     }
 
-    private inner class ProviderAdapter(private val rows: List<Row>) :
-        RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    /** Rows are built once and reused across filters, so identity is the diff. */
+    private object RowDiff : DiffUtil.ItemCallback<Row>() {
+        override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = oldItem === newItem
+        override fun areContentsTheSame(oldItem: Row, newItem: Row): Boolean = oldItem === newItem
+    }
 
-        override fun getItemCount(): Int = rows.size
+    private inner class ProviderAdapter : ListAdapter<Row, RecyclerView.ViewHolder>(RowDiff) {
 
         override fun getItemViewType(position: Int): Int =
-            if (rows[position] is Row.App) TYPE_APP else TYPE_WIDGET
+            if (getItem(position) is Row.App) TYPE_APP else TYPE_WIDGET
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inflater = LayoutInflater.from(parent.context)
@@ -106,7 +142,7 @@ class WidgetPickerActivity : SlidePanelActivity() {
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            when (val row = rows[position]) {
+            when (val row = getItem(position)) {
                 is Row.App -> (holder as AppVH).bind(row)
                 is Row.Widget -> (holder as WidgetVH).bind(row)
             }

@@ -226,6 +226,8 @@
 
     <!-- Widgets page. -->
     <string name="add_widget">Add widget</string>
+    <string name="widgets_menu">Widget options</string>
+    <string name="widget_search_hint">Search widgets</string>
     <string name="widgets_edit">Edit</string>
     <string name="widgets_done">Done</string>
     <string name="widget_resize">Resize widget</string>
