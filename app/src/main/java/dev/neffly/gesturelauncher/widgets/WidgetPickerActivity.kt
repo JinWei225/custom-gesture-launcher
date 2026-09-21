@@ -122,10 +122,11 @@ class WidgetPickerActivity : SlidePanelActivity() {
         class Widget(val info: AppWidgetProviderInfo, val label: String) : Row()
     }
 
-    /** Rows are built once and reused across filters, so identity is the diff. */
+    /** Rows are built once and reused across filters, so identity is the diff, and a row that
+     *  is the same object is unchanged. */
     private object RowDiff : DiffUtil.ItemCallback<Row>() {
         override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = oldItem === newItem
-        override fun areContentsTheSame(oldItem: Row, newItem: Row): Boolean = oldItem === newItem
+        override fun areContentsTheSame(oldItem: Row, newItem: Row): Boolean = true
     }
 
     private inner class ProviderAdapter : ListAdapter<Row, RecyclerView.ViewHolder>(RowDiff) {
