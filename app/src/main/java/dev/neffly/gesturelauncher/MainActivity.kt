@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +24,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -93,6 +95,8 @@ class MainActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var canvas: GestureCanvasView
+    private lateinit var widgetPanel: LinearLayout
+    private lateinit var eventsScroll: ScrollView
     private lateinit var eventsContainer: LinearLayout
 
     /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
@@ -126,7 +130,7 @@ class MainActivity : BaseActivity() {
     private var eventsCacheAtMillis = 0L
     private var eventsCacheDay = -1L
 
-    /** The lines currently in [eventsContainer], so a resume that would draw the same three rows
+    /** The lines currently in [eventsContainer], so a resume that would draw the same rows
      *  again doesn't rebuild the views — this runs on every Home press. */
     private var renderedRows: List<String> = emptyList()
 
@@ -195,7 +199,10 @@ class MainActivity : BaseActivity() {
 
         emptyHint = home.findViewById(R.id.emptyHint)
         recognitionHint = home.findViewById(R.id.recognitionHint)
+        widgetPanel = home.findViewById(R.id.widgetPanel)
+        eventsScroll = home.findViewById(R.id.eventsScroll)
         eventsContainer = home.findViewById(R.id.eventsContainer)
+        placeEvents()
         batteryIcon = home.findViewById(R.id.batteryIcon)
         batteryLevel = home.findViewById(R.id.batteryLevel)
 
@@ -433,6 +440,13 @@ class MainActivity : BaseActivity() {
         calendarWatched = false
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Rotation doesn't recreate this activity (see the manifest), so the events list is moved
+        // by hand: beside the clock in landscape on a tablet, under it everywhere else.
+        placeEvents()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) clearFrozenTapFeedback()
@@ -543,6 +557,20 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    /**
+     * Puts the events list under the clock, or — on a tablet in landscape, where the panel is wide
+     * and short — beside it.
+     */
+    private fun placeEvents() {
+        val beside = resources.getBoolean(R.bool.events_beside_clock)
+        widgetPanel.orientation = if (beside) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        eventsScroll.layoutParams = LinearLayout.LayoutParams(
+            if (beside) 0 else LinearLayout.LayoutParams.MATCH_PARENT,
+            if (beside) LinearLayout.LayoutParams.MATCH_PARENT else 0,
+            1f
+        ).apply { if (beside) marginStart = dp(EVENTS_BESIDE_GAP_DP) }
+    }
+
     /** Year*1000 + day-of-year — cheap "is it still the same day" stamp for the events cache. */
     private fun dayStamp(): Long {
         val c = Calendar.getInstance()
@@ -552,9 +580,9 @@ class MainActivity : BaseActivity() {
     /**
      * Shows what is left of the day, not the whole of it.
      *
-     * The widget holds three rows, so without this an afternoon glance is three rows of things that
-     * already happened while the next meeting sits below the fold. An event still running counts as
-     * ahead — it is the one most worth seeing — and an all-day event spans the day by definition, so
+     * The widget is a fixed-height zone, so without this an afternoon glance is a screenful of
+     * things that already happened while the next meeting sits below the fold. An event still
+     * running counts as ahead — it is the one most worth seeing — and an all-day event spans the day by definition, so
      * neither is filtered out.
      *
      * Filtered here rather than in the query so the five-minute cache stays useful: every resume
@@ -571,21 +599,16 @@ class MainActivity : BaseActivity() {
             return
         }
         val timeFmt = DateFormat.getTimeFormat(this)
-        val maxRows = 3
-        val rows = remaining.take(maxRows).map { e ->
+        renderRows(remaining.map { e ->
             val time = if (e.allDay) getString(R.string.all_day) else timeFmt.format(Date(e.begin))
             "$time   ${e.title}"
-        }.toMutableList()
-        if (remaining.size > maxRows) {
-            rows.add(getString(R.string.more_events, remaining.size - maxRows))
-        }
-        renderRows(rows)
+        })
     }
 
     /**
      * Builds the today's-events rows: an accent tick, then the line itself. The first row is the
      * next thing happening and is drawn brightest, with the rest stepped back — the same ordering
-     * cue the clock design uses, and cheaper to read at a glance than three identical lines.
+     * cue the clock design uses, and cheaper to read at a glance than identical lines.
      */
     private fun renderRows(lines: List<String>) {
         if (lines == renderedRows && eventsContainer.childCount == lines.size) return
@@ -726,6 +749,7 @@ class MainActivity : BaseActivity() {
          *  see GestureCanvasView.bottomDeadZone. Wide enough for a fast swipe's first sample. */
         private const val CANVAS_DEAD_ZONE_DP = 32
 
+        private const val EVENTS_BESIDE_GAP_DP = 32
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L
         private const val RECOGNITION_HINT_MILLIS = 1200L

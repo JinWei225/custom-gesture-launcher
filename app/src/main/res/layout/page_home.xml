@@ -118,17 +118,34 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Today's events, filled at runtime. Whole area opens the calendar app. -->
-        <LinearLayout
-            android:id="@+id/eventsContainer"
+        <!-- Today's events, filled at runtime. Whole area opens the calendar app.
+
+             Scrolls rather than grows: this zone is a fixed share of the screen so the gesture
+             canvas below never moves, which means a long day has to scroll inside it. Its size
+             and place — under the clock on a phone, beside it on a tablet in landscape — are set
+             by MainActivity.placeEvents from R.bool.events_beside_clock, because the activity
+             handles rotation itself and a layout qualifier would never be re-inflated. -->
+        <ScrollView
+            android:id="@+id/eventsScroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true"
-            android:orientation="vertical"
-            android:paddingVertical="6dp" />
+            android:fadingEdgeLength="24dp"
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:requiresFadingEdge="vertical"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/eventsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:paddingVertical="6dp" />
+        </ScrollView>
     </LinearLayout>
 
     <!-- Only this lower region captures gestures. -->

@@ -1,0 +1,6 @@
+<resources>
+
+    <!-- Tablet, landscape: the panel is wide and short, so the events go beside the clock. -->
+    <bool name="events_beside_clock">true</bool>
+
+</resources>

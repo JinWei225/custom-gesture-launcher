@@ -76,7 +76,6 @@
     <string name="no_events_left">Nothing left today</string>
     <string name="enable_calendar">Tap to show today\'s events</string>
     <string name="all_day">All day</string>
-    <string name="more_events">+%1$d more</string>
     <string name="no_clock_app">No clock app found</string>
     <string name="app_not_available">That app is no longer available</string>
 
