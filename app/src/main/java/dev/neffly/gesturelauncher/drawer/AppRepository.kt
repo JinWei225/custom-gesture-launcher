@@ -174,7 +174,9 @@ object AppRepository {
             .addCategory(Intent.CATEGORY_LAUNCHER)
             .setComponent(componentName)
             .addFlags(flags)
-        if (direct.resolveActivity(context.packageManager) != null) return direct
+        // PackageManager, not Intent.resolveActivity: that one hands back the component of an
+        // explicit intent without asking the system, so it never reports a disabled alias as gone.
+        if (context.packageManager.resolveActivity(direct, 0) != null) return direct
         return context.packageManager.getLaunchIntentForPackage(componentName.packageName)
             ?.addFlags(flags)
     }
