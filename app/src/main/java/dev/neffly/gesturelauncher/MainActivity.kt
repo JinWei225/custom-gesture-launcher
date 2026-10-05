@@ -47,8 +47,9 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
-import dev.neffly.gesturelauncher.lock.LockAdmin
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
+import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
+import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.PageDotsView
@@ -348,25 +349,24 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Locks through the force-lock device admin, and when it hasn't been granted yet explains it
-     * rather than doing nothing: a double tap that silently fails reads as broken, where one that
-     * names the grant it needs — and opens the system's confirmation for it — is one tap from
-     * working.
+     * Locks through the accessibility service, and when that isn't possible says why rather than
+     * doing nothing: a double tap that silently fails reads as broken, where one that names the
+     * grant it needs — and opens the screen that gives it — is one tap from working.
      */
     private fun lockScreen() {
-        if (LockAdmin.isActive(this)) {
-            LockAdmin.lockNow(this)
+        if (LauncherAccessibilityService.lockScreen()) return
+        if (!LauncherAccessibilityService.canLock) {
+            Toast.makeText(this, R.string.lock_unsupported, Toast.LENGTH_SHORT).show()
             return
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.lock_setup_title)
             .setMessage(R.string.lock_setup_message)
-            .setPositiveButton(R.string.lock_setup_grant) { _, _ ->
-                startActivity(LockAdmin.requestIntent(this))
-            }
+            .setPositiveButton(R.string.lock_setup_open) { _, _ -> openAccessibilitySettings() }
             .setNegativeButton(android.R.string.cancel, null)
             .showWithFont()
     }
+
 
     /**
      * Drops any touch feedback that the tap which left this screen froze part-way.

@@ -173,29 +173,13 @@
             android:exported="false"
             android:theme="@style/Theme.GestureLauncher" />
 
-        <!-- The home screen's double-tap lock. Device admin limited to force-lock — see LockAdmin
-             for why it isn't an accessibility service. BIND_DEVICE_ADMIN keeps anything but the
-             system from delivering its broadcasts. -->
-        <receiver
-            android:name=".lock.LockDeviceAdmin"
-            android:exported="true"
-            android:label="@string/lock_admin_label"
-            android:description="@string/lock_admin_description"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/lock_device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
-
         <!-- Alt+Space from a physical keyboard opens quick search.
 
              An accessibility service is the only route an ordinary app has to a key press aimed at
-             someone else's window — see LauncherAccessibilityService for why nothing lighter
-             works. It is off until the user enables it in the system's accessibility screen; the
-             settings hub's toggle governs the keyboard shortcut once they have.
+             someone else's window, or to locking the screen — see LauncherAccessibilityService for
+             why nothing lighter works. It is off until the user enables it in the system's
+             accessibility screen; the settings hub's toggle governs the keyboard shortcut once
+             they have, and the home screen's lock button explains what it needs.
 
              exported + the BIND_ACCESSIBILITY_SERVICE permission are both mandatory for the system
              to bind it: exported so AccessibilityManagerService can reach it, and the permission so

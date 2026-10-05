@@ -3,7 +3,8 @@
 
      Deliberately the smallest set of capabilities that still delivers key events.
      canRequestFilterKeyEvents + flagRequestFilterKeyEvents is the whole point; everything else is
-     either required by the platform or turned off.
+     either required by the platform or turned off. Locking the screen is a global action, which
+     needs nothing declared here beyond the service being bound.
 
      accessibilityEventTypes cannot be empty — a service that subscribes to nothing is never bound
      — so it names the cheapest single type and the service ignores what arrives. packageNames then
