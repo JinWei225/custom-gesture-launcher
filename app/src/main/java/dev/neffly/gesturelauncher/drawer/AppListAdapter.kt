@@ -272,7 +272,7 @@ class AppListAdapter(
                         is Command.Alarm -> R.drawable.ic_alarm
                         is Command.Timer -> R.drawable.ic_timer
                         is Command.Event -> R.drawable.ic_event
-                        is Command.Web -> if (action.command.url != null) R.drawable.ic_link else R.drawable.ic_search
+                        is Command.Web -> if (action.command.url != null) R.drawable.ic_link else R.drawable.ic_web
                         is Command.Map -> R.drawable.ic_place
                     }
                 )

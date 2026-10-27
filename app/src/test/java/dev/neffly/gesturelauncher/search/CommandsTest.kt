@@ -44,7 +44,7 @@ class CommandsTest {
     fun `a keyword needs a trailing space to trigger`() {
         assertNull(parse("alarm"))
         assertNull(parse("Timer"))
-        assertNull(parse("google"))
+        assertNull(parse("web"))
         assertNull(parse("maps"))
         assertNull(parse("  maps"))
     }
@@ -54,7 +54,9 @@ class CommandsTest {
         assertEquals(Command.Alarm(null, emptySet(), ""), parse("alarm "))
         assertEquals(Command.Timer(null, ""), parse("Timer "))
         assertEquals(Command.Event("", null, null, null), parse("event "))
-        assertEquals(Command.Web("", null), parse("google "))
+        assertEquals(Command.Web("", null), parse("web "))
+        // Web searches answer to `web` alone; "google " is an ordinary search, e.g. for the app.
+        assertNull(parse("google "))
         assertEquals(Command.Map(""), parse("maps  "))
     }
 
@@ -223,7 +225,7 @@ class CommandsTest {
     @Test
     fun `web and map take the rest of the line`() {
         assertEquals(Command.Web("how tall is K2", null), parse("web how tall is K2"))
-        assertEquals(Command.Web("how tall is K2", null), parse("google how tall is K2"))
+        assertNull(parse("google how tall is K2"))
         assertEquals(Command.Web("docs.google.com", "https://docs.google.com"), parse("web docs.google.com"))
         assertEquals(Command.Web("", null), parse("web "))
         assertEquals(Command.Map("petrol station near me"), parse("map petrol station near me"))

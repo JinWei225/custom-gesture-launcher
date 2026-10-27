@@ -102,6 +102,10 @@ class GestureCanvasView @JvmOverloads constructor(
      */
     var bottomDeadZone = 0
 
+    /** Height, in pixels, of a band along the bottom edge the trail is kept out of: on the home
+     *  screen, the dock that sits over the canvas's lower part. See [clamped]. */
+    var bottomInset = 0
+
     init {
         isFocusable = true
         isClickable = true
@@ -123,8 +127,9 @@ class GestureCanvasView @JvmOverloads constructor(
                     subStrokeLengths.clear()
                 }
                 subStrokeLengths.add(1)
-                points.add(PointF(event.x, event.y))
-                path.moveTo(event.x, event.y)
+                val start = clamped(event.x, event.y)
+                points.add(start)
+                path.moveTo(start.x, start.y)
                 invalidate()
                 return true
             }
@@ -133,15 +138,9 @@ class GestureCanvasView @JvmOverloads constructor(
                 // arrive as "historical" points. Folding them in costs nothing and gives the
                 // recognizer (and the trail) the full-resolution stroke.
                 for (h in 0 until event.historySize) {
-                    val hx = event.getHistoricalX(h)
-                    val hy = event.getHistoricalY(h)
-                    points.add(PointF(hx, hy))
-                    path.lineTo(hx, hy)
-                    subStrokeLengths[subStrokeLengths.size - 1]++
+                    addPoint(clamped(event.getHistoricalX(h), event.getHistoricalY(h)))
                 }
-                points.add(PointF(event.x, event.y))
-                path.lineTo(event.x, event.y)
-                subStrokeLengths[subStrokeLengths.size - 1]++
+                addPoint(clamped(event.x, event.y))
                 invalidate()
                 return true
             }
@@ -162,6 +161,29 @@ class GestureCanvasView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun addPoint(point: PointF) {
+        points.add(point)
+        path.lineTo(point.x, point.y)
+        subStrokeLengths[subStrokeLengths.size - 1]++
+    }
+
+    /**
+     * [x], [y] held inside the canvas, above [bottomInset], so a finger that wanders past the edge
+     * — behind the clock or the dock on the home screen, or off a settings screen's capture box —
+     * leaves the trail running along that edge instead of vanishing out of view. Showing where the box stops is how the user
+     * learns how much room a gesture has. Inset by the halo's half-width so the whole round-capped
+     * line stays visible, not half of it clipped at the boundary.
+     *
+     * The recognizer gets the clamped points too: what was drawn on screen is what is matched.
+     */
+    private fun clamped(x: Float, y: Float): PointF {
+        val inset = haloPaint.strokeWidth / 2
+        return PointF(
+            x.coerceIn(inset, (width - inset).coerceAtLeast(inset)),
+            y.coerceIn(inset, (height - bottomInset - inset).coerceAtLeast(inset))
+        )
     }
 
     private val finalizeRunnable = Runnable {

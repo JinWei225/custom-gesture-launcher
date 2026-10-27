@@ -195,6 +195,9 @@ class MainActivity : BaseActivity() {
         canvas = home.findViewById(R.id.gestureCanvas)
         canvas.autoClearMillis = 180L
         canvas.bottomDeadZone = dp(CANVAS_DEAD_ZONE_DP)
+        // The canvas runs down to the navigation bar, under the dock — which always sits the dock
+        // gap above that edge, whatever the device's navigation mode.
+        canvas.bottomInset = dp(DOCK_GAP_DP) + dock.layoutParams.height
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
 
         emptyHint = home.findViewById(R.id.emptyHint)

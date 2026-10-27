@@ -114,7 +114,7 @@
                     android:id="@+id/quickFillWeb"
                     style="@style/Widget.GestureLauncher.QuickFill"
                     android:contentDescription="@string/quick_fill_web"
-                    android:src="@drawable/ic_search"
+                    android:src="@drawable/ic_web"
                     android:tooltipText="@string/quick_fill_web" />
 
             </LinearLayout>

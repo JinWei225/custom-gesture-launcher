@@ -45,7 +45,7 @@ sealed class Command {
         val end: LocalTime?
     ) : Command()
 
-    /** `web how tall is k2`, `google docs.google.com`. [url] is set when the query is an address. */
+    /** `web how tall is k2`, `web docs.google.com`. [url] is set when the query is an address. */
     data class Web(val query: String, val url: String?) : Command()
 
     /** `map petrol station near me`. */
@@ -73,10 +73,10 @@ object Commands {
      * [query]'s command, or null when it doesn't start with a keyword *followed by a space*.
      *
      * The space is the opt-in. Without it, "maps" typed to open Google Maps put an empty "search
-     * on Maps" row above the app itself, and "google", "alarm" and "timer" did the same to their
-     * apps — the commonest way to reach those four apps was answered with a command nobody had
-     * asked for. Which is why the query is trimmed at the start only: the trailing space is the
-     * signal, and it has to survive normalization to be seen.
+     * on Maps" row above the app itself, and "alarm" and "timer" did the same to their apps — the
+     * commonest way to reach those apps was answered with a command nobody had asked for. Which
+     * is why the query is trimmed at the start only: the trailing space is the signal, and it has
+     * to survive normalization to be seen.
      */
     fun parse(query: String, clock: Clock = Clock.systemDefaultZone()): Command? {
         val q = Normalizer.normalize(query, Normalizer.Form.NFKC).replace(WHITESPACE, " ").trimStart()
@@ -87,7 +87,7 @@ object Commands {
             "alarm" -> alarm(slots)
             "timer" -> timer(slots)
             "event" -> event(slots, ZonedDateTime.now(clock))
-            "web", "google" -> slots.rest().let { Command.Web(it, WebSearch.detectUrl(it)) }
+            "web" -> slots.rest().let { Command.Web(it, WebSearch.detectUrl(it)) }
             else -> Command.Map(slots.rest())
         }
     }
@@ -332,7 +332,7 @@ object Commands {
     private const val SEPARATOR = " · "
 
     private val WHITESPACE = Regex("""\s+""")
-    private val KEYWORD = Regex("""(alarm|timer|event|web|google|maps?) (.*)""", RegexOption.IGNORE_CASE)
+    private val KEYWORD = Regex("""(alarm|timer|event|web|maps?) (.*)""", RegexOption.IGNORE_CASE)
 
     /** Token edges for a time: not glued to a word or another clock field. */
     private const val LEFT = """(?<![\w:])"""
