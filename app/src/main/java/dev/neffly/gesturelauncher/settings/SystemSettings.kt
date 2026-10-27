@@ -12,7 +12,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import dev.neffly.gesturelauncher.R
-import dev.neffly.gesturelauncher.search.FilePermissions
 
 /**
  * Deep-links to the system "change default Home app" picker. No app can force-unset itself as the default launcher (Android security) — this is
@@ -135,16 +134,6 @@ fun Activity.openAccessibilitySettings() {
             Intent(Settings.ACTION_SETTINGS)
         )
     )
-}
-
-/**
- * Opens whichever screen grants this app all-files access, needed for local file search on API 30+.
- * A no-op below that, where the grant is an ordinary runtime permission instead.
- */
-fun Activity.openAllFilesAccessSettings() {
-    val candidates = FilePermissions.requestIntents(this)
-    // Empty means the grant doesn't exist on this API level, which is not a failure to report.
-    if (candidates.isNotEmpty()) startFirstThatOpens(candidates)
 }
 
 /**

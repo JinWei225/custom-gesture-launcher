@@ -12,8 +12,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.search.Command
-import dev.neffly.gesturelauncher.search.FileHit
-import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchResult
 import dev.neffly.gesturelauncher.ui.FontEngine
 import kotlinx.coroutines.CoroutineScope
@@ -26,8 +24,8 @@ import kotlinx.coroutines.withContext
  * Result list for the drawer, the floating quick-search window and the training app-picker.
  *
  * Two modes, one adapter. [submit] renders the plain alphabetical app list, optionally interleaving
- * alphabet section headers. [submitResults] renders a mixed search result list — answers, apps
- * and files — grouped under their own section labels. Sharing one adapter is what keeps the
+ * alphabet section headers. [submitResults] renders a mixed search result list — answers and apps
+ * — grouped under their own section labels. Sharing one adapter is what keeps the
  * drawer and the floating window rendering identically, font handling included.
  *
  * Backed by [ListAdapter]/DiffUtil so only changed rows rebind. Icons load lazily per bound row
@@ -37,7 +35,6 @@ class AppListAdapter(
     private val scope: CoroutineScope,
     private val onClick: (AppInfo) -> Unit,
     private val onLongClick: ((AppInfo, View) -> Unit)? = null,
-    private val onFileClick: ((FileHit) -> Unit)? = null,
     private val onSettingsClick: (() -> Unit)? = null,
     private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null,
     private val onTimeClick: ((SearchResult.Time) -> Unit)? = null,
@@ -47,12 +44,11 @@ class AppListAdapter(
     sealed class Row {
         /** Alphabet bucket header, browse mode only. */
         data class Header(val letter: Char) : Row()
-        /** Search-mode group label (Actions / Apps / Files). Explicitly `@param:` because Kotlin 2.2
+        /** Search-mode group label (Actions / Apps / Launcher). Explicitly `@param:` because Kotlin 2.2
          *  is on its way to applying a bare annotation to the backing field as well, and the
          *  resource check this one carries belongs on the value. */
         data class Section(@param:StringRes val titleRes: Int) : Row()
         data class Item(val app: AppInfo) : Row()
-        data class FileRow(val hit: FileHit) : Row()
         object SettingsRow : Row()
         data class CalculationRow(val calculation: SearchResult.Calculation) : Row()
         data class TimeRow(val time: SearchResult.Time) : Row()
@@ -115,7 +111,6 @@ class AppListAdapter(
             rows.add(
                 when (result) {
                     is SearchResult.App -> Row.Item(result.app)
-                    is SearchResult.File -> Row.FileRow(result.hit)
                     is SearchResult.Settings -> Row.SettingsRow
                     is SearchResult.Calculation -> Row.CalculationRow(result)
                     is SearchResult.Time -> Row.TimeRow(result)
@@ -129,7 +124,6 @@ class AppListAdapter(
     @StringRes
     private fun sectionTitleFor(result: SearchResult): Int = when (result) {
         is SearchResult.App -> R.string.search_section_apps
-        is SearchResult.File -> R.string.search_section_files
         is SearchResult.Settings -> R.string.search_section_launcher
         is SearchResult.Calculation -> R.string.search_section_calculator
         is SearchResult.Time -> R.string.search_section_time
@@ -167,7 +161,6 @@ class AppListAdapter(
     private fun asResult(row: Row): SearchResult? =
         when (row) {
             is Row.Item -> SearchResult.App(row.app)
-            is Row.FileRow -> SearchResult.File(row.hit)
             is Row.SettingsRow -> SearchResult.Settings
             is Row.CalculationRow -> row.calculation
             is Row.TimeRow -> row.time
@@ -201,8 +194,8 @@ class AppListAdapter(
         is Row.Header -> VIEW_TYPE_HEADER
         is Row.Section -> VIEW_TYPE_SECTION
         is Row.Item -> VIEW_TYPE_APP
-        // File, web, settings and answer rows share one layout and holder; only the bind differs.
-        is Row.FileRow, is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow, is Row.ActionRow ->
+        // Settings, action and answer rows share one layout and holder; only the bind differs.
+        is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow, is Row.ActionRow ->
             VIEW_TYPE_ENTRY
     }
 
@@ -245,16 +238,6 @@ class AppListAdapter(
                 holder.itemView.setOnLongClickListener(
                     onLongClick?.let { cb -> { v: View -> cb(app, v); true } }
                 )
-            }
-            is Row.FileRow -> {
-                val hit = row.hit
-                holder as EntryVH
-                holder.icon.setImageResource(FileSearcher.iconFor(hit.mimeType))
-                holder.title.text = hit.name
-                holder.showSubtitle(hit.folder, TextUtils.TruncateAt.START)
-                if (hit.folder.isEmpty()) holder.subtitle.visibility = View.GONE
-                holder.itemView.setOnClickListener { onFileClick?.invoke(hit) }
-                holder.itemView.setOnLongClickListener(null)
             }
             is Row.CalculationRow -> {
                 val calculation = row.calculation
@@ -385,7 +368,6 @@ class AppListAdapter(
                 old is Row.Header && new is Row.Header -> old.letter == new.letter
                 old is Row.Section && new is Row.Section -> old.titleRes == new.titleRes
                 old is Row.Item && new is Row.Item -> old.app.key == new.app.key
-                old is Row.FileRow && new is Row.FileRow -> old.hit.uri == new.hit.uri
                 // Only ever one of each answer row, so identity is the row type itself; what it
                 // carries is content, and changing it must rebind rather than replace. Load-bearing:
                 // these rows are pinned to the top and change on every keystroke, so treating each

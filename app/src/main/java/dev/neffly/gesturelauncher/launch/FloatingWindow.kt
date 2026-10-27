@@ -19,15 +19,14 @@ import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.Commands
-import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchResult
 
 /**
  * Opens a search result in a floating (freeform) window instead of full screen.
  *
  * Reached by swiping a result row to the right; see [dev.neffly.gesturelauncher.ui.SwipeToFloat].
- * Works for every kind of openable row — an app, a file (whichever viewer handles it) and the web
- * row (the default browser) — because all three end up as an Intent, and the float is nothing but
+ * Works for every kind of openable row — an app, an alarm, timer or event (the app that owns it) and
+ * the web row (the default browser) — because each ends up as an Intent, and the float is nothing but
  * ActivityOptions bolted onto that intent.
  *
  * [canFloat] is the single gate on whether the gesture exists at all, so nothing below has to
@@ -76,7 +75,7 @@ object FloatingWindow {
         // answer rows are text to copy. Exhaustive rather than a negated list, so a new kind of
         // result has to say which side it falls on.
         is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
-        is SearchResult.App, is SearchResult.File, is SearchResult.Action ->
+        is SearchResult.App, is SearchResult.Action ->
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
     }
 
@@ -84,15 +83,17 @@ object FloatingWindow {
     fun open(activity: Activity, result: SearchResult) {
         val opened = when (result) {
             is SearchResult.App -> openApp(activity, result.app)
-            is SearchResult.File ->
-                start(activity, FileSearcher.intentFor(result.hit), R.string.file_open_failed)
             is SearchResult.Action ->
-                start(activity, Commands.intentFor(result.command), Commands.failureMessage(result.command))
+                start(
+                    activity,
+                    Commands.intentFor(activity, result.command),
+                    Commands.failureMessage(result.command)
+                )
             // None opens a window, so there is nothing for the system to react to.
             is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
         }
         // Gated on a window having actually appeared, because that is what provokes the system's
-        // home launch. Arming after a start that failed — an app that has gone, a file no viewer
+        // home launch. Arming after a start that failed — an app that has gone, an intent nothing
         // handles — would leave the expectation lying in wait for the user's next real Home press,
         // which it would then swallow.
         if (opened) UnrequestedHomeLaunch.expectAfterFreeformChange()

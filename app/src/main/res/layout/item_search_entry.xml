@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shared row for file, web, settings and calculator results. Deliberately reads the same
+<!-- Shared row for action, settings, calculator and time-zone results. Deliberately reads the same
      minHeight, icon box and 20dp insets as item_app.xml, so a mixed result list has one row rhythm
      whichever theme supplies the numbers — see values/attrs.xml. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -38,9 +38,8 @@
             android:maxLines="1"
             android:textAppearance="?attr/textAppearanceBodyLarge" />
 
-        <!-- ellipsize and maxLines are set per row in AppListAdapter: START for file paths (the
-             deepest folder is the useful end), END for the prose subtitles the other row types
-             carry, and two lines for the time-zone row's working. -->
+        <!-- ellipsize and maxLines are set per row in AppListAdapter: one line for the plain
+             subtitles, two for the time-zone and action rows' working. -->
         <TextView
             android:id="@+id/entrySubtitle"
             android:layout_width="match_parent"

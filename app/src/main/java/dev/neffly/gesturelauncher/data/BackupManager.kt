@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
 import dev.neffly.gesturelauncher.notes.Note
 import dev.neffly.gesturelauncher.notes.NoteStore
+import dev.neffly.gesturelauncher.search.WebSearch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -31,13 +32,14 @@ data class BackupData(
     val autoKeyboard: Boolean,
     val gestures: List<GestureMapping>,
     val appTags: Map<String, String> = emptyMap(),
-    val searchFiles: Boolean = false,
     val quickSearch: Boolean = false,
     val hapticFeedback: Boolean = true,
     /** The raw AppCompatDelegate.MODE_NIGHT_* constant, exactly as [Prefs.themeMode] stores it. */
     val themeMode: Int = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
     val fontScale: Float = 1f,
     val searchOnLeft: Boolean = false,
+    /** A [WebSearch.Engine] name, exactly as [Prefs.searchEngine] stores it. */
+    val searchEngine: String = WebSearch.Engine.DEFAULT.name,
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
      *  something to the device that allocated it. */
     val notes: List<Note> = emptyList()
@@ -62,13 +64,13 @@ object BackupManager {
         autoKeyboard = Prefs.autoKeyboard(context),
         gestures = GestureStore.all(context),
         appTags = AppTagStore.allTags(context),
-        searchFiles = Prefs.searchFiles(context),
         quickSearch = Prefs.quickSearchEnabled(context),
         notes = NoteStore.load(context),
         hapticFeedback = Prefs.hapticFeedback(context),
         themeMode = Prefs.themeMode(context),
         fontScale = Prefs.fontScale(context),
-        searchOnLeft = Prefs.searchOnLeft(context)
+        searchOnLeft = Prefs.searchOnLeft(context),
+        searchEngine = Prefs.searchEngine(context).name
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -105,10 +107,7 @@ object BackupManager {
         Prefs.setThemeMode(context, data.themeMode)
         Prefs.setFontScale(context, data.fontScale)
         Prefs.setSearchOnLeft(context, data.searchOnLeft)
-        // File search is deliberately not restored on: the permission it needs is device-specific
-        // and won't have been granted here, so a restored "on" would just be a broken promise.
-        // The settings row grants it in one tap.
-        //
+        Prefs.setSearchEngine(context, WebSearch.Engine.fromName(data.searchEngine))
         // Theme and font size are written here but not *applied* here — this is the data layer,
         // and making them visible means recreating activities. The importing screen does that once
         // the user has read the summary; see SettingsHubActivity.applyImport.

@@ -16,23 +16,23 @@
     <string name="app_alias_hint">e.g. tng</string>
     <string name="remove_alias">Remove alias</string>
 
-    <!-- Search bar hints, picked to match whichever sources are actually switched on. -->
-    <string name="search_apps_and_files">Search apps and files</string>
+    <!-- Quick search's shortcut buttons, each of which types its command keyword into the bar. -->
+    <string name="quick_fill_event">New event</string>
+    <string name="quick_fill_timer">New timer</string>
+    <string name="quick_fill_alarm">New alarm</string>
+    <string name="quick_fill_web">Search the web</string>
 
     <string name="search_section_apps">Apps</string>
-    <string name="search_section_files">Files</string>
     <string name="search_section_launcher">Launcher</string>
     <string name="search_launcher_settings">Launcher settings</string>
     <string name="search_launcher_settings_subtitle">Gestures, appearance, search and backup</string>
-    <string name="search_google_subtitle">Search Google in your browser</string>
+    <string name="search_engine_subtitle">Search %1$s in your browser</string>
     <string name="search_open_url_subtitle">Open this address in your browser</string>
-    <string name="search_web">Google</string>
     <string name="search_web_hint">Add what to search for, or an address to open</string>
     <string name="search_map">Google Maps</string>
     <string name="search_map_subtitle">Search Google Maps</string>
     <string name="search_map_hint">Add a place, e.g. map petrol station</string>
     <string name="map_search_failed">No app can open Google Maps</string>
-    <string name="file_open_failed">Nothing on this device can open that file</string>
     <string name="web_search_failed">No browser found</string>
     <string name="quick_search_no_results">No results</string>
     <string name="search_section_calculator">Calculator</string>
@@ -190,11 +190,14 @@
     <string name="battery_optimized">Restricted — the system may unload the launcher, making the app drawer slow to open</string>
 
     <string name="section_search">Search</string>
-    <string name="menu_search_files">Search local files</string>
-    <string name="search_files_row_subtitle">Include files from your storage in search results</string>
-    <string name="search_files_permission_denied">Files won\'t be searched until all-files access is granted</string>
+    <string name="menu_search_engine">Search engine</string>
+    <string name="engine_google">Google</string>
+    <string name="engine_bing">Bing</string>
+    <string name="engine_duckduckgo">DuckDuckGo</string>
+    <string name="engine_brave">Brave Search</string>
+    <string name="engine_ecosia">Ecosia</string>
     <string name="menu_quick_search">Quick search overlay</string>
-    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and finding files</string>
+    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and quick actions</string>
     <string name="quick_search_trigger">Quick search trigger</string>
     <string name="quick_search_trigger_granted">Ready — this launcher is your digital assistant. On Android 12+, also set Settings → System → Gestures → Press and hold power button to “Digital assistant”.</string>
     <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gessearch Launcher. Long-pressing the power button will then open quick search.</string>

@@ -2,10 +2,11 @@ package dev.neffly.gesturelauncher.data
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import dev.neffly.gesturelauncher.search.WebSearch
 
 /**
  * SharedPreferences wrapper for every setting the app keeps: the crash-counter safety net, the
- * recognition threshold, the search and quick-search toggles, theme, font and font scale. One
+ * recognition threshold, the search engine and quick-search toggle, theme, font and font scale. One
  * file, so the first read pages everything in — see App.onCreate.
  */
 object Prefs {
@@ -19,7 +20,7 @@ object Prefs {
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_FONT_NAME = "font_name"
     private const val KEY_FONT_SCALE = "font_scale"
-    private const val KEY_SEARCH_FILES = "search_files"
+    private const val KEY_SEARCH_ENGINE = "search_engine"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
@@ -110,14 +111,13 @@ object Prefs {
         prefs(context).edit().putFloat(KEY_FONT_SCALE, value).apply()
     }
 
-    /** Include local files in search results (default OFF — it needs a storage permission the user
-     *  has to grant deliberately, so opting in is the only honest default). Applies to both the
-     *  drawer's search bar and the floating quick-search window. */
-    fun searchFiles(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_SEARCH_FILES, false)
+    /** Where the `web` command sends a search (default Google). Stored by enum name; a name this
+     *  build doesn't know falls back to the default. */
+    fun searchEngine(context: Context): WebSearch.Engine =
+        WebSearch.Engine.fromName(prefs(context).getString(KEY_SEARCH_ENGINE, null))
 
-    fun setSearchFiles(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_SEARCH_FILES, value).apply()
+    fun setSearchEngine(context: Context, value: WebSearch.Engine) {
+        prefs(context).edit().putString(KEY_SEARCH_ENGINE, value.name).apply()
     }
 
     /** Master switch for the floating quick-search window (default OFF — turning it on is what

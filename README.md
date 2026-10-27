@@ -21,17 +21,19 @@ persistence, min SDK 26 (Android 8.0+).
   just launch an app.
 - A visible **halo trail** follows your finger while drawing, and haptic feedback (toggleable)
   confirms a match.
-- **Unified search** over installed apps, local files and the web, ranked by one fuzzy matcher so
-  everything sorts by the same rules. Enter opens the top result whatever kind it is. File search
-  (via MediaStore) and the web row are individually toggleable.
+- **Unified search** over installed apps, ranked by one fuzzy matcher, plus command rows:
+  `event`, `timer`, `alarm`, `web` and `map` followed by a space create that thing in the app that
+  owns it. Enter opens the top result whatever kind it is. The `web` command searches on the
+  engine picked in settings (Google, Bing, DuckDuckGo, Brave Search or Ecosia).
 - **Answers in the search box**: a sum (`12*12`, `20% of 50`) or a time-zone question (`time in
   tokyo`, `3pm est to tokyo`, `tokyo to london`) is answered in a row pinned above the results;
   tap it to copy. Zones can be named by city, country or abbreviation, straight from the
   platform's tz database — nothing is fetched.
 - **Floating search over any app**: the same search box, reachable from anywhere on the phone by
   holding the power button (it registers as a digital assistant) or from a home-screen gesture.
-- **Swipe a result right** to open it in a floating window instead of full screen — apps, files
-  and web results alike, on devices that support freeform windows.
+  Buttons under the bar start an event, timer, alarm or web search in one tap.
+- **Swipe a result right** to open it in a floating window instead of full screen — apps, actions
+  and web searches alike, on devices that support freeform windows.
 - Full **app drawer** with alphabet-index fast scroll, app aliases, and long-press
   app-info/shortcuts/uninstall. It paints a complete list on its first frame from a disk snapshot,
   so it stays instant even after the OS hibernates the launcher.
@@ -43,7 +45,7 @@ persistence, min SDK 26 (Android 8.0+).
 - Adjustable **recognition sensitivity** with a live test mode (draw a shape, see what it would
   match, without launching anything).
 - **Backup/restore** your gestures, app aliases, and settings — sensitivity, theme, font size and
-  the search toggles — to a single file. The imported font file itself can't travel in a JSON
+  the search settings — to a single file. The imported font file itself can't travel in a JSON
   backup, so the font has to be re-picked on a new device.
 - Built-in safety nets: the drawer button is always present regardless of gesture state, a
   one-tap deep link to the Home-app picker, and a crash counter that drops into a **Safe Mode**
@@ -81,16 +83,14 @@ gear icon → **Gesture settings** → **+** → choose what the gesture should 
 save. Then draw it anywhere on the home screen to trigger it. Tune matching strictness under
 **Recognition sensitivity**.
 
-The same settings hub is where you turn on file/web search, the floating search window, a custom
-font, and the theme. File search asks for all-files access, and the floating search needs you to
-pick Gessearch Launcher as your digital assistant — both are off until you grant them deliberately.
+The same settings hub is where you pick the search engine, turn on the floating search window, and
+set a custom font and the theme. The floating search needs you to pick Gessearch Launcher as your
+digital assistant — it is off until you grant that deliberately.
 
 ## Known limitations
 
 - Gesture actions are currently limited to launching an app, opening the drawer, opening a URL, or
   opening the floating search (no pinned shortcuts or contact call/text actions yet).
-- File search only sees files the media scanner has indexed; anything it hasn't reached is
-  invisible to the search box.
 - Floating windows depend on the device reporting freeform-window support, and OEM skins keep
   their own rules on top of it — some apps report themselves resizable, reach freeform, and are
   then expanded to full screen anyway. Nothing public exposes that, so those cases aren't warned

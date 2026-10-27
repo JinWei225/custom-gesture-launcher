@@ -33,9 +33,7 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.search.Clipboard
 import dev.neffly.gesturelauncher.search.Commands
-import dev.neffly.gesturelauncher.search.FileSearcher
 import dev.neffly.gesturelauncher.search.SearchController
-import dev.neffly.gesturelauncher.search.SearchEngine
 import dev.neffly.gesturelauncher.search.SearchResult
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
@@ -137,7 +135,6 @@ class AppDrawerActivity : BaseActivity() {
             scope = lifecycleScope,
             onClick = { app -> launchAndClearSearch(app) },
             onLongClick = { app, anchor -> showAppMenu(app, anchor) },
-            onFileClick = { hit -> FileSearcher.open(this, hit); clearSearch() },
             onSettingsClick = { openSettings(); clearSearch() },
             onCalculationClick = { calculation -> open(calculation) },
             onTimeClick = { time -> open(time) },
@@ -186,7 +183,7 @@ class AppDrawerActivity : BaseActivity() {
 
         searchInput = findViewById(R.id.searchInput)
         // Shared with the floating quick-search window, so both rank and group results identically.
-        search = SearchController(this, lifecycleScope) { query, results ->
+        search = SearchController(this) { query, results ->
             renderResults(query, results)
         }
         searchInput.addTextChangedListener(object : TextWatcher {
@@ -222,7 +219,6 @@ class AppDrawerActivity : BaseActivity() {
     private fun open(result: SearchResult) {
         when (result) {
             is SearchResult.App -> launchAndClearSearch(result.app)
-            is SearchResult.File -> { FileSearcher.open(this, result.hit); clearSearch() }
             is SearchResult.Settings -> { openSettings(); clearSearch() }
             is SearchResult.Action -> { Commands.open(this, result.command); clearSearch() }
             // The only rows that leave the drawer open: the query stays in the box so a second
@@ -244,11 +240,6 @@ class AppDrawerActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        // The search toggles live in the settings hub, which is opened from this screen — so their
-        // effect (which sources are searched, and what the hint promises) has to be re-read here.
-        // On the EditText, not the layout: the borderless field style turns the floating label
-        // off, and a hint set on the layout would then never be shown.
-        searchInput.hint = getString(SearchEngine.hint(this))
         // Cheap when the cache is warm — LauncherApps callbacks (see App) invalidate it whenever
         // packages change, so no per-open full rescan is needed anymore.
         loadApps()
@@ -340,9 +331,8 @@ class AppDrawerActivity : BaseActivity() {
             submitBrowseList()
             return
         }
-        // Keyed on whether the user has dragged, not on whether the query changed: the file section
-        // lands after the apps do, inserting rows *above* whatever LinearLayoutManager is anchored
-        // to, which would otherwise leave the list parked past the best match.
+        // Keyed on whether the user has dragged, not on whether the query changed: an app-list
+        // refresh re-emits the same query, and a list the user has scrolled must stay put.
         if (renderedQuery != query) userScrolled = false
         renderedQuery = query
         adapter.submitResults(results) {

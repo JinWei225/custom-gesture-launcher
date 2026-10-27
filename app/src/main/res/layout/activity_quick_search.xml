@@ -65,17 +65,59 @@
                      pixels so the field ignores the font-size multiplier BaseActivity applies to
                      every `sp` dimension. This is a fixed-height bar over someone else's app, not a
                      page of the launcher's own text — it has to stay the same shape whatever the
-                     user's text size is, while the results below it still follow it. -->
+                     user's text size is, while the results below it still follow it. The hint
+                     is on the EditText because the borderless field style has no floating label. -->
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/searchInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
+                    android:hint="@string/search_apps"
                     android:gravity="center_vertical"
                     android:imeOptions="actionSearch"
                     android:inputType="text"
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Shortcuts that type a command keyword into the bar, so the action row and its
+                 hint appear straight away. Only while the bar is empty — see renderResults. -->
+            <LinearLayout
+                android:id="@+id/quickFillRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/quickFillEvent"
+                    style="@style/Widget.GestureLauncher.QuickFill"
+                    android:contentDescription="@string/quick_fill_event"
+                    android:src="@drawable/ic_event"
+                    android:tooltipText="@string/quick_fill_event" />
+
+                <ImageButton
+                    android:id="@+id/quickFillTimer"
+                    style="@style/Widget.GestureLauncher.QuickFill"
+                    android:contentDescription="@string/quick_fill_timer"
+                    android:src="@drawable/ic_timer"
+                    android:tooltipText="@string/quick_fill_timer" />
+
+                <ImageButton
+                    android:id="@+id/quickFillAlarm"
+                    style="@style/Widget.GestureLauncher.QuickFill"
+                    android:contentDescription="@string/quick_fill_alarm"
+                    android:src="@drawable/ic_alarm"
+                    android:tooltipText="@string/quick_fill_alarm" />
+
+                <ImageButton
+                    android:id="@+id/quickFillWeb"
+                    style="@style/Widget.GestureLauncher.QuickFill"
+                    android:contentDescription="@string/quick_fill_web"
+                    android:src="@drawable/ic_search"
+                    android:tooltipText="@string/quick_fill_web" />
+
+            </LinearLayout>
 
             <!-- Height ceiling is set in code from the space left above the keyboard; beyond it
                  the results scroll inside the card instead of growing it. Gone until there's

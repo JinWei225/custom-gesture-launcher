@@ -21,7 +21,7 @@ import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
-import dev.neffly.gesturelauncher.search.FilePermissions
+import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
@@ -51,7 +51,7 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var batterySubtitle: TextView
     private lateinit var fontSubtitle: TextView
     private lateinit var fontScaleSubtitle: TextView
-    private lateinit var searchFilesSwitch: MaterialSwitch
+    private lateinit var searchEngineSubtitle: TextView
     private lateinit var quickSearchSwitch: MaterialSwitch
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
@@ -67,19 +67,6 @@ class SettingsHubActivity : SlidePanelActivity() {
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
      *  whether the imported one is actually different before rebuilding the screen. */
     private var importedFromScale = 1f
-
-    /** True while waiting to come back from the all-files-access screen, so onResume knows to turn
-     *  the toggle back off if nothing was granted there. */
-    private var awaitingFilePermission = false
-
-    private val filePermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            Prefs.setSearchFiles(this, granted)
-            searchFilesSwitch.isChecked = granted
-            if (!granted) {
-                Toast.makeText(this, R.string.search_files_permission_denied, Toast.LENGTH_LONG).show()
-            }
-        }
 
     private val exportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -143,8 +130,8 @@ class SettingsHubActivity : SlidePanelActivity() {
         fontScaleSubtitle = findViewById(R.id.fontScaleSubtitle)
         findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
 
-        searchFilesSwitch = findViewById(R.id.searchFilesSwitch)
-        findViewById<View>(R.id.searchFilesRow).setOnClickListener { toggleSearchFiles() }
+        searchEngineSubtitle = findViewById(R.id.searchEngineSubtitle)
+        findViewById<View>(R.id.searchEngineRow).setOnClickListener { showSearchEngineDialog() }
 
         quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
         findViewById<View>(R.id.quickSearchRow).setOnClickListener {
@@ -206,23 +193,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         )
         fontSubtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
         fontScaleSubtitle.text = fontScaleLabel(Prefs.fontScale(this))
-
-        // All-files access is granted on a settings screen we can't get a result from, so the
-        // toggle is reconciled against the real permission state on the way back.
-        if (awaitingFilePermission) {
-            awaitingFilePermission = false
-            val granted = FilePermissions.isGranted(this)
-            Prefs.setSearchFiles(this, granted)
-            if (!granted) {
-                Toast.makeText(this, R.string.search_files_permission_denied, Toast.LENGTH_LONG).show()
-            }
-        }
-        // A permission revoked in system settings has to switch the feature off too, or search
-        // would silently return nothing while the row claims it's on.
-        if (Prefs.searchFiles(this) && !FilePermissions.isGranted(this)) {
-            Prefs.setSearchFiles(this, false)
-        }
-        searchFilesSwitch.isChecked = Prefs.searchFiles(this)
+        searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
         keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)
@@ -231,28 +202,20 @@ class SettingsHubActivity : SlidePanelActivity() {
         updateKeyboardShortcut()
     }
 
-    /**
-     * Turning file search on has to clear the storage grant first — the toggle is meaningless
-     * without it, so it only sticks once the permission is actually held.
-     */
-    private fun toggleSearchFiles() {
-        if (Prefs.searchFiles(this)) {
-            Prefs.setSearchFiles(this, false)
-            searchFilesSwitch.isChecked = false
-            return
-        }
-        if (FilePermissions.isGranted(this)) {
-            Prefs.setSearchFiles(this, true)
-            searchFilesSwitch.isChecked = true
-            return
-        }
-        val runtimePermission = FilePermissions.runtimePermission
-        if (runtimePermission != null) {
-            filePermissionLauncher.launch(runtimePermission)
-        } else {
-            awaitingFilePermission = true
-            openAllFilesAccessSettings()
-        }
+    /** Where the `web` command searches. Read when the row is built, so nothing needs refreshing
+     *  beyond this screen's own subtitle. */
+    private fun showSearchEngineDialog() {
+        val engines = WebSearch.Engine.entries
+        val labels = engines.map { getString(it.label) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_search_engine)
+            .setSingleChoiceItems(labels, engines.indexOf(Prefs.searchEngine(this))) { dialog, which ->
+                Prefs.setSearchEngine(this, engines[which])
+                searchEngineSubtitle.setText(engines[which].label)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
     }
 
     /** Greys the trigger row out while the overlay is off, and reports whether the role is held. */
@@ -500,6 +463,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
+        searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
 
         var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
         if (result.missingApps.isNotEmpty()) {

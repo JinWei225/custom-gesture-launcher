@@ -33,14 +33,14 @@
             app:endIconMode="clear_text"
             app:startIconDrawable="@drawable/ic_search">
 
-            <!-- The hint is set at runtime (see AppDrawerActivity), naming whichever search
-                 sources are switched on — and it lands on the EditText rather than on the layout,
-                 because the borderless style turns the floating label off. -->
+            <!-- The hint is on the EditText rather than on the layout, because the borderless
+                 style turns the floating label off. -->
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/searchInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@android:color/transparent"
+                android:hint="@string/search_apps"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1" />

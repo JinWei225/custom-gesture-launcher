@@ -9,6 +9,7 @@ import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.annotation.StringRes
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.data.Prefs
 import java.text.Normalizer
 import java.time.Clock
 import java.time.DayOfWeek
@@ -168,7 +169,7 @@ object Commands {
             context.getString(R.string.search_timer_for, length(context, it))
         } ?: context.getString(R.string.search_timer)
         is Command.Event -> command.title.ifEmpty { context.getString(R.string.search_event_new) }
-        is Command.Web -> command.query.ifEmpty { context.getString(R.string.search_web) }
+        is Command.Web -> command.query.ifEmpty { context.getString(Prefs.searchEngine(context).label) }
         is Command.Map -> command.query.ifEmpty { context.getString(R.string.search_map) }
     }
 
@@ -178,13 +179,13 @@ object Commands {
             .joinToString(SEPARATOR).ifEmpty { context.getString(R.string.search_alarm_hint) }
         is Command.Timer -> command.label.ifEmpty { context.getString(R.string.search_timer_hint) }
         is Command.Event -> eventDetail(context, command)
-        is Command.Web -> context.getString(
-            when {
-                command.query.isEmpty() -> R.string.search_web_hint
-                command.url != null -> R.string.search_open_url_subtitle
-                else -> R.string.search_google_subtitle
-            }
-        )
+        is Command.Web -> when {
+            command.query.isEmpty() -> context.getString(R.string.search_web_hint)
+            command.url != null -> context.getString(R.string.search_open_url_subtitle)
+            else -> context.getString(
+                R.string.search_engine_subtitle, context.getString(Prefs.searchEngine(context).label)
+            )
+        }
         is Command.Map -> context.getString(
             if (command.query.isEmpty()) R.string.search_map_hint else R.string.search_map_subtitle
         )
@@ -236,7 +237,7 @@ object Commands {
 
     /** Starts the clock or calendar app on [command], prefilled, and says so if there is none. */
     fun open(context: Context, command: Command) {
-        if (runCatching { context.startActivity(intentFor(command)) }.isFailure) {
+        if (runCatching { context.startActivity(intentFor(context, command)) }.isFailure) {
             Toast.makeText(context, failureMessage(command), Toast.LENGTH_SHORT).show()
         }
     }
@@ -254,7 +255,7 @@ object Commands {
      * event is seen once more in the app that owns it before it exists — the row is a preview,
      * not a confirmation. NEW_TASK because the floating window lives in its own task.
      */
-    fun intentFor(command: Command, zone: ZoneId = ZoneId.systemDefault()): Intent {
+    fun intentFor(context: Context, command: Command, zone: ZoneId = ZoneId.systemDefault()): Intent {
         val intent = when (command) {
             is Command.Alarm -> Intent(AlarmClock.ACTION_SET_ALARM).apply {
                 command.time?.let {
@@ -289,7 +290,7 @@ object Commands {
                     putExtra(CalendarContract.EXTRA_EVENT_END_TIME, millis(endDay.atTime(end), zone))
                 }
             }
-            is Command.Web -> WebSearch.intentFor(command.query, command.url)
+            is Command.Web -> WebSearch.intentFor(Prefs.searchEngine(context), command.query, command.url)
             // Google's documented Maps URL rather than a geo: URI. It is claimed by the Maps app
             // alone, so it opens there directly instead of through a chooser on a phone with
             // Waze installed as well, and it still works in a browser where Maps is absent.

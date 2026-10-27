@@ -52,8 +52,8 @@ import kotlinx.coroutines.withContext
  * activity intent anyway. Extending [BaseActivity] is what gives it the user's imported typeface
  * and font-size multiplier for free.
  *
- * Results come from the same [SearchController] the app drawer uses, so ranking, aliases, file
- * search and the web row behave identically in both places.
+ * Results come from the same [SearchController] the app drawer uses, so ranking, aliases and the
+ * command rows behave identically in both places.
  */
 class QuickSearchActivity : BaseActivity() {
 
@@ -64,6 +64,7 @@ class QuickSearchActivity : BaseActivity() {
     private lateinit var cardDivider: View
     private lateinit var cardGlow: View
     private lateinit var emptyLabel: TextView
+    private lateinit var quickFillRow: View
     private lateinit var adapter: AppListAdapter
     private lateinit var search: SearchController
 
@@ -126,10 +127,21 @@ class QuickSearchActivity : BaseActivity() {
         resultList = findViewById(R.id.resultList)
         cardDivider = findViewById(R.id.cardDivider)
         emptyLabel = findViewById(R.id.emptyLabel)
+        quickFillRow = findViewById(R.id.quickFillRow)
+        // The keywords [Commands] answers to; the trailing space is what turns them into commands.
+        mapOf(
+            R.id.quickFillEvent to "event ",
+            R.id.quickFillTimer to "timer ",
+            R.id.quickFillAlarm to "alarm ",
+            R.id.quickFillWeb to "web "
+        ).forEach { (id, keyword) ->
+            findViewById<View>(id).setOnClickListener {
+                searchInput.setText(keyword)
+                searchInput.setSelection(keyword.length)
+            }
+        }
 
         findViewById<View>(R.id.quickSearchScrim).setOnClickListener { finish() }
-        // On the EditText, not the layout — the borderless field style has no floating label.
-        searchInput.hint = getString(SearchEngine.hint(this))
         // DIP, not SP: the field is fixed outright, where the rows below merely opt out of the
         // launcher's multiplier (see appliesFontScale). The bar is chrome with a height the card's
         // whole layout is measured against, so it holds still even for the device's own text-size
@@ -145,7 +157,6 @@ class QuickSearchActivity : BaseActivity() {
         adapter = AppListAdapter(
             scope = lifecycleScope,
             onClick = { app -> AppRepository.launch(this, app); finish() },
-            onFileClick = { hit -> FileSearcher.open(this, hit); finish() },
             onSettingsClick = { openSettings() },
             onCalculationClick = { calculation -> open(calculation) },
             onTimeClick = { time -> open(time) },
@@ -158,7 +169,7 @@ class QuickSearchActivity : BaseActivity() {
             SwipeToFloat(adapter) { result -> FloatingWindow.open(this, result); finish() }
         ).attachToRecyclerView(resultList)
 
-        search = SearchController(this, lifecycleScope) { query, results ->
+        search = SearchController(this) { query, results ->
             renderResults(query, results)
         }
         searchInput.addTextChangedListener(object : TextWatcher {
@@ -346,10 +357,9 @@ class QuickSearchActivity : BaseActivity() {
     }
 
     /**
-     * The scroll reset is keyed on whether the user has dragged, not on whether the query changed.
-     * The file section lands after the apps do, inserting rows *above* whatever LinearLayoutManager
-     * is anchored to — which silently leaves the list parked at the bottom, showing the web row
-     * instead of the best match. Anything the user hasn't scrolled themselves goes back to the top.
+     * The scroll reset is keyed on whether the user has dragged, not on whether the query changed:
+     * an app-list refresh re-emits the same query, and a list the user has scrolled must stay put.
+     * Anything the user hasn't scrolled themselves goes back to the top.
      */
     private fun renderResults(query: String, results: List<SearchResult>) {
         if (renderedQuery != query) userScrolled = false
@@ -365,6 +375,8 @@ class QuickSearchActivity : BaseActivity() {
         // not an empty state.
         emptyLabel.visibility =
             if (results.isEmpty() && query.isNotBlank()) View.VISIBLE else View.GONE
+        // The shortcuts are for starting a query, so they make way once one has been typed.
+        quickFillRow.visibility = if (query.isBlank()) View.VISIBLE else View.GONE
         // The hairline only earns its place once there are two things to separate.
         cardDivider.visibility =
             if (resultList.isVisible || emptyLabel.isVisible) View.VISIBLE else View.GONE
@@ -373,7 +385,6 @@ class QuickSearchActivity : BaseActivity() {
     private fun open(result: SearchResult) {
         when (result) {
             is SearchResult.App -> AppRepository.launch(this, result.app)
-            is SearchResult.File -> FileSearcher.open(this, result.hit)
             is SearchResult.Settings -> { openSettings(); return }
             is SearchResult.Action -> Commands.open(this, result.command)
             // Copies and closes, unlike the drawer, which stays open. This window is a panel over
@@ -399,11 +410,6 @@ class QuickSearchActivity : BaseActivity() {
     override fun onStop() {
         super.onStop()
         if (!isFinishing) finish()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::search.isInitialized) search.cancel()
     }
 
     companion object {
