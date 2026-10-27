@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home page of the pager: the clock with today's events beside it (non-drawable), then the
+<!-- The home page of the pager: the clock with today's events under it (non-drawable), then the
      gesture canvas, which stops short of the dock. The pages either side of it are page_widgets
      and page_notes. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -10,16 +10,17 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Top widget zone: safe (no gesture capture). Only as tall as the clock, so the canvas below
-         starts as high as it can. The start padding is 8dp short of the 24dp everything else
-         uses, because both clock rows carry 8dp of horizontal padding for their touch feedback —
-         this keeps the text itself on the 24dp line. -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Top widget zone: safe (no gesture capture). Only as tall as its contents, so the canvas
+         below starts as high as it can. The start padding is 8dp short of the 24dp everything
+         else uses, because both clock rows carry 8dp of horizontal padding for their touch
+         feedback — this keeps the text itself on the 24dp line. -->
+    <LinearLayout
         android:id="@+id/widgetPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingStart="16dp"
-        android:paddingTop="32dp"
+        android:paddingTop="12dp"
         android:paddingEnd="24dp">
 
         <!-- Date above the time, not beside it.
@@ -34,9 +35,7 @@
             android:id="@+id/clockWidget"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:orientation="vertical">
 
             <!-- The whole line, battery included, opens the calendar: it reads as one row, and
                  carving the battery out of the middle of it would leave a dead patch between
@@ -122,22 +121,19 @@
 
         <!-- Today's events, filled at runtime. Whole area opens the calendar app.
 
-             Beside the clock and exactly as tall as it, so a long day scrolls inside this box
-             rather than pushing the gesture canvas down. -->
+             Under the clock, at full width so a long title has room. A fixed height of about three
+             rows: a long day scrolls inside this box rather than pushing the gesture canvas down.
+             The start margin puts the rows on the same 24dp line as the clock's text. -->
         <ScrollView
             android:id="@+id/eventsScroll"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            android:layout_marginStart="8dp"
             android:fadingEdgeLength="24dp"
             android:fillViewport="true"
             android:overScrollMode="never"
             android:requiresFadingEdge="vertical"
-            android:scrollbars="none"
-            app:layout_constraintBottom_toBottomOf="@id/clockWidget"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/clockWidget"
-            app:layout_constraintTop_toTopOf="@id/clockWidget">
+            android:scrollbars="none">
 
             <LinearLayout
                 android:id="@+id/eventsContainer"
@@ -149,7 +145,7 @@
                 android:orientation="vertical"
                 android:paddingVertical="6dp" />
         </ScrollView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
     <!-- Only this lower region captures gestures. Its bottom margin is set in code to clear the
          dock, which lies outside this page (see MainActivity), leaving a strip above the dock where

@@ -59,10 +59,14 @@ class NotesPage(private val activity: AppCompatActivity, page: View) {
 
     /** Picks up notes written to the store behind this page's back — a backup import, which
      *  happens in the settings hub while the home screen waits underneath. A page that matches
-     *  the store is left alone, draft and edit in progress included. */
+     *  the store keeps its draft and any edit in progress, and only has its day labels brought
+     *  up to date, for a page left open across midnight. */
     fun refresh() {
         val stored = NoteStore.load(activity)
-        if (stored == notes) return
+        if (stored == notes) {
+            show(scrollToEnd = false)
+            return
+        }
         notes.clear()
         notes += stored
         cancelEdit()

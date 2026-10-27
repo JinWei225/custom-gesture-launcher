@@ -24,7 +24,10 @@ class NoteAdapter(
 ) : ListAdapter<NoteAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
-        data class Day(val dayStart: Long) : Row()
+        /** [today] is the start of the day the list was built on. The label is relative to it, so
+         *  it is part of the row: rebuilt after midnight, the row differs and DiffUtil relabels it,
+         *  instead of yesterday's run still reading "Today" above today's. */
+        data class Day(val dayStart: Long, val today: Long) : Row()
         data class Item(val note: Note) : Row()
     }
 
@@ -56,9 +59,9 @@ class NoteAdapter(
 
         fun bind(row: Row.Day) {
             val context = itemView.context
-            label.text = when {
-                DateUtils.isToday(row.dayStart) -> context.getString(R.string.note_today)
-                DateUtils.isToday(row.dayStart + DateUtils.DAY_IN_MILLIS) -> context.getString(R.string.note_yesterday)
+            label.text = when (row.dayStart) {
+                row.today -> context.getString(R.string.note_today)
+                startOfDay(row.today - 1) -> context.getString(R.string.note_yesterday)
                 else -> DateUtils.formatDateTime(
                     context, row.dayStart,
                     DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_WEEKDAY or DateUtils.FORMAT_ABBREV_ALL
@@ -100,14 +103,15 @@ class NoteAdapter(
             override fun areContentsTheSame(a: Row, b: Row): Boolean = a == b
         }
 
-        /** [notes] in order, each run from a new day led by that day's label. */
-        fun rowsFor(notes: List<Note>): List<Row> {
+        /** [notes] in order, each run from a new day led by that day's label, as of [now]. */
+        fun rowsFor(notes: List<Note>, now: Long = System.currentTimeMillis()): List<Row> {
+            val today = startOfDay(now)
             val rows = ArrayList<Row>(notes.size + 8)
             var lastDay = Long.MIN_VALUE
             for (note in notes) {
                 val day = startOfDay(note.id)
                 if (day != lastDay) {
-                    rows += Row.Day(day)
+                    rows += Row.Day(day, today)
                     lastDay = day
                 }
                 rows += Row.Item(note)
@@ -115,7 +119,7 @@ class NoteAdapter(
             return rows
         }
 
-        private fun startOfDay(millis: Long): Long {
+        fun startOfDay(millis: Long): Long {
             val c = Calendar.getInstance()
             c.timeInMillis = millis
             c.set(Calendar.HOUR_OF_DAY, 0)
