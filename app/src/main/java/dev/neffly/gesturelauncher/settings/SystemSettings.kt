@@ -1,6 +1,5 @@
 package dev.neffly.gesturelauncher.settings
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.role.RoleManager
 import android.content.ComponentName
@@ -44,23 +43,13 @@ fun Context.isBatteryOptimizationExempt(): Boolean {
  * (see AppListSnapshot) makes that cheap to recover from; this makes it stop happening.
  *
  * Same shape as the other deep links here — see [startFirstThatOpens].
+ *
+ * Lands on the system's list rather than the one-tap "don't optimise" prompt: that prompt needs
+ * REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, which Google Play allows only for a short list of use cases
+ * a launcher isn't on.
  */
-// BatteryLife flags ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS as an abused API. Here the app
-// being killed IS the user-visible bug the setting exists to fix, and it's a launcher, not
-// something doing background work it hasn't earned.
-@SuppressLint("BatteryLife")
 fun Activity.openBatteryOptimizationSettings() {
     val candidates = buildList {
-        // Skipped when already exempt: the system dialog is a no-op in that case, which reads as
-        // the button being broken.
-        if (!isBatteryOptimizationExempt()) {
-            add(
-                Intent(
-                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:$packageName")
-                )
-            )
-        }
         add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         OEM_AUTOSTART_SCREENS.forEach { add(Intent().setComponent(it)) }
         add(
@@ -123,7 +112,8 @@ fun Activity.openAssistantSettings() {
  * Opens the accessibility screen, where the keyboard-shortcut service is switched on.
  *
  * There is no deep link to a single service's page that works across OEM builds, so this lands on
- * the list and the settings row's subtitle names the entry to look for. Unlike the assistant role
+ * the list, and the disclosure that leads here names the entry to look for. Reached only through
+ * [dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess]. Unlike the assistant role
  * above, this grant genuinely is user-toggleable — it just isn't requestable from an app, by
  * design: an accessibility service that could turn itself on would defeat the point of the screen.
  */

@@ -23,6 +23,7 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
+import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
@@ -162,7 +163,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         keyboardShortcutAccessRow = findViewById(R.id.keyboardShortcutAccessRow)
         keyboardShortcutAccessTitle = findViewById(R.id.keyboardShortcutAccessTitle)
         keyboardShortcutAccessSubtitle = findViewById(R.id.keyboardShortcutAccessSubtitle)
-        keyboardShortcutAccessRow.setOnClickListener { openAccessibilitySettings() }
+        keyboardShortcutAccessRow.setOnClickListener { requestAccessibilityAccess() }
 
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()

@@ -1,9 +1,11 @@
-# Builds and publishes a signed release APK whenever a version tag is pushed:
+# Builds and publishes a signed release APK and app bundle whenever a version tag is pushed:
 #
 #   git tag v1.2.3 && git push origin v1.2.3
 #
 # The tag is the single source of the version — versionName "1.2.3" and versionCode 10203 are
-# derived from it — and the GitHub Release it creates is what Obtainium watches for updates.
+# derived from it — and the GitHub Release it creates is what Obtainium watches for updates. The
+# APK is for sideloading and Obtainium (which only looks at .apk assets); the .aab is the file
+# uploaded to Google Play, which takes nothing else for a new app.
 # Unit tests run first; a red test means no release.
 name: Release
 
@@ -60,16 +62,21 @@ jobs:
 
       - name: Test and build
         run: >
-          ./gradlew testDebugUnitTest assembleRelease
+          ./gradlew testDebugUnitTest assembleRelease bundleRelease
           -PversionName=${{ steps.version.outputs.name }}
           -PversionCode=${{ steps.version.outputs.code }}
 
-      - name: Name the APK
-        run: cp app/build/outputs/apk/release/app-release.apk
-          "gessearch-launcher-${{ steps.version.outputs.name }}.apk"
+      - name: Name the APK and bundle
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk \
+            "gessearch-launcher-${{ steps.version.outputs.name }}.apk"
+          cp app/build/outputs/bundle/release/app-release.aab \
+            "gessearch-launcher-${{ steps.version.outputs.name }}.aab"
 
       - uses: softprops/action-gh-release@v2
         with:
           name: ${{ steps.version.outputs.name }}
-          files: gessearch-launcher-*.apk
+          files: |
+            gessearch-launcher-*.apk
+            gessearch-launcher-*.aab
           generate_release_notes: true

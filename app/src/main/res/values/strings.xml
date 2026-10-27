@@ -209,7 +209,7 @@
     <string name="keyboard_shortcut_row_subtitle">Press Alt + Space on a physical keyboard to open quick search</string>
     <string name="keyboard_shortcut_access">Keyboard access</string>
     <string name="keyboard_shortcut_access_granted">Ready — Alt + Space works anywhere. Tap to review or turn the access off.</string>
-    <string name="keyboard_shortcut_access_missing">Tap to open Accessibility, then turn on “Gessearch Launcher”. Without it Android won\'t deliver key presses from other apps.</string>
+    <string name="keyboard_shortcut_access_missing">Needs accessibility access — tap to see what it allows. Without it Android won\'t deliver key presses from other apps.</string>
 
     <!-- The one accessibility service, shared by the keyboard shortcut and the double-tap lock. -->
     <string name="accessibility_service_label">Gessearch Launcher</string>
@@ -221,9 +221,13 @@
     <string name="menu_search_side">Search button</string>
     <string name="search_side_left">Left corner</string>
     <string name="search_side_right">Right corner</string>
-    <string name="lock_setup_title">Locking needs accessibility access</string>
-    <string name="lock_setup_message">Android only lets an accessibility service lock the screen. Turn on “Gessearch Launcher” in Accessibility, then double-tap the dock again. It reads nothing on your screen.</string>
-    <string name="lock_setup_open">Open Accessibility</string>
+    <!-- The prominent disclosure Google Play requires before the user is sent to grant the access:
+         what the service receives, what it does with it, and what it doesn't. Shown by both the
+         keyboard row and the dock's double-tap lock. -->
+    <string name="accessibility_disclosure_title">Allow accessibility access?</string>
+    <string name="accessibility_disclosure_message">Gessearch Launcher uses Android\'s accessibility service for two features, because Android offers no other way to do them:\n\n• Alt + Space on a physical keyboard opens quick search from any app. The service receives the keys you press on a physical keyboard, acts only on Alt + Space, and passes every other key straight on.\n• A double tap on the home screen\'s dock locks the screen.\n\nThe service does not read what is on your screen, and it does not store or share your key presses — this app has no internet access.\n\nIf you agree, turn on “Gessearch Launcher” on the next screen. You can turn it off there at any time.</string>
+    <string name="accessibility_disclosure_agree">Agree</string>
+    <string name="accessibility_disclosure_decline">No thanks</string>
     <string name="lock_unsupported">Locking needs Android 9 or newer</string>
 
     <!-- Widgets page. -->

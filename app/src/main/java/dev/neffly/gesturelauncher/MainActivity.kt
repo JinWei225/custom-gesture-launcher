@@ -25,7 +25,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -48,11 +47,10 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
-import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
+import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.PageDotsView
-import dev.neffly.gesturelauncher.ui.showWithFont
 import dev.neffly.gesturelauncher.widgets.WidgetPage
 import dev.neffly.gesturelauncher.notes.NotesPage
 import dev.neffly.gesturelauncher.ui.StaticPagesAdapter
@@ -356,12 +354,7 @@ class MainActivity : BaseActivity() {
             Toast.makeText(this, R.string.lock_unsupported, Toast.LENGTH_SHORT).show()
             return
         }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.lock_setup_title)
-            .setMessage(R.string.lock_setup_message)
-            .setPositiveButton(R.string.lock_setup_open) { _, _ -> openAccessibilitySettings() }
-            .setNegativeButton(android.R.string.cancel, null)
-            .showWithFont()
+        requestAccessibilityAccess()
     }
 
 

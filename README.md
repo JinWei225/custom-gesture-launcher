@@ -59,7 +59,8 @@ listing.
 
 To get updates automatically, add the repo to [Obtainium](https://github.com/ImranR98/Obtainium):
 **Add App** → paste `https://github.com/JinWei225/custom-gesture-launcher` → **Add**. Every
-release carries one signed APK, so Obtainium needs no further configuration.
+release carries one signed APK (plus an `.aab` bundle, which Obtainium ignores), so Obtainium needs
+no further configuration.
 
 Releases are signed with a dedicated key. A copy built from source in Android Studio is signed
 with your own debug key instead, and Android won't install one over the other — uninstall first
@@ -117,9 +118,10 @@ is built or uploaded by hand.
 git tag v1.2.3 && git push origin v1.2.3
 ```
 
-The workflow runs the unit tests, builds a release APK with `versionName` `1.2.3` and
-`versionCode` `10203` derived from the tag, and publishes a GitHub Release with the APK attached
-and auto-generated notes. Obtainium picks it up from there.
+The workflow runs the unit tests, builds a release APK and app bundle with `versionName` `1.2.3`
+and `versionCode` `10203` derived from the tag, and publishes a GitHub Release with both attached
+and auto-generated notes. Obtainium picks up the APK from there; the `.aab` is the file to upload
+to Google Play.
 
 It signs with a keystore held in repository secrets, set up once:
 
