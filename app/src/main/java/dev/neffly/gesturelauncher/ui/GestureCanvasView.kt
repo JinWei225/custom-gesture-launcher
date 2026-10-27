@@ -92,20 +92,6 @@ class GestureCanvasView @JvmOverloads constructor(
             invalidate()
         }
 
-    /**
-     * Height, in pixels, of a band along the bottom edge in which a touch is not a stroke.
-     *
-     * The navigation bar is a "slippery" window: a swipe up that begins on it is handed to the
-     * window under the finger as a fresh ACTION_DOWN at the point where it crossed over — which,
-     * for a canvas that runs down to the bar, is this edge. Without this a swipe up from the
-     * buttons drew a stroke and got "not recognized" for it.
-     */
-    var bottomDeadZone = 0
-
-    /** Height, in pixels, of a band along the bottom edge the trail is kept out of: on the home
-     *  screen, the dock that sits over the canvas's lower part. See [clamped]. */
-    var bottomInset = 0
-
     init {
         isFocusable = true
         isClickable = true
@@ -114,7 +100,9 @@ class GestureCanvasView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if (event.y > height - bottomDeadZone) return false
+                // A horizontal stroke would otherwise be taken by the home screen's pager as a
+                // page turn the moment it passed the touch slop.
+                parent?.requestDisallowInterceptTouchEvent(true)
                 removeCallbacks(clearRunnable)
                 removeCallbacks(finalizeRunnable)
                 if (finalizePending) {
@@ -170,9 +158,9 @@ class GestureCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * [x], [y] held inside the canvas, above [bottomInset], so a finger that wanders past the edge
-     * — behind the clock or the dock on the home screen, or off a settings screen's capture box —
-     * leaves the trail running along that edge instead of vanishing out of view. Showing where the box stops is how the user
+     * [x], [y] held inside the canvas, so a finger that wanders past the edge — behind the clock
+     * or the dock on the home screen, or off a settings screen's capture box — leaves the trail
+     * running along that edge instead of vanishing out of view. Showing where the box stops is how the user
      * learns how much room a gesture has. Inset by the halo's half-width so the whole round-capped
      * line stays visible, not half of it clipped at the boundary.
      *
@@ -182,7 +170,7 @@ class GestureCanvasView @JvmOverloads constructor(
         val inset = haloPaint.strokeWidth / 2
         return PointF(
             x.coerceIn(inset, (width - inset).coerceAtLeast(inset)),
-            y.coerceIn(inset, (height - bottomInset - inset).coerceAtLeast(inset))
+            y.coerceIn(inset, (height - inset).coerceAtLeast(inset))
         )
     }
 

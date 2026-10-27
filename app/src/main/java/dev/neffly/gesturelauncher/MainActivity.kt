@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
@@ -24,7 +23,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -35,6 +33,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -95,8 +94,6 @@ class MainActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var canvas: GestureCanvasView
-    private lateinit var widgetPanel: LinearLayout
-    private lateinit var eventsScroll: ScrollView
     private lateinit var eventsContainer: LinearLayout
 
     /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
@@ -194,18 +191,17 @@ class MainActivity : BaseActivity() {
 
         canvas = home.findViewById(R.id.gestureCanvas)
         canvas.autoClearMillis = 180L
-        canvas.bottomDeadZone = dp(CANVAS_DEAD_ZONE_DP)
-        // The canvas runs down to the navigation bar, under the dock — which always sits the dock
-        // gap above that edge, whatever the device's navigation mode.
-        canvas.bottomInset = dp(DOCK_GAP_DP) + dock.layoutParams.height
+        // The page runs down to the navigation bar, and the dock always sits the dock gap above
+        // that edge whatever the navigation mode — so a fixed margin clears it. The extra strip
+        // above the dock is room for a sideways swipe to turn the pages without drawing.
+        home.findViewById<View>(R.id.canvasFrame).updateLayoutParams<LinearLayout.LayoutParams> {
+            bottomMargin = dp(DOCK_GAP_DP) + dock.layoutParams.height + dp(CANVAS_SWIPE_STRIP_DP)
+        }
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
 
         emptyHint = home.findViewById(R.id.emptyHint)
         recognitionHint = home.findViewById(R.id.recognitionHint)
-        widgetPanel = home.findViewById(R.id.widgetPanel)
-        eventsScroll = home.findViewById(R.id.eventsScroll)
         eventsContainer = home.findViewById(R.id.eventsContainer)
-        placeEvents()
         batteryIcon = home.findViewById(R.id.batteryIcon)
         batteryLevel = home.findViewById(R.id.batteryLevel)
 
@@ -288,8 +284,8 @@ class MainActivity : BaseActivity() {
 
     /**
      * Three pages, all kept alive: the widgets keep updating and the note box keeps its draft
-     * while another page is in front. Swiping only ever leaves a side page — on the home page a
-     * horizontal drag is a stroke for the canvas, which the pager must never take first.
+     * while another page is in front. A swipe turns the pages anywhere but on the gesture canvas,
+     * which keeps its strokes from the pager itself (see GestureCanvasView).
      */
     private fun setUpPager(pages: List<View>) {
         pager.adapter = StaticPagesAdapter(pages)
@@ -301,12 +297,10 @@ class MainActivity : BaseActivity() {
             }
 
             override fun onPageSelected(position: Int) {
-                pager.isUserInputEnabled = position != PAGE_HOME
                 showDock(position, animate = true)
                 if (position != PAGE_NOTES) hideKeyboard()
             }
         })
-        pager.isUserInputEnabled = false
     }
 
     /**
@@ -443,13 +437,6 @@ class MainActivity : BaseActivity() {
         calendarWatched = false
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        // Rotation doesn't recreate this activity (see the manifest), so the events list is moved
-        // by hand: beside the clock in landscape on a tablet, under it everywhere else.
-        placeEvents()
-    }
-
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) clearFrozenTapFeedback()
@@ -558,20 +545,6 @@ class MainActivity : BaseActivity() {
             eventsCacheDay = today
             renderEvents(events)
         }
-    }
-
-    /**
-     * Puts the events list under the clock, or — on a tablet in landscape, where the panel is wide
-     * and short — beside it.
-     */
-    private fun placeEvents() {
-        val beside = resources.getBoolean(R.bool.events_beside_clock)
-        widgetPanel.orientation = if (beside) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-        eventsScroll.layoutParams = LinearLayout.LayoutParams(
-            if (beside) 0 else LinearLayout.LayoutParams.MATCH_PARENT,
-            if (beside) LinearLayout.LayoutParams.MATCH_PARENT else 0,
-            1f
-        ).apply { if (beside) marginStart = dp(EVENTS_BESIDE_GAP_DP) }
     }
 
     /** Year*1000 + day-of-year — cheap "is it still the same day" stamp for the events cache. */
@@ -748,11 +721,9 @@ class MainActivity : BaseActivity() {
         private const val DOCK_GAP_DP = 24
         /** Between the note box and the keyboard, while the keyboard is up. */
         private const val NOTES_KEYBOARD_GAP_DP = 8
-        /** The band at the canvas's bottom edge where a swipe up from the navigation bar lands —
-         *  see GestureCanvasView.bottomDeadZone. Wide enough for a fast swipe's first sample. */
-        private const val CANVAS_DEAD_ZONE_DP = 32
+        /** Between the gesture canvas and the dock: room for a sideways swipe to turn the pages. */
+        private const val CANVAS_SWIPE_STRIP_DP = 32
 
-        private const val EVENTS_BESIDE_GAP_DP = 32
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L
         private const val RECOGNITION_HINT_MILLIS = 1200L

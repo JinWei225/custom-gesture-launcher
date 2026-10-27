@@ -13,9 +13,7 @@ import kotlin.math.abs
  * the finger and lets go of them as a launcher does, and a double tap locks the screen.
  *
  * The pages are moved through the pager's fake drag rather than by letting the pager take the
- * touch: on the home page the pager takes no touch at all, since a horizontal drag there is a
- * stroke for the canvas, and this strip is the one place on that page where a drag means "turn
- * the page" instead. (Lint wants a performClick behind a touch listener; a single tap does
+ * touch: the dock lies over the pager, not inside it, so the pager never sees these touches. (Lint wants a performClick behind a touch listener; a single tap does
  * nothing here, so there is no click to perform.)
  */
 @SuppressLint("ClickableViewAccessibility")

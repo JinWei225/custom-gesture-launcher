@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home page of the pager: top 30% = clock + today's events (non-drawable); lower 70% =
-     gesture canvas. The pages either side of it are page_widgets and page_notes. -->
+<!-- The home page of the pager: the clock with today's events beside it (non-drawable), then the
+     gesture canvas, which stops short of the dock. The pages either side of it are page_widgets
+     and page_notes. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,15 +10,17 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Top widget zone: safe (no gesture capture). -->
-    <LinearLayout
+    <!-- Top widget zone: safe (no gesture capture). Only as tall as the clock, so the canvas below
+         starts as high as it can. The start padding is 8dp short of the 24dp everything else
+         uses, because both clock rows carry 8dp of horizontal padding for their touch feedback —
+         this keeps the text itself on the 24dp line. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/widgetPanel"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="30"
-        android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="32dp">
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingTop="32dp"
+        android:paddingEnd="24dp">
 
         <!-- Date above the time, not beside it.
              Font padding is deliberately left ON here despite the gap it leaves between the
@@ -26,15 +29,14 @@
              shadow from being cut off at the top of the glyphs. -->
         <!-- No longer clickable as a whole: the date line and the time open different apps
              (calendar and clock), so each is its own target and this is just the column that
-             stacks them. The negative start margin cancels the horizontal padding both rows
-             now carry for their touch feedback, so the text still lines up with everything
-             else in the panel. -->
+             stacks them. -->
         <LinearLayout
             android:id="@+id/clockWidget"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="-8dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <!-- The whole line, battery included, opens the calendar: it reads as one row, and
                  carving the battery out of the middle of it would leave a dead patch between
@@ -120,21 +122,22 @@
 
         <!-- Today's events, filled at runtime. Whole area opens the calendar app.
 
-             Scrolls rather than grows: this zone is a fixed share of the screen so the gesture
-             canvas below never moves, which means a long day has to scroll inside it. Its size
-             and place — under the clock on a phone, beside it on a tablet in landscape — are set
-             by MainActivity.placeEvents from R.bool.events_beside_clock, because the activity
-             handles rotation itself and a layout qualifier would never be re-inflated. -->
+             Beside the clock and exactly as tall as it, so a long day scrolls inside this box
+             rather than pushing the gesture canvas down. -->
         <ScrollView
             android:id="@+id/eventsScroll"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_marginStart="16dp"
             android:fadingEdgeLength="24dp"
             android:fillViewport="true"
             android:overScrollMode="never"
             android:requiresFadingEdge="vertical"
-            android:scrollbars="none">
+            android:scrollbars="none"
+            app:layout_constraintBottom_toBottomOf="@id/clockWidget"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/clockWidget"
+            app:layout_constraintTop_toTopOf="@id/clockWidget">
 
             <LinearLayout
                 android:id="@+id/eventsContainer"
@@ -146,13 +149,16 @@
                 android:orientation="vertical"
                 android:paddingVertical="6dp" />
         </ScrollView>
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Only this lower region captures gestures. -->
+    <!-- Only this lower region captures gestures. Its bottom margin is set in code to clear the
+         dock, which lies outside this page (see MainActivity), leaving a strip above the dock where
+         a sideways swipe turns the pages instead of drawing. -->
     <FrameLayout
+        android:id="@+id/canvasFrame"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="70">
+        android:layout_weight="1">
 
         <dev.neffly.gesturelauncher.ui.GestureCanvasView
             android:id="@+id/gestureCanvas"

@@ -12,10 +12,4 @@
          two booleans through a bool keeps the whole theme in a single file with no duplicated
          style to keep in sync. -->
     <bool name="light_system_bars">true</bool>
-
-    <!-- Whether the home screen's events list sits beside the clock instead of under it. Read by
-         MainActivity.placeEvents; true only on a tablet in landscape, see
-         values-sw600dp-land/bools.xml. -->
-    <bool name="events_beside_clock">false</bool>
-
 </resources>
