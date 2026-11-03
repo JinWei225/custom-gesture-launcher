@@ -124,7 +124,7 @@ object AppRepository {
                         packageName = activity.componentName.packageName,
                         componentName = activity.componentName,
                         user = activity.user,
-                        tag = AppTagStore.tag(context, activity.componentName)
+                        tag = AppTagStore.tag(context, activity.componentName.packageName)
                     )
                 }.sortedWith(DRAWER_ORDER)
             // Left needing a scan, not cached, when the list changed under us — the caller's

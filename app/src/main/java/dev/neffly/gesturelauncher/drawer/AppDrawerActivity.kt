@@ -406,16 +406,16 @@ class AppDrawerActivity : BaseActivity() {
             .setPositiveButton(R.string.save) { _, _ ->
                 val text = input.text?.toString()?.trim().orEmpty()
                 if (text.isEmpty()) {
-                    AppTagStore.clearTag(this, app.componentName)
+                    AppTagStore.clearTag(this, app.packageName)
                 } else {
-                    AppTagStore.setTag(this, app.componentName, text)
+                    AppTagStore.setTag(this, app.packageName, text)
                 }
                 AppRepository.invalidate()
             }
             .setNegativeButton(R.string.cancel, null)
         if (app.tag != null) {
             builder.setNeutralButton(R.string.remove_alias) { _, _ ->
-                AppTagStore.clearTag(this, app.componentName)
+                AppTagStore.clearTag(this, app.packageName)
                 AppRepository.invalidate()
             }
         }

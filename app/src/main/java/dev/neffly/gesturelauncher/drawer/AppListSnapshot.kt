@@ -85,7 +85,7 @@ object AppListSnapshot {
                 user = user,
                 // Read live rather than persisted, so editing an alias never has to rewrite the
                 // snapshot — AppTagStore is a SharedPreferences map lookup once the file is loaded.
-                tag = AppTagStore.tag(context, component)
+                tag = AppTagStore.tag(context, component.packageName)
             )
         }
     }
