@@ -132,6 +132,8 @@ class GestureTrainingActivity : BaseActivity() {
                     ?: when (pendingAction) {
                         GestureAction.OPEN_DRAWER -> getString(R.string.gesture_action_open_drawer)
                         GestureAction.QUICK_SEARCH -> getString(R.string.gesture_action_quick_search)
+                        GestureAction.NOTIFICATIONS -> getString(R.string.gesture_action_notifications)
+                        GestureAction.QUICK_SETTINGS -> getString(R.string.gesture_action_quick_settings)
                         else -> pendingUrl.orEmpty()
                     }
                 showDraw()

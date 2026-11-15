@@ -68,7 +68,8 @@ class GestureSettingsActivity : BaseActivity() {
                     startActivity(GestureUrlEntryActivity.editIntent(this@GestureSettingsActivity, mapping.id))
                 })
                 // Nothing to change beyond redrawing the shape.
-                GestureAction.OPEN_DRAWER, GestureAction.QUICK_SEARCH -> {}
+                GestureAction.OPEN_DRAWER, GestureAction.QUICK_SEARCH,
+                GestureAction.NOTIFICATIONS, GestureAction.QUICK_SETTINGS -> {}
             }
             add(GlassMenu.item(anchor, R.string.delete, R.drawable.ic_delete, destructive = true) {
                 deleteWithUndo(mapping)

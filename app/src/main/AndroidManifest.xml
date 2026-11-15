@@ -13,6 +13,10 @@
          service, never to this app, which only receives the text. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Gestures that pull down the notification shade or quick settings (normal, auto-granted) —
+         see launch/SystemPanels. -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
     <!-- Required since API 26 for the drawer's long-press "Uninstall" (ACTION_DELETE) to work. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 

@@ -10,6 +10,7 @@ import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.launch.SystemPanels
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
@@ -39,6 +40,12 @@ object GestureActionDispatcher {
                 context.startActivity(QuickSearchActivity.intent(context))
                 // The card animates its own fade/rise — same reasoning as the drawer above.
                 (context as? Activity)?.overrideNextTransition()
+            }
+            GestureAction.NOTIFICATIONS -> if (!SystemPanels.expandNotifications(context)) {
+                Toast.makeText(context, R.string.system_panel_failed, Toast.LENGTH_SHORT).show()
+            }
+            GestureAction.QUICK_SETTINGS -> if (!SystemPanels.expandQuickSettings(context)) {
+                Toast.makeText(context, R.string.system_panel_failed, Toast.LENGTH_SHORT).show()
             }
             GestureAction.OPEN_URL -> {
                 val url = mapping.url

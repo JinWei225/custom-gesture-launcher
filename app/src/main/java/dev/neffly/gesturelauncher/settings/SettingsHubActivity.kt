@@ -48,6 +48,8 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var gesturesSubtitle: TextView
     private lateinit var autoKeyboardSwitch: MaterialSwitch
     private lateinit var hapticFeedbackSwitch: MaterialSwitch
+    private lateinit var widgetsPageSwitch: MaterialSwitch
+    private lateinit var notesPageSwitch: MaterialSwitch
     private lateinit var searchSideSubtitle: TextView
     private lateinit var themeSubtitle: TextView
     private lateinit var batterySubtitle: TextView
@@ -113,6 +115,20 @@ class SettingsHubActivity : SlidePanelActivity() {
             val enabled = !Prefs.autoKeyboard(this)
             Prefs.setAutoKeyboard(this, enabled)
             autoKeyboardSwitch.isChecked = enabled
+        }
+
+        // The home screen rebuilds itself with the new set of pages when it next comes back.
+        widgetsPageSwitch = findViewById(R.id.widgetsPageSwitch)
+        findViewById<View>(R.id.widgetsPageRow).setOnClickListener {
+            val enabled = !Prefs.widgetsPage(this)
+            Prefs.setWidgetsPage(this, enabled)
+            widgetsPageSwitch.isChecked = enabled
+        }
+        notesPageSwitch = findViewById(R.id.notesPageSwitch)
+        findViewById<View>(R.id.notesPageRow).setOnClickListener {
+            val enabled = !Prefs.notesPage(this)
+            Prefs.setNotesPage(this, enabled)
+            notesPageSwitch.isChecked = enabled
         }
 
         hapticFeedbackSwitch = findViewById(R.id.hapticFeedbackSwitch)
@@ -190,6 +206,8 @@ class SettingsHubActivity : SlidePanelActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
+        widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
+        notesPageSwitch.isChecked = Prefs.notesPage(this)
         searchSideSubtitle.setText(searchSideLabel(Prefs.searchOnLeft(this)))
         themeSubtitle.setText(themeLabelFor(Prefs.themeMode(this)))
         // Re-read on every resume, not just at create: the usual flow is tapping the row, changing
@@ -496,6 +514,8 @@ class SettingsHubActivity : SlidePanelActivity() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
+        widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
+        notesPageSwitch.isChecked = Prefs.notesPage(this)
         searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
         showVoiceWords()
 

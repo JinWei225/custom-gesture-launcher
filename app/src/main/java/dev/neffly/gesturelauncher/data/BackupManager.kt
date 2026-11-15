@@ -42,6 +42,8 @@ data class BackupData(
     val searchEngine: String = WebSearch.Engine.DEFAULT.name,
     /** Voice search's own vocabulary, as [Prefs.voiceWords] keeps it. */
     val voiceWords: List<String> = emptyList(),
+    val widgetsPage: Boolean = true,
+    val notesPage: Boolean = true,
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
      *  something to the device that allocated it. */
     val notes: List<Note> = emptyList()
@@ -73,7 +75,9 @@ object BackupManager {
         fontScale = Prefs.fontScale(context),
         searchOnLeft = Prefs.searchOnLeft(context),
         searchEngine = Prefs.searchEngine(context).name,
-        voiceWords = Prefs.voiceWords(context)
+        voiceWords = Prefs.voiceWords(context),
+        widgetsPage = Prefs.widgetsPage(context),
+        notesPage = Prefs.notesPage(context)
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -113,6 +117,8 @@ object BackupManager {
         Prefs.setFontScale(context, data.fontScale)
         Prefs.setSearchOnLeft(context, data.searchOnLeft)
         Prefs.setSearchEngine(context, WebSearch.Engine.fromName(data.searchEngine))
+        Prefs.setWidgetsPage(context, data.widgetsPage)
+        Prefs.setNotesPage(context, data.notesPage)
         // Theme and font size are written here but not *applied* here — this is the data layer,
         // and making them visible means recreating activities. The importing screen does that once
         // the user has read the summary; see SettingsHubActivity.applyImport.

@@ -51,6 +51,11 @@
     <string name="search_time_hours_minutes">%1$d h %2$d min</string>
     <string name="search_time_seconds">%1$d s</string>
     <string name="search_section_actions">Actions</string>
+    <string name="gesture_action_notifications">Open notifications</string>
+    <string name="gesture_action_notifications_subtitle">Pull down the notification shade</string>
+    <string name="gesture_action_quick_settings">Open quick settings</string>
+    <string name="gesture_action_quick_settings_subtitle">Pull down the quick settings panel</string>
+    <string name="system_panel_failed">This phone doesn\'t let the launcher open that panel</string>
     <string name="search_ask">Ask %1$s</string>
     <string name="search_ask_prompt">“%1$s” — opens a new chat, ready to send</string>
     <string name="search_ask_hint">Add your question, or tap to open a new chat</string>
@@ -248,6 +253,10 @@
     <string name="voice_words_none">Names and terms voice search keeps mishearing</string>
     <string name="voice_words_hint">e.g. Ollama</string>
     <string name="voice_words_cleared">Voice words cleared</string>
+    <string name="widgets_page">Widgets page</string>
+    <string name="widgets_page_subtitle">A page of widgets to the left of the home screen</string>
+    <string name="notes_page">Notes page</string>
+    <string name="notes_page_subtitle">A page of quick notes to the right of the home screen</string>
     <plurals name="voice_words_saved">
         <item quantity="one">Saved %d voice word</item>
         <item quantity="other">Saved %d voice words</item>

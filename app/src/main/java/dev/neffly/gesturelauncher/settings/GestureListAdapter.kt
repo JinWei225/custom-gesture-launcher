@@ -63,6 +63,8 @@ class GestureListAdapter(
             GestureAction.OPEN_DRAWER -> bindBuiltInIcon(holder, R.drawable.ic_apps)
             GestureAction.OPEN_URL -> bindBuiltInIcon(holder, R.drawable.ic_link)
             GestureAction.QUICK_SEARCH -> bindBuiltInIcon(holder, R.drawable.ic_search)
+            GestureAction.NOTIFICATIONS -> bindBuiltInIcon(holder, R.drawable.ic_notifications)
+            GestureAction.QUICK_SETTINGS -> bindBuiltInIcon(holder, R.drawable.ic_quick_settings)
         }
     }
 

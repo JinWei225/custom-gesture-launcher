@@ -25,6 +25,8 @@ object Prefs {
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
     private const val KEY_VOICE_WORDS = "voice_words"
+    private const val KEY_WIDGETS_PAGE = "widgets_page"
+    private const val KEY_NOTES_PAGE = "notes_page"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -151,6 +153,20 @@ object Prefs {
 
     fun setSearchOnLeft(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_SEARCH_ON_LEFT, value).apply()
+    }
+
+    /** Whether the home screen has its widgets page, to the left of home (default ON). */
+    fun widgetsPage(context: Context): Boolean = prefs(context).getBoolean(KEY_WIDGETS_PAGE, true)
+
+    fun setWidgetsPage(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WIDGETS_PAGE, value).apply()
+    }
+
+    /** Whether the home screen has its notes page, to the right of home (default ON). */
+    fun notesPage(context: Context): Boolean = prefs(context).getBoolean(KEY_NOTES_PAGE, true)
+
+    fun setNotesPage(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_NOTES_PAGE, value).apply()
     }
 
     /** Words and names the user has told voice search to listen for — see

@@ -38,6 +38,12 @@ class GestureActionChooserActivity : SlidePanelActivity() {
         findViewById<View>(R.id.quickSearchRow).setOnClickListener {
             goTo(GestureTrainingActivity.newGestureIntent(this, GestureAction.QUICK_SEARCH))
         }
+        findViewById<View>(R.id.notificationsRow).setOnClickListener {
+            goTo(GestureTrainingActivity.newGestureIntent(this, GestureAction.NOTIFICATIONS))
+        }
+        findViewById<View>(R.id.quickSettingsRow).setOnClickListener {
+            goTo(GestureTrainingActivity.newGestureIntent(this, GestureAction.QUICK_SETTINGS))
+        }
         findViewById<View>(R.id.openUrlRow).setOnClickListener {
             goTo(Intent(this, GestureUrlEntryActivity::class.java))
         }
