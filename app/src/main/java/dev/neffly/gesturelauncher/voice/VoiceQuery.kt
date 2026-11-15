@@ -1,6 +1,8 @@
 package dev.neffly.gesturelauncher.voice
 
 import dev.neffly.gesturelauncher.drawer.AppInfo
+import dev.neffly.gesturelauncher.search.Assistants
+import dev.neffly.gesturelauncher.search.Command
 import dev.neffly.gesturelauncher.search.SearchScoring
 
 /**
@@ -29,6 +31,9 @@ object VoiceQuery {
     sealed interface Resolution {
         data class Launch(val app: AppInfo) : Resolution
         data class Search(val query: String) : Resolution
+
+        /** A request that names what to do as plainly as "open" does — see [resolve]. */
+        data class Perform(val command: Command) : Resolution
     }
 
     /**
@@ -51,7 +56,14 @@ object VoiceQuery {
             if (matches.size == 1) return Resolution.Launch(matches.single())
             if (matches.size > 1) return Resolution.Search(s.query)
         }
-        return Resolution.Search(spoken.first().query)
+        // "Ask Claude …" names the app as plainly as "open" does, and opening it only types the
+        // prompt — sending it is still the user's tap — so it goes straight there. It needs one
+        // assistant: named, or the only one installed.
+        val best = spoken.first().query
+        Assistants.parse(best, Assistants.installed(apps))?.singleOrNull()
+            ?.takeIf { it.prompt.isNotEmpty() }
+            ?.let { return Resolution.Perform(it) }
+        return Resolution.Search(best)
     }
 
     /**

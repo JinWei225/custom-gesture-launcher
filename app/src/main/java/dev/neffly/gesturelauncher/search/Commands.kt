@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.drawer.AppInfo
 import java.text.Normalizer
 import java.time.Clock
 import java.time.DayOfWeek
@@ -50,6 +51,9 @@ sealed class Command {
 
     /** `map petrol station near me`. */
     data class Map(val query: String) : Command()
+
+    /** `ask Claude how tall is K2` — read by [Assistants], which knows which apps are assistants. */
+    data class Ask(val prompt: String, val assistant: AppInfo) : Command()
 }
 
 /**
@@ -171,6 +175,7 @@ object Commands {
         is Command.Event -> command.title.ifEmpty { context.getString(R.string.search_event_new) }
         is Command.Web -> command.query.ifEmpty { context.getString(Prefs.searchEngine(context).label) }
         is Command.Map -> command.query.ifEmpty { context.getString(R.string.search_map) }
+        is Command.Ask -> context.getString(R.string.search_ask, command.assistant.label)
     }
 
     /** The row's subtitle: the rest of the reading, or, with nothing read yet, what to type. */
@@ -189,6 +194,9 @@ object Commands {
         is Command.Map -> context.getString(
             if (command.query.isEmpty()) R.string.search_map_hint else R.string.search_map_subtitle
         )
+        is Command.Ask ->
+            if (command.prompt.isEmpty()) context.getString(R.string.search_ask_hint)
+            else context.getString(R.string.search_ask_prompt, command.prompt)
     }
 
     private fun eventDetail(context: Context, event: Command.Event): String {
@@ -248,6 +256,7 @@ object Commands {
         is Command.Event -> R.string.calendar_app_missing
         is Command.Web -> R.string.web_search_failed
         is Command.Map -> R.string.map_search_failed
+        is Command.Ask -> R.string.ask_failed
     }
 
     /**
@@ -295,6 +304,7 @@ object Commands {
             // alone, so it opens there directly instead of through a chooser on a phone with
             // Waze installed as well, and it still works in a browser where Maps is absent.
             is Command.Map -> Intent(Intent.ACTION_VIEW, Uri.parse(MAPS_SEARCH + Uri.encode(command.query)))
+            is Command.Ask -> Assistants.intent(command)
         }
         return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

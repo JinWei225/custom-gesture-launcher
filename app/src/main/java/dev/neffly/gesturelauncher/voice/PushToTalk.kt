@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.Commands
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
@@ -35,6 +36,7 @@ class PushToTalk(private val activity: ComponentActivity, private val caption: T
             val apps = AppRepository.cachedOrPrime(activity)
             when (val resolved = VoiceQuery.resolve(candidates, apps, Prefs.voiceWords(activity))) {
                 is VoiceQuery.Resolution.Launch -> AppRepository.launch(activity, resolved.app)
+                is VoiceQuery.Resolution.Perform -> Commands.open(activity, resolved.command)
                 is VoiceQuery.Resolution.Search -> {
                     activity.startActivity(QuickSearchActivity.intent(activity, resolved.query))
                     activity.overrideNextTransition()

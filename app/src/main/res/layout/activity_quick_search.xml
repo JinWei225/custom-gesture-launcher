@@ -139,6 +139,13 @@
                     android:src="@drawable/ic_web"
                     android:tooltipText="@string/quick_fill_web" />
 
+                <ImageButton
+                    android:id="@+id/quickFillAsk"
+                    style="@style/Widget.GestureLauncher.QuickFill"
+                    android:contentDescription="@string/quick_fill_ask"
+                    android:src="@drawable/ic_assistant"
+                    android:tooltipText="@string/quick_fill_ask" />
+
             </LinearLayout>
 
             <!-- Height ceiling is set in code from the space left above the keyboard; beyond it

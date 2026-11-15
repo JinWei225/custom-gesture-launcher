@@ -39,12 +39,15 @@ object SearchEngine {
             SearchResult.Time(TimeZones.title(context, it), TimeZones.detail(context, it))
         }
 
-    /** The action row, when the query starts with a command keyword. Untoggled, as above: the
-     *  keyword is the opt-in, and nothing happens until the row is tapped. */
-    fun command(context: Context, query: String): SearchResult.Action? =
-        Commands.parse(query)?.let {
-            SearchResult.Action(it, Commands.title(context, it), Commands.detail(context, it))
-        }
+    /** The action rows, when the query starts with a command keyword. Untoggled, as above: the
+     *  keyword is the opt-in, and nothing happens until a row is tapped. `ask` with no app named
+     *  has a row per installed assistant, so there can be several. */
+    fun commands(context: Context, query: String, apps: List<AppInfo>): List<SearchResult.Action> {
+        val commands: List<Command> = Commands.parse(query)?.let { listOf(it) }
+            ?: Assistants.parse(query, Assistants.installed(apps))
+            ?: return emptyList()
+        return commands.map { SearchResult.Action(it, Commands.title(context, it), Commands.detail(context, it)) }
+    }
 
     private const val MIN_SETTINGS_QUERY = 3
     private const val SETTINGS_KEYWORDS = "launcher settings"

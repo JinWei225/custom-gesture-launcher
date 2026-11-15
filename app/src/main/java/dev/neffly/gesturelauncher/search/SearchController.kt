@@ -36,7 +36,7 @@ class SearchController(
         val results = ArrayList<SearchResult>()
         // Pinned above everything: when the query is a sum, the answer is the whole reason it was
         // typed.
-        SearchEngine.command(context, query)?.let { results += it }
+        results += SearchEngine.commands(context, query, apps)
         SearchEngine.calculation(query)?.let { results += it }
         SearchEngine.time(context, query)?.let { results += it }
         results += SearchEngine.apps(apps, query)

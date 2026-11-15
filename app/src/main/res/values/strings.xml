@@ -51,6 +51,11 @@
     <string name="search_time_hours_minutes">%1$d h %2$d min</string>
     <string name="search_time_seconds">%1$d s</string>
     <string name="search_section_actions">Actions</string>
+    <string name="search_ask">Ask %1$s</string>
+    <string name="search_ask_prompt">“%1$s” — opens a new chat, ready to send</string>
+    <string name="search_ask_hint">Add your question, or tap to open a new chat</string>
+    <string name="ask_failed">Couldn\'t open that app</string>
+    <string name="quick_fill_ask">Ask AI</string>
     <string name="search_alarm">Alarm</string>
     <string name="search_alarm_at">Alarm at %1$s</string>
     <string name="search_alarm_hint">Add a time, e.g. 7:30am weekdays gym</string>

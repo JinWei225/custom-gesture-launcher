@@ -25,6 +25,10 @@ persistence, min SDK 26 (Android 8.0+).
   `event`, `timer`, `alarm`, `web` and `map` followed by a space create that thing in the app that
   owns it. Enter opens the top result whatever kind it is. The `web` command searches on the
   engine picked in settings (Google, Bing, DuckDuckGo, Brave Search or Ecosia).
+- **Ask an AI app**: `ask Claude how tall is K2` opens a new chat in that app with the question
+  typed in and not sent; `ask …` with no app named offers every installed assistant (Claude,
+  Gemini, ChatGPT, Copilot, Perplexity, DeepSeek, Grok). By voice, "ask Claude …" opens it
+  straight away.
 - **Answers in the search box**: a sum (`12*12`, `20% of 50`) or a time-zone question (`time in
   tokyo`, `3pm est to tokyo`, `tokyo to london`) is answered in a row pinned above the results;
   tap it to copy. Zones can be named by city, country or abbreviation, straight from the

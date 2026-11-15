@@ -274,6 +274,7 @@ class AppListAdapter(
                         is Command.Event -> R.drawable.ic_event
                         is Command.Web -> if (action.command.url != null) R.drawable.ic_link else R.drawable.ic_web
                         is Command.Map -> R.drawable.ic_place
+                        is Command.Ask -> R.drawable.ic_assistant
                     }
                 )
                 holder.title.text = action.title

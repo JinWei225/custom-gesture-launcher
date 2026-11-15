@@ -177,7 +177,8 @@ class QuickSearchActivity : BaseActivity() {
             R.id.quickFillEvent to "event ",
             R.id.quickFillTimer to "timer ",
             R.id.quickFillAlarm to "alarm ",
-            R.id.quickFillWeb to "web "
+            R.id.quickFillWeb to "web ",
+            R.id.quickFillAsk to "ask "
         ).forEach { (id, keyword) ->
             findViewById<View>(id).setOnClickListener {
                 searchInput.setText(keyword)
@@ -351,6 +352,10 @@ class QuickSearchActivity : BaseActivity() {
                     finish()
                 }
                 is VoiceQuery.Resolution.Search -> showSpoken(resolved.query)
+                is VoiceQuery.Resolution.Perform -> {
+                    Commands.open(this@QuickSearchActivity, resolved.command)
+                    finish()
+                }
             }
         }
 
