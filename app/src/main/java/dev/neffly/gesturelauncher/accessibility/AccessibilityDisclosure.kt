@@ -7,8 +7,8 @@ import dev.neffly.gesturelauncher.settings.openAccessibilitySettings
 import dev.neffly.gesturelauncher.ui.showWithFont
 
 /**
- * The one way into the accessibility screen for [LauncherAccessibilityService]: the settings hub's
- * keyboard row and the dock's double-tap lock both come through here.
+ * The one way into the accessibility screen for [LauncherAccessibilityService], from the settings
+ * hub's keyboard row.
  *
  * Google Play requires an app that isn't an accessibility tool to say, in the app and before the
  * user is sent to grant the access, what the service touches and what it does with it, and to get

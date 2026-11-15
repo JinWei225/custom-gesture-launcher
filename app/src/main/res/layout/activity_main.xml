@@ -15,7 +15,7 @@
 
     <!-- Kept outside the pager and the canvas so a recognizer crash can't remove it. A strip
          the width of the dock showing the page dots at its centre — a drag on it turns the pages
-         and a double tap locks the screen (see DockStrip) — and over it one search disc at
+         and a hold is push-to-talk (see DockStrip) — and over it one search disc at
          whichever corner the user chose, which takes its own touches. The corner is set in code
          from the setting; the bottom margin too, above whatever navigation bar the device has.
          The strip stays on every page; the search disc belongs to the home page and fades out
@@ -43,5 +43,26 @@
             android:src="@drawable/ic_search"
             app:tint="@color/wallpaper_overlay_text" />
     </FrameLayout>
+
+    <!-- What push-to-talk is hearing, above the dock while the strip is held. Bottom margin set in
+         code with the dock's. One line, cut at the start, so the latest words are the ones shown. -->
+    <TextView
+        android:id="@+id/voiceCaption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:background="@drawable/bg_glass_pill"
+        android:drawablePadding="8dp"
+        android:ellipsize="start"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="10dp"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_mic"
+        app:drawableTint="@color/wallpaper_overlay_text" />
 
 </FrameLayout>

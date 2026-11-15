@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.BackupData
 import dev.neffly.gesturelauncher.data.BackupManager
@@ -53,6 +54,7 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var fontSubtitle: TextView
     private lateinit var fontScaleSubtitle: TextView
     private lateinit var searchEngineSubtitle: TextView
+    private lateinit var voiceWordsSubtitle: TextView
     private lateinit var quickSearchSwitch: MaterialSwitch
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
@@ -132,6 +134,9 @@ class SettingsHubActivity : SlidePanelActivity() {
         findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
 
         searchEngineSubtitle = findViewById(R.id.searchEngineSubtitle)
+        voiceWordsSubtitle = findViewById(R.id.voiceWordsSubtitle)
+        findViewById<View>(R.id.voiceWordsRow).setOnClickListener { showVoiceWordsDialog() }
+        showVoiceWords()
         findViewById<View>(R.id.searchEngineRow).setOnClickListener { showSearchEngineDialog() }
 
         quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
@@ -216,6 +221,33 @@ class SettingsHubActivity : SlidePanelActivity() {
                 dialog.dismiss()
             }
             .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
+    }
+
+    /** The words themselves, comma-separated, or what the row is for while there are none. */
+    private fun showVoiceWords() {
+        val words = Prefs.voiceWords(this)
+        voiceWordsSubtitle.text =
+            if (words.isEmpty()) getString(R.string.voice_words_none) else words.joinToString(", ")
+    }
+
+    private fun showVoiceWordsDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_voice_words, null)
+        val input = view.findViewById<TextInputEditText>(R.id.voiceWordsInput)
+        input.setText(Prefs.voiceWords(this).joinToString("\n"))
+        input.setSelection(input.length())
+        AlertDialog.Builder(this)
+            .setTitle(R.string.voice_words)
+            .setView(view)
+            .setPositiveButton(R.string.save) { _, _ ->
+                Prefs.setVoiceWords(this, input.text?.toString().orEmpty().lines())
+                showVoiceWords()
+                val count = Prefs.voiceWords(this).size
+                val message = if (count == 0) getString(R.string.voice_words_cleared)
+                else resources.getQuantityString(R.plurals.voice_words_saved, count, count)
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
             .showWithFont()
     }
 
@@ -465,6 +497,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
         searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
+        showVoiceWords()
 
         var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
         if (result.missingApps.isNotEmpty()) {

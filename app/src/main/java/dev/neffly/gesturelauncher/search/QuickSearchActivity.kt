@@ -1,16 +1,25 @@
 package dev.neffly.gesturelauncher.search
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,6 +45,8 @@ import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
 import dev.neffly.gesturelauncher.ui.SwipeToFloat
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
+import dev.neffly.gesturelauncher.voice.VoiceInput
+import dev.neffly.gesturelauncher.voice.VoiceQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -54,6 +65,11 @@ import kotlinx.coroutines.withContext
  *
  * Results come from the same [SearchController] the app drawer uses, so ranking, aliases and the
  * command rows behave identically in both places.
+ *
+ * The mic beside the field types by voice: what is heard fills the field as it is said, so the
+ * results follow along, and "open <app>" launches the app outright (see [VoiceQuery]). The home
+ * screen's push-to-talk opens this window with what it heard as the query — [EXTRA_QUERY]. Opened
+ * by the power button, the window starts listening by itself.
  */
 class QuickSearchActivity : BaseActivity() {
 
@@ -67,8 +83,33 @@ class QuickSearchActivity : BaseActivity() {
     private lateinit var quickFillRow: View
     private lateinit var adapter: AppListAdapter
     private lateinit var search: SearchController
+    private lateinit var voiceButton: ImageButton
+    private lateinit var voice: VoiceInput
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val restoreHint = Runnable { searchInput.setHint(R.string.search_apps) }
+
+    /** The mic was pressed to start this session and is still held — see [setUpVoice]. */
+    private var voiceHeld = false
+    private var voicePressedAt = 0L
+
+    /** The permission dialog is up. On some ROMs it is a full activity that stops this one, and
+     *  this window closing itself in [onStop] would throw the answer away. */
+    private var awaitingMicPermission = false
+
+    private val requestMic =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            awaitingMicPermission = false
+            // The finger is long gone by now, so the session ends when the speaker goes quiet.
+            if (granted) startListening()
+            else Toast.makeText(this, R.string.voice_permission_denied, Toast.LENGTH_SHORT).show()
+        }
 
     private var renderedQuery: String? = null
+
+    /** Whether the query in the field found anything — the list is filled synchronously as the
+     *  text changes, so this is current straight after a setText. See [showSpoken]. */
+    private var hasResults = false
 
     /** Whether the user has dragged the list since the query last changed — see [renderResults]. */
     private var userScrolled = false
@@ -106,8 +147,11 @@ class QuickSearchActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The assistant role outlives the toggle — someone who turns the feature off but leaves us
-        // as their assistant must get their power button back, not an empty search bar.
-        if (!Prefs.quickSearchEnabled(this)) {
+        // as their assistant must get their power button back, not an empty search bar. A query
+        // from the home screen's push-to-talk is not that: the user just asked for it by voice,
+        // and this window is where its results are shown.
+        val voiceQuery = intent.getStringExtra(EXTRA_QUERY)
+        if (!Prefs.quickSearchEnabled(this) && voiceQuery == null) {
             finish()
             return
         }
@@ -193,11 +237,130 @@ class QuickSearchActivity : BaseActivity() {
             }
         }
 
+        voiceButton = findViewById(R.id.voiceButton)
+        voice = VoiceInput(this, voiceListener)
+        if (VoiceInput.isAvailable(this)) setUpVoice() else voiceButton.visibility = View.GONE
+
         positionCard()
         applyInsets()
         loadApps()
-        showKeyboard()
+        // Set after the apps are loaded, so the first results already include them. A spoken
+        // query is shown with its results in full view rather than under a keyboard nobody asked
+        // for; tapping the field brings the keyboard up as usual.
+        //
+        // The power button is the hands-free way in, so it opens listening rather than typing —
+        // once the microphone has been granted: a permission dialog on every power-button hold
+        // would be a toll on the people who type. The keyboard is a tap on the field away.
+        val listenOnOpen = intent.action == Intent.ACTION_ASSIST &&
+            voiceButton.isVisible && VoiceInput.hasPermission(this)
+        when {
+            voiceQuery != null -> showSpoken(voiceQuery)
+            listenOnOpen && savedInstanceState == null -> startListening()
+            else -> showKeyboard()
+        }
         if (savedInstanceState == null) animateIn()
+    }
+
+    /**
+     * Press and hold to talk, release to finish; or tap, speak, and let the recognizer notice the
+     * pause. Both are one gesture: a press starts the session, and its release only ends it if the
+     * press was long enough to be a hold. A press while a session is running ends that session.
+     *
+     * The click listener is the path for TalkBack, whose double-tap arrives as a click rather than
+     * as touches: it toggles. (Touches are consumed here, so a finger never also fires it — which
+     * is also why lint's performClick check is suppressed.)
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setUpVoice() {
+        // Going for the field means typing instead: the session would otherwise keep writing
+        // over what is typed. Returns false so the touch still focuses the field and brings up
+        // the keyboard.
+        searchInput.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN && voice.active) {
+                voice.cancel()
+                voiceIdle()
+            }
+            false
+        }
+        voiceButton.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    voicePressedAt = event.eventTime
+                    voiceHeld = if (voice.active) { voice.stop(); false } else startVoice()
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (voiceHeld && event.eventTime - voicePressedAt >= HOLD_MILLIS) voice.stop()
+                    voiceHeld = false
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    if (voiceHeld) voice.stop()
+                    voiceHeld = false
+                }
+            }
+            true
+        }
+        voiceButton.setOnClickListener { if (voice.active) voice.stop() else startVoice() }
+    }
+
+    private fun startListening() = voice.start(VoiceQuery.vocabulary(search.apps, Prefs.voiceWords(this)))
+
+    private fun voiceIdle() {
+        voiceButton.isActivated = false
+        searchInput.setHint(R.string.search_apps)
+    }
+
+    /**
+     * Puts spoken text in the field. Speech that finds nothing here — "weather tomorrow" — is
+     * almost always a question for the web, so it becomes a web search, whose row is then the one
+     * to tap; typed text is left alone, since there a miss is usually a typo.
+     */
+    private fun showSpoken(query: String) {
+        searchInput.setText(query)
+        if (!hasResults && query.isNotBlank()) searchInput.setText("web $query")
+        searchInput.setSelection(searchInput.length())
+    }
+
+    /** Starts listening, or asks for the microphone first; true when listening has started. */
+    private fun startVoice(): Boolean {
+        if (!VoiceInput.hasPermission(this)) {
+            awaitingMicPermission = true
+            requestMic.launch(Manifest.permission.RECORD_AUDIO)
+            return false
+        }
+        startListening()
+        return true
+    }
+
+    private val voiceListener = object : VoiceInput.Listener {
+        override fun onListening() {
+            handler.removeCallbacks(restoreHint)
+            voiceButton.isActivated = true
+            searchInput.setHint(R.string.voice_listening)
+        }
+
+        override fun onPartial(text: String) {
+            searchInput.setText(text)
+            searchInput.setSelection(text.length)
+        }
+
+        override fun onResult(candidates: List<String>) {
+            voiceIdle()
+            when (val resolved = VoiceQuery.resolve(candidates, search.apps, Prefs.voiceWords(this@QuickSearchActivity))) {
+                is VoiceQuery.Resolution.Launch -> {
+                    AppRepository.launch(this@QuickSearchActivity, resolved.app)
+                    finish()
+                }
+                is VoiceQuery.Resolution.Search -> showSpoken(resolved.query)
+            }
+        }
+
+        /** Said in the field's hint, where the answer would have appeared, for a moment. */
+        override fun onError(message: Int) {
+            voiceButton.isActivated = false
+            searchInput.setHint(message)
+            handler.removeCallbacks(restoreHint)
+            handler.postDelayed(restoreHint, ERROR_HINT_MILLIS)
+        }
     }
 
     /** Sits the card in the upper third, above where the keyboard will come up, and narrows it on
@@ -364,6 +527,7 @@ class QuickSearchActivity : BaseActivity() {
     private fun renderResults(query: String, results: List<SearchResult>) {
         if (renderedQuery != query) userScrolled = false
         renderedQuery = query
+        hasResults = results.isNotEmpty()
         adapter.submitResults(results) {
             if (!userScrolled) resultList.scrollToPosition(0)
             // The floor is measured off the rows themselves, so it can only be recomputed once
@@ -409,7 +573,14 @@ class QuickSearchActivity : BaseActivity() {
      *  stale query waiting behind the next app would be a surprise. */
     override fun onStop() {
         super.onStop()
-        if (!isFinishing) finish()
+        if (::voice.isInitialized) voice.cancel()
+        if (!isFinishing && !awaitingMicPermission) finish()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        if (::voice.isInitialized) voice.destroy()
+        super.onDestroy()
     }
 
     companion object {
@@ -465,9 +636,19 @@ class QuickSearchActivity : BaseActivity() {
 
         private fun entryOffsetPx(context: Context) = dp(context, 12)
 
-        /** Opens the floating search — used by the gesture dispatcher. */
-        fun intent(context: Context): Intent =
+        /** A press on the mic at least this long is a hold: releasing it ends the session. Shorter
+         *  is a tap, and the session runs on until the speaker goes quiet. */
+        private val HOLD_MILLIS = ViewConfiguration.getLongPressTimeout().toLong()
+
+        private const val ERROR_HINT_MILLIS = 2500L
+
+        /** Text to open the window with — what the home screen's push-to-talk heard. */
+        private const val EXTRA_QUERY = "dev.neffly.gesturelauncher.extra.QUERY"
+
+        /** Opens the floating search, with [query] already in the field when given. */
+        fun intent(context: Context, query: String? = null): Intent =
             Intent(context, QuickSearchActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .apply { if (query != null) putExtra(EXTRA_QUERY, query) }
     }
 }

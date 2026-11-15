@@ -10,20 +10,31 @@ import kotlin.math.abs
 
 /**
  * The blank part of the dock beside the search button. A drag there pulls the pages along with
- * the finger and lets go of them as a launcher does, and a double tap locks the screen.
+ * the finger and lets go of them as a launcher does, and touching and holding it is push-to-talk:
+ * [onHold] when the hold is recognised, [onRelease] when that finger comes up.
  *
  * The pages are moved through the pager's fake drag rather than by letting the pager take the
- * touch: the dock lies over the pager, not inside it, so the pager never sees these touches. (Lint wants a performClick behind a touch listener; a single tap does
- * nothing here, so there is no click to perform.)
+ * touch: the dock lies over the pager, not inside it, so the pager never sees these touches. (Lint
+ * wants a performClick behind a touch listener; a single tap does nothing here, so there is no
+ * click to perform.)
  */
 @SuppressLint("ClickableViewAccessibility")
-class DockStrip(strip: View, private val pager: ViewPager2, private val onDoubleTap: () -> Unit) {
+class DockStrip(
+    strip: View,
+    private val pager: ViewPager2,
+    private val onHold: () -> Unit,
+    private val onRelease: () -> Unit
+) {
 
     private var dragging = false
 
     /** Set once a touch has shown itself to be vertical: it is left alone for its whole life
      *  rather than being picked up as a page drag when it later wanders sideways. */
     private var vertical = false
+
+    /** The current touch became a hold. GestureDetector ignores movement from then on, so a hold
+     *  that drifts sideways while the user talks never turns into a page drag. */
+    private var holding = false
 
     private val detector = GestureDetector(strip.context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
@@ -49,10 +60,10 @@ class DockStrip(strip: View, private val pager: ViewPager2, private val onDouble
             return dragging
         }
 
-        override fun onDoubleTap(e: MotionEvent): Boolean {
-            strip.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-            onDoubleTap()
-            return true
+        override fun onLongPress(e: MotionEvent) {
+            holding = true
+            strip.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            onHold()
         }
     })
 
@@ -62,6 +73,10 @@ class DockStrip(strip: View, private val pager: ViewPager2, private val onDouble
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                 if (dragging) pager.endFakeDrag()
                 dragging = false
+                if (holding) {
+                    holding = false
+                    onRelease()
+                }
             }
             true
         }

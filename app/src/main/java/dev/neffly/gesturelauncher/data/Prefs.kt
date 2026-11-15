@@ -24,6 +24,7 @@ object Prefs {
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
+    private const val KEY_VOICE_WORDS = "voice_words"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -144,11 +145,21 @@ object Prefs {
     }
 
     /** Which corner of the home screen's dock the search button sits in (default right). The
-     *  strip that turns the pages and locks the screen takes the rest of the dock. */
+     *  strip that turns the pages and is push-to-talk takes the rest of the dock. */
     fun searchOnLeft(context: Context): Boolean =
         prefs(context).getBoolean(KEY_SEARCH_ON_LEFT, false)
 
     fun setSearchOnLeft(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_SEARCH_ON_LEFT, value).apply()
+    }
+
+    /** Words and names the user has told voice search to listen for — see
+     *  [dev.neffly.gesturelauncher.voice.VoiceQuery]. One per line in storage, in the user's order. */
+    fun voiceWords(context: Context): List<String> =
+        prefs(context).getString(KEY_VOICE_WORDS, null).orEmpty().lines().filter { it.isNotBlank() }
+
+    fun setVoiceWords(context: Context, words: List<String>) {
+        val clean = words.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        prefs(context).edit().putString(KEY_VOICE_WORDS, clean.joinToString("\n")).apply()
     }
 }

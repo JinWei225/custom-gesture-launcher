@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick search's mic: the accent while it is listening, the field's icon colour otherwise. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/colorPrimary" android:state_activated="true" />
+    <item android:color="?attr/colorOnSurfaceVariant" />
+</selector>

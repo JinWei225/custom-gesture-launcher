@@ -32,6 +32,13 @@ persistence, min SDK 26 (Android 8.0+).
 - **Floating search over any app**: the same search box, reachable from anywhere on the phone by
   holding the power button (it registers as a digital assistant) or from a home-screen gesture.
   Buttons under the bar start an event, timer, alarm or web search in one tap.
+- **Voice search**: hold the strip beside the search button on the home screen and speak, or use
+  the mic in the floating search. "Open Spotify" opens the app straight away; anything else
+  ("set a timer for 10 minutes", "search for how tall is K2", "WhatsApp") lands in the search box
+  with its results ready to tap; speech that matches nothing becomes a web search. Holding the
+  power button opens the floating search already listening. App names and aliases are what it
+  listens for, and **Voice words** in settings add names it keeps mishearing. Speech is turned
+  into text by the phone's own speech recognition service.
 - **Swipe a result right** to open it in a floating window instead of full screen — apps, actions
   and web searches alike, on devices that support freeform windows.
 - Full **app drawer** with alphabet-index fast scroll, app aliases, and long-press

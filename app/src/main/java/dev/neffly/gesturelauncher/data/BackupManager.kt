@@ -40,6 +40,8 @@ data class BackupData(
     val searchOnLeft: Boolean = false,
     /** A [WebSearch.Engine] name, exactly as [Prefs.searchEngine] stores it. */
     val searchEngine: String = WebSearch.Engine.DEFAULT.name,
+    /** Voice search's own vocabulary, as [Prefs.voiceWords] keeps it. */
+    val voiceWords: List<String> = emptyList(),
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
      *  something to the device that allocated it. */
     val notes: List<Note> = emptyList()
@@ -70,7 +72,8 @@ object BackupManager {
         themeMode = Prefs.themeMode(context),
         fontScale = Prefs.fontScale(context),
         searchOnLeft = Prefs.searchOnLeft(context),
-        searchEngine = Prefs.searchEngine(context).name
+        searchEngine = Prefs.searchEngine(context).name,
+        voiceWords = Prefs.voiceWords(context)
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -90,6 +93,7 @@ object BackupManager {
             GestureStore.replaceAll(context, data.gestures)
             AppTagStore.replaceAll(context, data.appTags)
             NoteStore.save(context, data.notes)
+            Prefs.setVoiceWords(context, data.voiceWords)
         } else {
             // Upsert by id, not append: a gesture's id is its identity everywhere else (the home
             // screen looks mappings up by it, and update/remove key on it), so merging a backup
@@ -99,6 +103,7 @@ object BackupManager {
             data.gestures.forEach { GestureStore.update(context, it) }
             AppTagStore.mergeAll(context, data.appTags)
             NoteStore.merge(context, data.notes)
+            Prefs.setVoiceWords(context, Prefs.voiceWords(context) + data.voiceWords)
         }
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)

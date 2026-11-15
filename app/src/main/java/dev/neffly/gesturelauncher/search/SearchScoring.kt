@@ -14,8 +14,10 @@ import java.util.Locale
 internal object SearchScoring {
 
     /**
-     * Lowercase, fold compatibility forms, strip diacritics, trim — so "Café" matches "cafe" and
-     * the fullwidth "ＷｈａｔｓＡｐｐ" a CJK keyboard produces matches "whatsapp".
+     * Lowercase, fold compatibility forms, strip diacritics and invisible format characters, trim
+     * — so "Café" matches "cafe", the fullwidth "ＷｈａｔｓＡｐｐ" a CJK keyboard produces matches
+     * "whatsapp", and a label with a zero-width character hidden in it ("My\uFEFFPB", as one
+     * banking app ships) reads as the "mypb" it looks like.
      *
      * NFKD rather than NFD does both jobs in one pass: the compatibility decomposition maps the
      * fullwidth and halfwidth blocks onto plain ASCII on the way to separating a letter from its
@@ -24,7 +26,7 @@ internal object SearchScoring {
      */
     fun normalize(s: String): String =
         Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFKD)
-            .replace(COMBINING_MARKS, "")
+            .replace(INVISIBLE, "")
             .trim()
 
     /**
@@ -109,6 +111,7 @@ internal object SearchScoring {
     private val SEPARATORS = charArrayOf(' ', '-', '_', '.', '/')
     private const val NO_MATCH = Int.MIN_VALUE / 2
 
-    /** Every combining mark NFKD split off — compiled once, not per label per keystroke. */
-    private val COMBINING_MARKS = Regex("\\p{M}+")
+    /** Every combining mark NFKD split off, and format characters (zero-width spaces, joiners,
+     *  BOMs) — compiled once, not per label per keystroke. */
+    private val INVISIBLE = Regex("[\\p{M}\\p{Cf}]+")
 }

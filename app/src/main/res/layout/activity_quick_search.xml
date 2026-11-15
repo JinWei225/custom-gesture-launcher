@@ -52,12 +52,20 @@
             android:paddingTop="10dp"
             android:paddingBottom="10dp">
 
+            <!-- The field and, at its end, the mic: hold to talk, or tap and speak. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/searchLayout"
                 style="@style/Widget.GestureLauncher.SearchField"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="10dp"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
                 app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/ic_search_field">
 
@@ -78,6 +86,20 @@
                     android:inputType="text"
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <ImageButton
+                android:id="@+id/voiceButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/voice_input"
+                android:scaleType="center"
+                android:src="@drawable/ic_mic"
+                android:tooltipText="@string/voice_input"
+                app:tint="@color/voice_button_tint" />
+
+            </LinearLayout>
 
             <!-- Shortcuts that type a command keyword into the bar, so the action row and its
                  hint appear straight away. Only while the bar is empty — see renderResults. -->

@@ -8,6 +8,11 @@
          ACTION_SET_ALARM / ACTION_SET_TIMER, which require this (normal, auto-granted). -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
 
+    <!-- Voice search: push-to-talk on the home screen's dock and the mic in quick search. Asked
+         for the first time either is used; the audio goes to the device's speech recognition
+         service, never to this app, which only receives the text. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Required since API 26 for the drawer's long-press "Uninstall" (ACTION_DELETE) to work. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
@@ -29,6 +34,10 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.DELETE" />
+        </intent>
+        <!-- The speech recognition service; without this SpeechRecognizer reports none on 11+. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
         <!-- The default browser, for the search bar's web results. -->
         <intent>
@@ -160,10 +169,9 @@
         <!-- Alt+Space from a physical keyboard opens quick search.
 
              An accessibility service is the only route an ordinary app has to a key press aimed at
-             someone else's window, or to locking the screen — see LauncherAccessibilityService for
-             why nothing lighter works. It is off until the user enables it in the system's
-             accessibility screen; the settings hub's toggle governs the keyboard shortcut once
-             they have, and the home screen's lock button explains what it needs.
+             someone else's window — see LauncherAccessibilityService for why nothing lighter
+             works. It is off until the user enables it in the system's accessibility screen; the
+             settings hub's toggle governs the keyboard shortcut once they have.
 
              exported + the BIND_ACCESSIBILITY_SERVICE permission are both mandatory for the system
              to bind it: exported so AccessibilityManagerService can reach it, and the permission so

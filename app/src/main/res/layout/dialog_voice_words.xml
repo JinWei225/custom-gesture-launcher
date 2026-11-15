@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The voice words editor: one word or phrase per line. A plain multi-line field rather than a
+     list with add and delete buttons — the list is short, and a text field already does adding,
+     removing, fixing a spelling and pasting. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/voiceWordsLayout"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:helperText="@string/voice_words_helper"
+        app:helperTextEnabled="true">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/voiceWordsInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top|start"
+            android:hint="@string/voice_words_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="8"
+            android:minLines="4" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>

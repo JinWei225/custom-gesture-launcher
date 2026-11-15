@@ -46,8 +46,6 @@ import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
-import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
-import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.PageDotsView
@@ -66,6 +64,7 @@ import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
+import dev.neffly.gesturelauncher.voice.PushToTalk
 import java.util.Calendar
 import java.util.Date
 import kotlin.math.roundToInt
@@ -76,7 +75,7 @@ import kotlin.math.roundToInt
  * The middle page is home proper — a gesture canvas confined to its lower ~70%, with a
  * non-drawable clock + today's-events zone above. Left of it is the widgets page, right of it the
  * notes page. The dock is the search button in one corner and, beside it, a strip that turns the
- * pages when dragged and locks the screen when double-tapped ([DockStrip]); on the two side pages
+ * pages when dragged and is push-to-talk when held ([DockStrip], [PushToTalk]); on the two side pages
  * a swipe anywhere turns them, and on the home page a horizontal swipe is a stroke, so the pager
  * takes no touch there. The dock is rendered independently of the recognizer.
  */
@@ -88,6 +87,7 @@ class MainActivity : BaseActivity() {
     private lateinit var searchButton: ImageButton
     private lateinit var widgetPage: WidgetPage
     private lateinit var notesPage: NotesPage
+    private lateinit var pushToTalk: PushToTalk
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -210,6 +210,7 @@ class MainActivity : BaseActivity() {
         // fixed gap whichever navigation mode the device is in.
         val root = findViewById<View>(R.id.homeRoot)
         val notesDockClearance = notes.paddingBottom
+        val voiceCaption = findViewById<TextView>(R.id.voiceCaption)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
@@ -221,6 +222,9 @@ class MainActivity : BaseActivity() {
             if (params.bottomMargin != dockMargin) {
                 params.bottomMargin = dockMargin
                 dock.layoutParams = params
+                voiceCaption.updateLayoutParams<FrameLayout.LayoutParams> {
+                    bottomMargin = dockMargin + params.height + dp(VOICE_CAPTION_GAP_DP)
+                }
             }
             insets
         }
@@ -258,7 +262,8 @@ class MainActivity : BaseActivity() {
         dockStrip = findViewById(R.id.dockStrip)
         dockStrip.count = PAGE_COUNT
         dockStrip.position = PAGE_HOME.toFloat()
-        DockStrip(dockStrip, pager) { lockScreen() }
+        pushToTalk = PushToTalk(this, voiceCaption)
+        DockStrip(dockStrip, pager, onHold = pushToTalk::press, onRelease = pushToTalk::lift)
         placeSearch()
         showDock(pager.currentItem, animate = false)
 
@@ -269,7 +274,7 @@ class MainActivity : BaseActivity() {
      * Puts the search disc in the corner the setting names. The strip runs the whole dock
      * underneath it, so its dots stay centred on the screen — over the home button — whichever
      * corner the disc is in; the disc takes the touches that land on it, and the rest of the
-     * strip is the drag-and-double-tap area. Applied on every resume: the setting is changed on
+     * strip is the drag-and-hold area. Applied on every resume: the setting is changed on
      * a screen over this one.
      */
     private fun placeSearch() {
@@ -343,20 +348,6 @@ class MainActivity : BaseActivity() {
         widgetPage.onActivityResult(requestCode, resultCode)
     }
 
-    /**
-     * Locks through the accessibility service, and when that isn't possible says why rather than
-     * doing nothing: a double tap that silently fails reads as broken, where one that names the
-     * grant it needs — and opens the screen that gives it — is one tap from working.
-     */
-    private fun lockScreen() {
-        if (LauncherAccessibilityService.lockScreen()) return
-        if (!LauncherAccessibilityService.canLock) {
-            Toast.makeText(this, R.string.lock_unsupported, Toast.LENGTH_SHORT).show()
-            return
-        }
-        requestAccessibilityAccess()
-    }
-
 
     /**
      * Drops any touch feedback that the tap which left this screen froze part-way.
@@ -409,6 +400,7 @@ class MainActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
+        pushToTalk.cancel()
         widgetPage.onStop()
         unwatchCalendar()
         runCatching { unregisterReceiver(batteryReceiver) }
@@ -450,6 +442,12 @@ class MainActivity : BaseActivity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(heartbeat)
+    }
+
+    override fun onDestroy() {
+        // Safe mode finishes from onCreate before anything below was built.
+        if (::pushToTalk.isInitialized) pushToTalk.destroy()
+        super.onDestroy()
     }
 
     // --- gestures ---------------------------------------------------------
@@ -716,6 +714,8 @@ class MainActivity : BaseActivity() {
         private const val NOTES_KEYBOARD_GAP_DP = 8
         /** Between the gesture canvas and the dock: room for a sideways swipe to turn the pages. */
         private const val CANVAS_SWIPE_STRIP_DP = 32
+        /** Between the dock and the push-to-talk caption above it. */
+        private const val VOICE_CAPTION_GAP_DP = 12
 
         private const val EVENTS_TTL_MILLIS = 5 * 60_000L
         private const val CALENDAR_DEBOUNCE_MILLIS = 500L
