@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.data
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
 
 /**
@@ -21,6 +22,7 @@ object Prefs {
     private const val KEY_FONT_NAME = "font_name"
     private const val KEY_FONT_SCALE = "font_scale"
     private const val KEY_SEARCH_ENGINE = "search_engine"
+    private const val KEY_MAPS_APP = "maps_app"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
@@ -122,6 +124,15 @@ object Prefs {
 
     fun setSearchEngine(context: Context, value: WebSearch.Engine) {
         prefs(context).edit().putString(KEY_SEARCH_ENGINE, value.name).apply()
+    }
+
+    /** Where the `map` command searches and routes (default Google Maps) — see [MapSearch.app]
+     *  for what is used while the chosen app isn't installed. */
+    fun mapsApp(context: Context): MapSearch.App =
+        MapSearch.App.fromName(prefs(context).getString(KEY_MAPS_APP, null))
+
+    fun setMapsApp(context: Context, value: MapSearch.App) {
+        prefs(context).edit().putString(KEY_MAPS_APP, value.name).apply()
     }
 
     /** Master switch for the floating quick-search window (default OFF — turning it on is what

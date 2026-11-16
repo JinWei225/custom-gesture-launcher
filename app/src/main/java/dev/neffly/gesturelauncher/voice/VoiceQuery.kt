@@ -3,6 +3,7 @@ package dev.neffly.gesturelauncher.voice
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import dev.neffly.gesturelauncher.search.Assistants
 import dev.neffly.gesturelauncher.search.Command
+import dev.neffly.gesturelauncher.search.Commands
 import dev.neffly.gesturelauncher.search.SearchScoring
 
 /**
@@ -18,7 +19,8 @@ import dev.neffly.gesturelauncher.search.SearchScoring
  * app it is launched straight away. The match is deliberately stricter than the search bar's fuzzy
  * one — launching without a look at the results is only right when the name really is the app's —
  * and a name that fits several apps equally (two apps both called "Authenticator") is searched,
- * so the user picks.
+ * so the user picks. "Ask Claude …" and "navigate to …" go straight to their app too — see
+ * [resolve].
  *
  * Unmatched speech is still only searched here. Quick search, which can see whether the text found
  * anything, turns a search with no results into a web search — see QuickSearchActivity.
@@ -62,6 +64,11 @@ object VoiceQuery {
         val best = spoken.first().query
         Assistants.parse(best, Assistants.installed(apps))?.singleOrNull()
             ?.takeIf { it.prompt.isNotEmpty() }
+            ?.let { return Resolution.Perform(it) }
+        // "Navigate to …" is usually said while driving, so it goes straight to the maps app rather
+        // than waiting on a tap here. Home and work start the route, since the saved place is the
+        // one answer; any other place opens on the app's results, as its first may not be it.
+        (Commands.parse(best) as? Command.Map)?.takeIf { it.query.isNotEmpty() }
             ?.let { return Resolution.Perform(it) }
         return Resolution.Search(best)
     }
@@ -138,6 +145,8 @@ object VoiceQuery {
         Regex("""(?:set|add)\s+(?:an?\s+|the\s+)?alarm\s*(?:for\s+|at\s+)?(.*)""", RegexOption.IGNORE_CASE) to "alarm",
         Regex("""(?:add|create|new|schedule)\s+(?:an?\s+|new\s+)?event\s*(.*)""", RegexOption.IGNORE_CASE) to "event",
         Regex("""(?:search|google|look\s+up)\s+(?:the\s+web\s+)?(?:for\s+)?(.+)""", RegexOption.IGNORE_CASE) to "web",
-        Regex("""(?:navigate|directions|take\s+me)\s+to\s+(.+)""", RegexOption.IGNORE_CASE) to "map"
+        Regex("""(?:navigate|directions|take\s+me)\s+to\s+(.+)""", RegexOption.IGNORE_CASE) to "map",
+        // Home and work are often asked for without "to": "take me home", "go home".
+        Regex("""(?:navigate|directions|take\s+me|go)\s+((?:my\s+)?(?:home|work))""", RegexOption.IGNORE_CASE) to "map"
     )
 }

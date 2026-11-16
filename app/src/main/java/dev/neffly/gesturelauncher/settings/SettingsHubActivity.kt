@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
@@ -25,6 +26,7 @@ import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
@@ -63,6 +65,8 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var fontSubtitle: TextView
     private lateinit var fontScaleSubtitle: TextView
     private lateinit var searchEngineSubtitle: TextView
+    private lateinit var mapsAppRow: View
+    private lateinit var mapsAppSubtitle: TextView
     private lateinit var voiceWordsSubtitle: TextView
     private lateinit var quickSearchSwitch: MaterialSwitch
     private lateinit var quickSearchRow: View
@@ -164,6 +168,9 @@ class SettingsHubActivity : SlidePanelActivity() {
         findViewById<View>(R.id.voiceWordsRow).setOnClickListener { showVoiceWordsDialog() }
         showVoiceWords()
         findViewById<View>(R.id.searchEngineRow).setOnClickListener { showSearchEngineDialog() }
+        mapsAppRow = findViewById(R.id.mapsAppRow)
+        mapsAppSubtitle = findViewById(R.id.mapsAppSubtitle)
+        mapsAppRow.setOnClickListener { showMapsAppDialog() }
 
         quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
         quickSearchRow = findViewById(R.id.quickSearchRow)
@@ -278,6 +285,9 @@ class SettingsHubActivity : SlidePanelActivity() {
         fontSubtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
         fontScaleSubtitle.text = fontScaleLabel(Prefs.fontScale(this))
         searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
+        // Re-read on every resume: Waze can be installed or removed while this screen is away.
+        mapsAppRow.isVisible = MapSearch.isInstalled(this, MapSearch.App.WAZE)
+        mapsAppSubtitle.setText(MapSearch.app(this).label)
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
         keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)
@@ -296,6 +306,21 @@ class SettingsHubActivity : SlidePanelActivity() {
             .setSingleChoiceItems(labels, engines.indexOf(Prefs.searchEngine(this))) { dialog, which ->
                 Prefs.setSearchEngine(this, engines[which])
                 searchEngineSubtitle.setText(engines[which].label)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
+    }
+
+    /** Where the `map` command searches and routes. */
+    private fun showMapsAppDialog() {
+        val apps = MapSearch.App.entries
+        val labels = apps.map { getString(it.label) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_maps_app)
+            .setSingleChoiceItems(labels, apps.indexOf(MapSearch.app(this))) { dialog, which ->
+                Prefs.setMapsApp(this, apps[which])
+                mapsAppSubtitle.setText(apps[which].label)
                 dialog.dismiss()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -577,6 +602,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
         notesPageSwitch.isChecked = Prefs.notesPage(this)
         searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
+        mapsAppSubtitle.setText(MapSearch.app(this).label)
         showVoiceWords()
 
         var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)

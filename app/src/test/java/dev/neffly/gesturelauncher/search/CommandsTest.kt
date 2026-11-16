@@ -232,6 +232,10 @@ class CommandsTest {
         assertEquals(Command.Map("KLCC"), parse("maps KLCC"))
         assertEquals(Command.Map(""), parse("map "))
         assertNull(parse("mapping tools"))
+        assertEquals(MapSearch.Place.HOME, (parse("map home") as Command.Map).place)
+        assertEquals(MapSearch.Place.WORK, (parse("maps My Work") as Command.Map).place)
+        assertNull((parse("map home depot") as Command.Map).place)
+        assertNull((parse("map homework") as Command.Map).place)
         assertNull(parse("googled it"))
     }
 }

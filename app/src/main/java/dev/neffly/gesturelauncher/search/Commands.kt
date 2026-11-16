@@ -2,7 +2,6 @@ package dev.neffly.gesturelauncher.search
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.text.format.DateFormat
@@ -49,8 +48,10 @@ sealed class Command {
     /** `web how tall is k2`, `web docs.google.com`. [url] is set when the query is an address. */
     data class Web(val query: String, val url: String?) : Command()
 
-    /** `map petrol station near me`. */
-    data class Map(val query: String) : Command()
+    /** `map petrol station near me`, or `map home` for the route to a saved [place]. */
+    data class Map(val query: String) : Command() {
+        val place: MapSearch.Place? get() = MapSearch.place(query)
+    }
 
     /** `ask Claude how tall is K2` — read by [Assistants], which knows which apps are assistants. */
     data class Ask(val prompt: String, val assistant: AppInfo) : Command()
@@ -174,7 +175,8 @@ object Commands {
         } ?: context.getString(R.string.search_timer)
         is Command.Event -> command.title.ifEmpty { context.getString(R.string.search_event_new) }
         is Command.Web -> command.query.ifEmpty { context.getString(Prefs.searchEngine(context).label) }
-        is Command.Map -> command.query.ifEmpty { context.getString(R.string.search_map) }
+        is Command.Map -> command.place?.let { context.getString(it.label) }
+            ?: command.query.ifEmpty { context.getString(MapSearch.app(context).label) }
         is Command.Ask -> context.getString(R.string.search_ask, command.assistant.label)
     }
 
@@ -191,9 +193,12 @@ object Commands {
                 R.string.search_engine_subtitle, context.getString(Prefs.searchEngine(context).label)
             )
         }
-        is Command.Map -> context.getString(
-            if (command.query.isEmpty()) R.string.search_map_hint else R.string.search_map_subtitle
-        )
+        is Command.Map -> when {
+            command.query.isEmpty() -> context.getString(R.string.search_map_hint)
+            command.place != null ->
+                context.getString(R.string.search_map_route, context.getString(MapSearch.app(context).label))
+            else -> context.getString(R.string.search_map_subtitle, context.getString(MapSearch.app(context).label))
+        }
         is Command.Ask ->
             if (command.prompt.isEmpty()) context.getString(R.string.search_ask_hint)
             else context.getString(R.string.search_ask_prompt, command.prompt)
@@ -300,10 +305,7 @@ object Commands {
                 }
             }
             is Command.Web -> WebSearch.intentFor(Prefs.searchEngine(context), command.query, command.url)
-            // Google's documented Maps URL rather than a geo: URI. It is claimed by the Maps app
-            // alone, so it opens there directly instead of through a chooser on a phone with
-            // Waze installed as well, and it still works in a browser where Maps is absent.
-            is Command.Map -> Intent(Intent.ACTION_VIEW, Uri.parse(MAPS_SEARCH + Uri.encode(command.query)))
+            is Command.Map -> MapSearch.intentFor(MapSearch.app(context), command.query, command.place)
             is Command.Ask -> Assistants.intent(command)
         }
         return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -338,7 +340,6 @@ object Commands {
     }
 
     private const val MAX_LENGTH = 120
-    private const val MAPS_SEARCH = "https://www.google.com/maps/search/?api=1&query="
     private const val SEPARATOR = " · "
 
     private val WHITESPACE = Regex("""\s+""")

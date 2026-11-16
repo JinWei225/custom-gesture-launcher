@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
 import dev.neffly.gesturelauncher.notes.Note
 import dev.neffly.gesturelauncher.notes.NoteStore
+import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -40,6 +41,8 @@ data class BackupData(
     val searchOnLeft: Boolean = false,
     /** A [WebSearch.Engine] name, exactly as [Prefs.searchEngine] stores it. */
     val searchEngine: String = WebSearch.Engine.DEFAULT.name,
+    /** A [MapSearch.App] name, exactly as [Prefs.mapsApp] stores it. */
+    val mapsApp: String = MapSearch.App.DEFAULT.name,
     /** Voice search's own vocabulary, as [Prefs.voiceWords] keeps it. */
     val voiceWords: List<String> = emptyList(),
     val widgetsPage: Boolean = true,
@@ -75,6 +78,7 @@ object BackupManager {
         fontScale = Prefs.fontScale(context),
         searchOnLeft = Prefs.searchOnLeft(context),
         searchEngine = Prefs.searchEngine(context).name,
+        mapsApp = Prefs.mapsApp(context).name,
         voiceWords = Prefs.voiceWords(context),
         widgetsPage = Prefs.widgetsPage(context),
         notesPage = Prefs.notesPage(context)
@@ -117,6 +121,7 @@ object BackupManager {
         Prefs.setFontScale(context, data.fontScale)
         Prefs.setSearchOnLeft(context, data.searchOnLeft)
         Prefs.setSearchEngine(context, WebSearch.Engine.fromName(data.searchEngine))
+        Prefs.setMapsApp(context, MapSearch.App.fromName(data.mapsApp))
         Prefs.setWidgetsPage(context, data.widgetsPage)
         Prefs.setNotesPage(context, data.notesPage)
         // Theme and font size are written here but not *applied* here — this is the data layer,

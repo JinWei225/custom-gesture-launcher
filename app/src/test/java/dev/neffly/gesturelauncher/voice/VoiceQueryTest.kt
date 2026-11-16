@@ -3,6 +3,7 @@ package dev.neffly.gesturelauncher.voice
 import android.content.ComponentName
 import android.os.Process
 import dev.neffly.gesturelauncher.drawer.AppInfo
+import dev.neffly.gesturelauncher.search.Command
 import dev.neffly.gesturelauncher.voice.VoiceQuery.Resolution
 import dev.neffly.gesturelauncher.voice.VoiceQuery.Spoken
 import org.junit.Assert.assertEquals
@@ -157,5 +158,33 @@ class VoiceQueryTest {
     @Test
     fun `a command is searched so its row can be confirmed`() {
         assertEquals(Resolution.Search("timer 5 minutes"), VoiceQuery.resolve(listOf("set a timer for 5 minutes"), apps))
+    }
+
+    @Test
+    fun `going home or to work is read as the map command`() {
+        assertEquals("map home", VoiceQuery.read("Take me home").query)
+        assertEquals("map home", VoiceQuery.read("navigate to home").query)
+        assertEquals("map my work", VoiceQuery.read("Navigate to my work.").query)
+        assertEquals("map home", VoiceQuery.read("go home").query)
+    }
+
+    @Test
+    fun `a saved place is routed to straight away`() {
+        assertEquals(
+            Resolution.Perform(Command.Map("home")),
+            VoiceQuery.resolve(listOf("take me home"), apps)
+        )
+        assertEquals(
+            Resolution.Perform(Command.Map("work")),
+            VoiceQuery.resolve(listOf("navigate to work"), apps)
+        )
+    }
+
+    @Test
+    fun `any other place goes straight to the maps app`() {
+        assertEquals(
+            Resolution.Perform(Command.Map("home depot")),
+            VoiceQuery.resolve(listOf("navigate to home depot"), apps)
+        )
     }
 }

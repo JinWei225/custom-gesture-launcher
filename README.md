@@ -27,6 +27,9 @@ persistence, min SDK 26 (Android 8.0+).
   `event`, `timer`, `alarm`, `web` and `map` followed by a space create that thing in the app that
   owns it. Enter opens the top result whatever kind it is. The `web` command searches on the
   engine picked in settings (Google, Bing, DuckDuckGo, Brave Search or Ecosia).
+- **Maps**: `map` searches Google Maps, or Waze when it is installed and picked in settings.
+  `map home` and `map work` start the route to the places saved in that app. By voice it opens
+  straight away: "take me home" starts the route, "navigate to KLCC" opens the app's results.
 - **Ask an AI app**: `ask Claude how tall is K2` opens a new chat in that app with the question
   typed in and not sent; `ask …` with no app named offers every installed assistant (Claude,
   Gemini, ChatGPT, Copilot, Perplexity, DeepSeek, Grok). By voice, "ask Claude …" opens it

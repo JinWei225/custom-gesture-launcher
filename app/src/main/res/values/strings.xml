@@ -29,10 +29,12 @@
     <string name="search_engine_subtitle">Search %1$s in your browser</string>
     <string name="search_open_url_subtitle">Open this address in your browser</string>
     <string name="search_web_hint">Add what to search for, or an address to open</string>
-    <string name="search_map">Google Maps</string>
-    <string name="search_map_subtitle">Search Google Maps</string>
-    <string name="search_map_hint">Add a place, e.g. map petrol station</string>
-    <string name="map_search_failed">No app can open Google Maps</string>
+    <string name="search_map_subtitle">Search %1$s</string>
+    <string name="search_map_route">Directions in %1$s</string>
+    <string name="search_map_home">Home</string>
+    <string name="search_map_work">Work</string>
+    <string name="search_map_hint">Add a place, or home or work</string>
+    <string name="map_search_failed">Couldn\'t open the maps app</string>
     <string name="web_search_failed">No browser found</string>
     <string name="quick_search_no_results">No results</string>
     <string name="search_section_calculator">Calculator</string>
@@ -199,6 +201,9 @@
 
     <string name="section_search">Search</string>
     <string name="menu_search_engine">Search engine</string>
+    <string name="menu_maps_app">Maps app</string>
+    <string name="maps_google">Google Maps</string>
+    <string name="maps_waze">Waze</string>
     <string name="engine_google">Google</string>
     <string name="engine_bing">Bing</string>
     <string name="engine_duckduckgo">DuckDuckGo</string>
