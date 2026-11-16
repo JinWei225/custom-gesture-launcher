@@ -37,8 +37,13 @@ abstract class SlidePanelActivity : BaseActivity() {
             .translationX(0f)
             .setDuration(SLIDE_DURATION_MS)
             .setInterpolator(DecelerateInterpolator())
+            .withEndAction(::onSlidIn)
             .start()
     }
+
+    /** The panel has finished sliding in on a genuine open (not a recreate), so its views are
+     *  where they will stay — the moment to point at one of them. */
+    protected open fun onSlidIn() {}
 
     /** Slides the panel back out, then finishes for real. */
     override fun finish() {

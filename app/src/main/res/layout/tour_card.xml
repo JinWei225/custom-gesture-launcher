@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One pop-up of the tour, and of the hints that follow it (see onboarding/TourBalloon). Always
+     a dark card with white text, in both themes: most of these open straight over the wallpaper,
+     and the ones that open over settings read as the same guide rather than as a dialog. The card
+     (@drawable/bg_tour_card) is the balloon's background, set in code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="10dp">
+
+    <!-- "2 of 7"; gone on a hint that isn't part of the tour. -->
+    <TextView
+        android:id="@+id/tourCounter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:alpha="0.62"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/tourTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tourBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:alpha="0.86"
+        android:lineSpacingMultiplier="1.15"
+        android:textColor="@color/wallpaper_overlay_text"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical|end"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tourSecondary"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/wallpaper_overlay_text"
+            app:rippleColor="@color/wallpaper_glass_stroke" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tourPrimary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@android:color/black"
+            app:backgroundTint="@color/wallpaper_overlay_text" />
+    </LinearLayout>
+
+</LinearLayout>

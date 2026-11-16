@@ -2,8 +2,10 @@
 
 A minimal, speed-focused Android home-screen replacement. The home screen is your system wallpaper
 plus a clock, date, battery and today's calendar over an invisible full-screen canvas: draw a
-single-stroke letter/shape and the mapped app launches instantly. A small bottom-right button
-always opens search, or the full app drawer on a long press, as a guaranteed fallback.
+single-stroke letter/shape and the mapped app launches instantly. A search button in the dock (in
+whichever bottom corner you choose) always opens search on a tap, or the full app drawer on a long
+press, as a guaranteed fallback. A widgets page sits to the left of home and a notes page to the
+right.
 
 Built from [`gesture-launcher-spec.md`](gesture-launcher-spec.md). Kotlin, classic Views/XML, JSON
 persistence, min SDK 26 (Android 8.0+).
@@ -33,6 +35,11 @@ persistence, min SDK 26 (Android 8.0+).
   tokyo`, `3pm est to tokyo`, `tokyo to london`) is answered in a row pinned above the results;
   tap it to copy. Zones can be named by city, country or abbreviation, straight from the
   platform's tz database — nothing is fetched.
+- **Three home pages**: a **widgets** page to the left of home and a **notes** page to the right
+  (quick notes you type and send, kept by day). Either can be turned off in settings. Swipe along
+  the dock strip beside the search button to move between them; its dots show where you are.
+- **Clock, date and today's events** over the wallpaper: tap the time for your alarms, the date for
+  your calendar, and the events line to let the launcher read today's calendar (optional).
 - **Floating search over any app**: the same search box, reachable from anywhere on the phone by
   holding the power button (it registers as a digital assistant) or from a home-screen gesture.
   Buttons under the bar start an event, timer, alarm or web search in one tap.
@@ -43,6 +50,9 @@ persistence, min SDK 26 (Android 8.0+).
   power button opens the floating search already listening. App names and aliases are what it
   listens for, and **Voice words** in settings add names it keeps mishearing. Speech is turned
   into text by the phone's own speech recognition service.
+- **Alt + Space** on a physical keyboard opens the floating search from any app. Optional, and it
+  needs accessibility access, which the app asks for only after explaining exactly what it is used
+  for.
 - **Swipe a result right** to open it in a floating window instead of full screen — apps, actions
   and web searches alike, on devices that support freeform windows.
 - Full **app drawer** with alphabet-index fast scroll, app aliases, and long-press
@@ -58,7 +68,11 @@ persistence, min SDK 26 (Android 8.0+).
 - **Backup/restore** your gestures, app aliases, and settings — sensitivity, theme, font size and
   the search settings — to a single file. The imported font file itself can't travel in a JSON
   backup, so the font has to be re-picked on a new device.
-- Built-in safety nets: the drawer button is always present regardless of gesture state, a
+- **Guided tours**: on first launch, pop-ups point at each control on the home screen and end on the
+  screen where you make your first gesture. The floating search bar, the widgets page and the notes
+  page each explain themselves the first time you open them. All of them can be replayed from
+  settings.
+- Built-in safety nets: the search button is always present regardless of gesture state, a
   one-tap deep link to the Home-app picker, and a crash counter that drops into a **Safe Mode**
   screen after repeated crashes so you're never locked out of your phone.
 
@@ -90,19 +104,32 @@ when switching between the two.
 
 ## First use
 
-The launcher ships with **no gestures**. Long-press the bottom-right button to open the drawer →
-gear icon → **Gesture settings** → **+** → choose what the gesture should do → draw the shape 3× →
-save. Then draw it anywhere on the home screen to trigger it. Tune matching strictness under
-**Recognition sensitivity**.
+The first time the home screen opens, a short **tour** walks through it: drawing on the canvas,
+the search button, the dock strip (pages and voice), the clock and calendar, the floating search,
+and finally a button that opens the screen where your first gesture is made. The floating search
+bar (its one-tap command buttons, the mic, and how to open results), the widgets page (adding,
+moving, resizing and removing widgets) and the notes page (sending notes, and copying, editing or
+deleting one) each get a short tour of their own the first time you open them. Skip any of them
+whenever you like; **Settings → Show the tours again** replays them all.
 
-The same settings hub is where you pick the search engine, turn on the floating search window, and
-set a custom font and the theme. The floating search needs you to pick Gessearch Launcher as your
-digital assistant — it is off until you grant that deliberately.
+The launcher ships with **no gestures**. If you draw on the home screen before adding any, a
+pop-up offers to add one. To get there by hand: **touch and hold** the search button to open the
+app drawer → gear icon → **Gestures** → **+** → choose what the gesture should do → draw the shape
+3× → save. Then draw it anywhere on the home screen to trigger it. Tune matching strictness under
+**Adjust gesture sensitivity**.
+
+The same settings hub is where you pick the search engine, turn the widgets and notes pages on or
+off, turn on the floating search window, and set a custom font and the theme. The floating search
+needs you to pick Gessearch Launcher as your digital assistant — it is off until you grant that
+deliberately. **Once it is on, a tap on the search button opens the floating bar instead of the
+drawer, so touch and hold the button for the app list and its gear icon** (typing `settings` in
+the bar also offers Launcher settings).
 
 ## Known limitations
 
-- Gesture actions are currently limited to launching an app, opening the drawer, opening a URL, or
-  opening the floating search (no pinned shortcuts or contact call/text actions yet).
+- Gesture actions are currently limited to launching an app, opening the drawer, opening a URL,
+  opening the floating search, or pulling down notifications or quick settings (no pinned
+  shortcuts or contact call/text actions yet).
 - Floating windows depend on the device reporting freeform-window support, and OEM skins keep
   their own rules on top of it — some apps report themselves resizable, reach freeform, and are
   then expanded to full screen anyway. Nothing public exposes that, so those cases aren't warned
@@ -152,6 +179,8 @@ A signed build locally works the same way: put the keystore's path and passwords
 ## Suggested test order (safety before gestures)
 
 1. Confirm the drawer + wallpaper + button work and you can set/unset the launcher as default.
+   On a fresh install the tour should start by itself; Skip ends it for good, and Settings → Show
+   the tours again brings it back, along with the search, widgets and notes tips.
 2. Add 2–3 gestures and confirm recognition; a sloppy/unknown stroke should do nothing (or show
    the "not recognized" hint) rather than misfiring.
 3. To exercise Safe Mode, temporarily throw in `MainActivity.onCreate`, crash 3×, confirm the Safe

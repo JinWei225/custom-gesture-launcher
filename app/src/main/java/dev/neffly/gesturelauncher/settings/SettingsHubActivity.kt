@@ -11,10 +11,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
+import com.skydoves.balloon.Balloon
+import dev.neffly.gesturelauncher.MainActivity
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.BackupData
 import dev.neffly.gesturelauncher.data.BackupManager
@@ -25,6 +28,10 @@ import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
 import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
+import dev.neffly.gesturelauncher.onboarding.Backdrop
+import dev.neffly.gesturelauncher.onboarding.Placement
+import dev.neffly.gesturelauncher.onboarding.TourBalloon
+import dev.neffly.gesturelauncher.onboarding.TourCard
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
@@ -58,6 +65,9 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var searchEngineSubtitle: TextView
     private lateinit var voiceWordsSubtitle: TextView
     private lateinit var quickSearchSwitch: MaterialSwitch
+    private lateinit var quickSearchRow: View
+    /** The guide pop-up open over a row, if any — see [pointAtQuickSearch]. */
+    private var guide: Balloon? = null
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
     private lateinit var quickSearchTriggerSubtitle: TextView
@@ -156,13 +166,15 @@ class SettingsHubActivity : SlidePanelActivity() {
         findViewById<View>(R.id.searchEngineRow).setOnClickListener { showSearchEngineDialog() }
 
         quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
-        findViewById<View>(R.id.quickSearchRow).setOnClickListener {
+        quickSearchRow = findViewById(R.id.quickSearchRow)
+        quickSearchRow.setOnClickListener {
             val enabled = !Prefs.quickSearchEnabled(this)
             Prefs.setQuickSearchEnabled(this, enabled)
             quickSearchSwitch.isChecked = enabled
             updateQuickSearchTrigger()
             // The keyboard shortcut opens this same window, so it follows the master switch too.
             updateKeyboardShortcut()
+            if (enabled) explainSettingsAfterQuickSearch()
         }
 
         quickSearchTriggerRow = findViewById(R.id.quickSearchTriggerRow)
@@ -186,6 +198,14 @@ class SettingsHubActivity : SlidePanelActivity() {
         keyboardShortcutAccessSubtitle = findViewById(R.id.keyboardShortcutAccessSubtitle)
         keyboardShortcutAccessRow.setOnClickListener { requestAccessibilityAccess() }
 
+        // Every tour is due again: home's on the next resume, and the others the next time their
+        // screen or page comes up. Home is singleTask, so bringing it forward closes this screen
+        // and whatever is between.
+        findViewById<View>(R.id.tourReplayRow).setOnClickListener {
+            Prefs.clearHintsSeen(this)
+            startActivity(Intent(this, MainActivity::class.java))
+        }
+
         findViewById<View>(R.id.defaultLauncherRow).setOnClickListener {
             openDefaultLauncherSettings()
         }
@@ -199,6 +219,46 @@ class SettingsHubActivity : SlidePanelActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull().orEmpty()
         findViewById<TextView>(R.id.aboutRow).text = getString(R.string.about_version, version)
+    }
+
+    /** Opened from the home tour's floating-search step: show where that switch is. */
+    override fun onSlidIn() {
+        if (intent.getStringExtra(EXTRA_HIGHLIGHT) == HIGHLIGHT_QUICK_SEARCH) pointAtQuickSearch()
+    }
+
+    /** Scrolls the floating-search row into view and points at it. Nothing is dimmed, so the row
+     *  itself can be tapped straight away; a touch anywhere closes the pop-up. */
+    private fun pointAtQuickSearch() {
+        val scroll = findViewById<NestedScrollView>(R.id.settingsScroll)
+        scroll.scrollTo(0, (quickSearchRow.top - scroll.height / 4).coerceAtLeast(0))
+        quickSearchRow.post {
+            guide?.dismiss()
+            guide = TourBalloon.show(
+                this, quickSearchRow, Placement.BELOW, Backdrop.NONE,
+                TourCard(
+                    title = getText(R.string.quick_search_setup_title),
+                    body = getText(R.string.quick_search_setup_body),
+                    primary = TourCard.Action(getText(R.string.tour_got_it)) {},
+                ),
+            )
+        }
+    }
+
+    /**
+     * Turning the floating search on takes the drawer — and the ⚙ in it, the way into this
+     * screen — off a plain tap on the home screen's search button. Said every time the switch goes
+     * on, so nobody is left without a way back here.
+     */
+    private fun explainSettingsAfterQuickSearch() {
+        guide?.dismiss()
+        guide = TourBalloon.show(
+            this, quickSearchRow, Placement.BELOW, Backdrop.SPOT_ROUND_RECT,
+            TourCard(
+                title = getText(R.string.quick_search_on_title),
+                body = getText(R.string.quick_search_on_body),
+                primary = TourCard.Action(getText(R.string.tour_got_it)) {},
+            ),
+        )
     }
 
     override fun onResume() {
@@ -554,6 +614,10 @@ class SettingsHubActivity : SlidePanelActivity() {
     }
 
     companion object {
+        /** Which row to point at once the screen has slid in; see [onSlidIn]. */
+        const val EXTRA_HIGHLIGHT = "highlight"
+        const val HIGHLIGHT_QUICK_SEARCH = "quick_search"
+
         /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
         private const val DISABLED_ROW_ALPHA = 0.4f
 

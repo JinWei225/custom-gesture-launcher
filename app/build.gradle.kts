@@ -99,6 +99,10 @@ dependencies {
     // picking it over the double-based alternatives: a calculator that answers 0.1 + 0.2 with
     // 0.30000000000000004 is a bug report waiting to happen.
     implementation("com.ezylang:EvalEx:3.7.0")
+    // Pop-ups that point at a view, with a dimmed overlay cut out around it: the home-screen tour
+    // and the hints that follow it (see onboarding/). Pinned to 1.7.x on purpose — 2.0 reused these
+    // coordinates for a Compose-only rewrite with no View API.
+    implementation("com.github.skydoves:balloon:1.7.6")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")

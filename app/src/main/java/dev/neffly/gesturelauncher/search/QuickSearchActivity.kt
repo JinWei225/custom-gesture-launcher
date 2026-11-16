@@ -40,6 +40,10 @@ import dev.neffly.gesturelauncher.drawer.AppListAdapter
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
+import dev.neffly.gesturelauncher.onboarding.Backdrop
+import dev.neffly.gesturelauncher.onboarding.Hint
+import dev.neffly.gesturelauncher.onboarding.Placement
+import dev.neffly.gesturelauncher.onboarding.Tour
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.MaxHeightRecyclerView
@@ -254,12 +258,38 @@ class QuickSearchActivity : BaseActivity() {
         // would be a toll on the people who type. The keyboard is a tap on the field away.
         val listenOnOpen = intent.action == Intent.ACTION_ASSIST &&
             voiceButton.isVisible && VoiceInput.hasPermission(this)
+        // The first plain open walks through the bar's buttons, with the keyboard held back until
+        // it's over — it would only cover the pop-ups. Not over a spoken query or while listening:
+        // the person is mid-request there, not exploring.
+        val tour = Tour(this, Hint.QUICK_SEARCH, onEnd = ::showKeyboard)
+        val showTour = savedInstanceState == null && voiceQuery == null && !listenOnOpen && tour.isDue
         when {
             voiceQuery != null -> showSpoken(voiceQuery)
             listenOnOpen && savedInstanceState == null -> startListening()
+            showTour -> {}
             else -> showKeyboard()
         }
-        if (savedInstanceState == null) animateIn()
+        if (savedInstanceState == null) animateIn { if (showTour) tour.start(tourSteps()) }
+    }
+
+    private fun tourSteps(): List<Tour.Step> = buildList {
+        val skip = Tour.Choice(R.string.tour_skip, Tour.Move.End)
+        val next = Tour.Choice(R.string.tour_next, Tour.Move.Next)
+        add(Tour.Step(
+            quickFillRow, Placement.BELOW, Backdrop.SPOT_ROUND_RECT,
+            getText(R.string.qs_tour_buttons_title), getText(R.string.qs_tour_buttons_body), next, skip,
+        ))
+        if (voiceButton.isVisible) {
+            add(Tour.Step(
+                voiceButton, Placement.BELOW, Backdrop.SPOT_CIRCLE,
+                getText(R.string.qs_tour_voice_title), getText(R.string.qs_tour_voice_body), next, skip,
+            ))
+        }
+        add(Tour.Step(
+            searchLayout, Placement.BELOW, Backdrop.SPOT_ROUND_RECT,
+            getText(R.string.qs_tour_results_title), getText(R.string.qs_tour_results_body),
+            Tour.Choice(R.string.tour_done, Tour.Move.End),
+        ))
     }
 
     /**
@@ -493,13 +523,15 @@ class QuickSearchActivity : BaseActivity() {
         return results * rowHeight + chrome * chromeHeight
     }
 
-    private fun animateIn() {
+    /** [then] runs once the card has settled where it stays. */
+    private fun animateIn(then: () -> Unit = {}) {
         cardGlow.alpha = 0f
         cardGlow.translationY = entryOffsetPx(this).toFloat()
         cardGlow.animate()
             .alpha(1f)
             .translationY(0f)
             .setDuration(ENTRY_DURATION_MS)
+            .withEndAction(then)
             .start()
     }
 

@@ -6,6 +6,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
@@ -59,6 +60,13 @@ import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.data.toTemplates
 import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
+import dev.neffly.gesturelauncher.onboarding.Backdrop
+import dev.neffly.gesturelauncher.onboarding.HomeTour
+import dev.neffly.gesturelauncher.onboarding.Placement
+import dev.neffly.gesturelauncher.onboarding.TourBalloon
+import dev.neffly.gesturelauncher.onboarding.TourCard
+import dev.neffly.gesturelauncher.settings.GestureActionChooserActivity
+import com.skydoves.balloon.Balloon
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
@@ -96,6 +104,7 @@ class MainActivity : BaseActivity() {
     /** Positions in the pager, which depend on which side pages are on. -1 for notes when off. */
     private var pageHome = 0
     private var pageNotes = -1
+    private var pageWidgets = -1
     private lateinit var pushToTalk: PushToTalk
 
     private val handler = Handler(Looper.getMainLooper())
@@ -105,7 +114,10 @@ class MainActivity : BaseActivity() {
 
     /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
     private lateinit var tappableWidgets: List<View>
-    private lateinit var emptyHint: TextView
+    private lateinit var canvasFrame: View
+    private lateinit var tour: HomeTour
+    /** The "no gestures yet" pop-up a stroke on an empty canvas brings up; one at a time. */
+    private var emptyCanvasHint: Balloon? = null
     private lateinit var recognitionHint: TextView
     private lateinit var batteryIcon: ImageView
     private lateinit var batteryLevel: TextView
@@ -193,6 +205,7 @@ class MainActivity : BaseActivity() {
         val pages = listOfNotNull(widgets, home, notes)
         pageHome = pages.indexOf(home)
         pageNotes = notes?.let { pages.indexOf(it) } ?: -1
+        pageWidgets = widgets?.let { pages.indexOf(it) } ?: -1
         // Built after setContentView, so the pass BaseActivity makes over the content view never
         // saw them; without this the clock, the battery and the notes keep the system font.
         pages.forEach { FontEngine.applyTo(it) }
@@ -205,12 +218,12 @@ class MainActivity : BaseActivity() {
         // The page runs down to the navigation bar, and the dock always sits the dock gap above
         // that edge whatever the navigation mode — so a fixed margin clears it. The extra strip
         // above the dock is room for a sideways swipe to turn the pages without drawing.
-        home.findViewById<View>(R.id.canvasFrame).updateLayoutParams<LinearLayout.LayoutParams> {
+        canvasFrame = home.findViewById(R.id.canvasFrame)
+        canvasFrame.updateLayoutParams<LinearLayout.LayoutParams> {
             bottomMargin = dp(DOCK_GAP_DP) + dock.layoutParams.height + dp(CANVAS_SWIPE_STRIP_DP)
         }
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
 
-        emptyHint = home.findViewById(R.id.emptyHint)
         recognitionHint = home.findViewById(R.id.recognitionHint)
         eventsContainer = home.findViewById(R.id.eventsContainer)
         batteryIcon = home.findViewById(R.id.batteryIcon)
@@ -282,6 +295,25 @@ class MainActivity : BaseActivity() {
         showDock(pager.currentItem, animate = false)
 
         tappableWidgets = listOf(dateRow, clockTime, eventsContainer, searchButton)
+
+        tour = HomeTour(
+            this,
+            canvasFrame = canvasFrame,
+            searchButton = searchButton,
+            dockStrip = dockStrip,
+            clockPanel = home.findViewById(R.id.widgetPanel),
+            showHomePage = { if (pager.currentItem != pageHome) pager.setCurrentItem(pageHome, false) },
+        )
+    }
+
+    /** Rotation and window resizes don't recreate this screen (see the manifest), so a tour step
+     *  open over the old layout has to be moved to where its control now is. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!::tour.isInitialized) return
+        tour.relayout()
+        widgetPage?.relayoutTour()
+        notesPage?.relayoutTour()
     }
 
     /**
@@ -317,6 +349,16 @@ class MainActivity : BaseActivity() {
             override fun onPageSelected(position: Int) {
                 showDock(position, animate = true)
                 if (position != pageNotes) hideKeyboard()
+            }
+
+            // Once the page has come to rest, not on selection: a tip measures where its control
+            // is, and mid-settle that is still sliding.
+            override fun onPageScrollStateChanged(state: Int) {
+                if (state != ViewPager2.SCROLL_STATE_IDLE) return
+                when (pager.currentItem) {
+                    pageWidgets -> widgetPage?.showTourIfDue()
+                    pageNotes -> notesPage?.showTourIfDue()
+                }
             }
         })
     }
@@ -455,6 +497,7 @@ class MainActivity : BaseActivity() {
         rebuildTemplates()
         refreshEvents()
         notesPage?.refresh()
+        tour.onResume()
         // Start (or restart) the "healthy" heartbeat.
         handler.removeCallbacks(heartbeat)
         handler.postDelayed(heartbeat, 10_000L)
@@ -483,16 +526,18 @@ class MainActivity : BaseActivity() {
         canvas.multiStrokeGapMillis =
             if (mappings.anyMultiStroke()) GestureCanvasView.MULTI_STROKE_GAP_MILLIS else 0L
         canvas.maxExpectedSubStrokes = mappings.maxExpectedSubStrokes()
-        emptyHint.visibility = if (mappings.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun onHomeStroke(points: List<android.graphics.PointF>, subStrokeCount: Int) {
-        if (templates.isEmpty()) return
         val pts = points.toPt()
         // Not long/deliberate enough to be a real attempt — stay silent (no hint, no haptic), the
         // trail just auto-clears. Only strokes past this floor are treated as "the user tried to
-        // draw something" for the purposes of the not-recognized hint below.
+        // draw something" for the purposes of the hints below.
         if (!OneDollarRecognizer.isStrokeUsable(pts)) return
+        if (templates.isEmpty()) {
+            showEmptyCanvasHint()
+            return
+        }
 
         val result = OneDollarRecognizer.recognize(pts, templates, subStrokeCount)
         val threshold = Prefs.matchThreshold(this)
@@ -514,6 +559,29 @@ class MainActivity : BaseActivity() {
         } else {
             showRecognitionHint()
         }
+    }
+
+    /**
+     * Someone drew with nothing to match: rather than a sentence parked on the home screen for
+     * good, a pop-up at the moment it matters, with the way to make one.
+     */
+    private fun showEmptyCanvasHint() {
+        if (tour.isShowing || emptyCanvasHint?.isShowing == true) return
+        emptyCanvasHint = TourBalloon.show(
+            this,
+            canvasFrame,
+            Placement.CENTER,
+            Backdrop.NONE,
+            TourCard(
+                title = getText(R.string.empty_canvas_title),
+                body = getText(R.string.empty_canvas_body),
+                primary = TourCard.Action(getText(R.string.tour_add_gesture)) {
+                    startActivity(Intent(this, GestureActionChooserActivity::class.java))
+                    overrideNextTransition()
+                },
+                secondary = TourCard.Action(getText(R.string.tour_not_now)) {},
+            ),
+        )
     }
 
     private fun showRecognitionHint() {

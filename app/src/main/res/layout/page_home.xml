@@ -161,25 +161,6 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Shown only while zero gestures are saved; never intercepts touch (plain,
-             non-clickable TextView) so strokes still reach the canvas underneath it. -->
-        <TextView
-            android:id="@+id/emptyHint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_margin="32dp"
-            android:alpha="0.62"
-            android:gravity="center"
-            android:shadowColor="@color/wallpaper_overlay_shadow"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="10"
-            android:text="@string/home_hint_empty"
-            android:textColor="@color/wallpaper_overlay_text"
-            android:textSize="15sp"
-            android:visibility="gone" />
-
         <!-- Shown briefly after a long/deliberate stroke matches nothing, so a real attempt
              gets feedback instead of silently doing nothing. Never intercepts touch. -->
         <TextView

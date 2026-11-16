@@ -19,6 +19,10 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.onboarding.Backdrop
+import dev.neffly.gesturelauncher.onboarding.Hint
+import dev.neffly.gesturelauncher.onboarding.Placement
+import dev.neffly.gesturelauncher.onboarding.Tour
 import dev.neffly.gesturelauncher.ui.GlassMenu
 
 /**
@@ -40,6 +44,26 @@ class NotesPage(private val activity: AppCompatActivity, page: View) {
 
     /** The note in the box for editing, or null when the box is composing a new one. */
     private var editing: Note? = null
+
+    private val tour = Tour(activity, Hint.NOTES)
+
+    /** The first time this page is turned to: how a note is made, and where its actions hide. */
+    fun showTourIfDue() {
+        if (!tour.isDue || tour.isShowing) return
+        tour.start(listOf(
+            Tour.Step(
+                input, Placement.ABOVE, Backdrop.SPOT_ROUND_RECT,
+                activity.getText(R.string.notes_tour_title), activity.getText(R.string.notes_tour_body),
+                Tour.Choice(R.string.notes_tour_write, Tour.Move.Open(resume = false) {
+                    input.requestFocus()
+                    WindowInsetsControllerCompat(activity.window, input).show(WindowInsetsCompat.Type.ime())
+                }),
+                Tour.Choice(R.string.tour_got_it, Tour.Move.End),
+            )
+        ))
+    }
+
+    fun relayoutTour() = tour.relayout()
 
     init {
         // From the end, like a conversation: the newest note sits just above the box, and a short

@@ -27,6 +27,7 @@ object Prefs {
     private const val KEY_VOICE_WORDS = "voice_words"
     private const val KEY_WIDGETS_PAGE = "widgets_page"
     private const val KEY_NOTES_PAGE = "notes_page"
+    private const val KEY_HINTS_SEEN = "hints_seen"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
     const val SAFE_MODE_CRASH_LIMIT = 3
@@ -167,6 +168,22 @@ object Prefs {
 
     fun setNotesPage(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NOTES_PAGE, value).apply()
+    }
+
+    /** Which guided tours have been finished or skipped, by [dev.neffly.gesturelauncher.onboarding.Hint]
+     *  name. Empty by default, so everyone sees each one once — including people updating from a
+     *  version without them. Cleared by the settings row that replays them. */
+    fun hintSeen(context: Context, name: String): Boolean =
+        name in prefs(context).getStringSet(KEY_HINTS_SEEN, null).orEmpty()
+
+    fun markHintSeen(context: Context, name: String) {
+        val seen = prefs(context).getStringSet(KEY_HINTS_SEEN, null).orEmpty()
+        // A fresh set: the one SharedPreferences hands out must not be modified in place.
+        prefs(context).edit().putStringSet(KEY_HINTS_SEEN, seen + name).apply()
+    }
+
+    fun clearHintsSeen(context: Context) {
+        prefs(context).edit().remove(KEY_HINTS_SEEN).apply()
     }
 
     /** Words and names the user has told voice search to listen for — see

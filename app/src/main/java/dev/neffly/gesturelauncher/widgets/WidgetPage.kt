@@ -26,6 +26,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.onboarding.Backdrop
+import dev.neffly.gesturelauncher.onboarding.Hint
+import dev.neffly.gesturelauncher.onboarding.Placement
+import dev.neffly.gesturelauncher.onboarding.Tour
 import dev.neffly.gesturelauncher.ui.GlassMenu
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import kotlin.math.roundToInt
@@ -86,10 +90,28 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
             if (result.resultCode == Activity.RESULT_OK) onBound(id) else host.deleteAppWidgetId(id)
         }
 
+    private val tour = Tour(activity, Hint.WIDGETS)
+
     init {
         menuButton.setOnClickListener { showMenu() }
         showAll()
     }
+
+    /** The first time this page is turned to: where adding and rearranging live, since both sit
+     *  behind the one corner button. */
+    fun showTourIfDue() {
+        if (!tour.isDue || tour.isShowing) return
+        tour.start(listOf(
+            Tour.Step(
+                menuButton, Placement.BELOW, Backdrop.SPOT_CIRCLE,
+                activity.getText(R.string.widgets_tour_title), activity.getText(R.string.widgets_tour_body),
+                Tour.Choice(R.string.add_widget, Tour.Move.Open(resume = false) { pick() }),
+                Tour.Choice(R.string.tour_got_it, Tour.Move.End),
+            )
+        ))
+    }
+
+    fun relayoutTour() = tour.relayout()
 
     /** Add, and Edit — which reads Done while the edit rows are showing. */
     private fun showMenu() {

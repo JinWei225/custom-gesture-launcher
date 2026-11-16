@@ -163,8 +163,6 @@
     <string name="import_result_missing_apps">\n\n⚠ %1$d gesture(s) point to apps not installed on this device:\n%2$s</string>
     <string name="ok">OK</string>
 
-    <string name="home_hint_empty">No gestures yet.\nTap the app-drawer button below to add one.</string>
-
     <string name="settings_hub_title">Settings</string>
     <string name="section_gestures">Gestures</string>
     <string name="section_backup">Backup</string>
@@ -207,7 +205,7 @@
     <string name="engine_brave">Brave Search</string>
     <string name="engine_ecosia">Ecosia</string>
     <string name="menu_quick_search">Quick search overlay</string>
-    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and quick actions</string>
+    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and quick actions. Once it\'s on, hold the home screen\'s search button for the app list and Settings</string>
     <string name="quick_search_trigger">Quick search trigger</string>
     <string name="quick_search_trigger_granted">Ready — this launcher is your digital assistant. On Android 12+, also set Settings → System → Gestures → Press and hold power button to “Digital assistant”.</string>
     <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gessearch Launcher. Long-pressing the power button will then open quick search.</string>
@@ -287,6 +285,62 @@
     <string name="note_edited">edited</string>
     <string name="note_today">Today</string>
     <string name="note_yesterday">Yesterday</string>
+
+    <!-- The home-screen tour (onboarding/HomeTour) and the guide pop-ups that follow it. -->
+    <string name="tour_counter">%1$d of %2$d</string>
+    <string name="tour_start">Start</string>
+    <string name="tour_skip">Skip</string>
+    <string name="tour_next">Next</string>
+    <string name="tour_not_now">Not now</string>
+    <string name="tour_later">Later</string>
+    <string name="tour_done">Done</string>
+    <string name="tour_got_it">Got it</string>
+    <string name="tour_set_up">Set up</string>
+    <string name="tour_open">Open</string>
+    <string name="tour_add_gesture">Add a gesture</string>
+    <string name="tour_welcome_title">Welcome to Gessearch</string>
+    <string name="tour_welcome_body">There\'s no grid of icons here: you draw a shape, and the app you linked to it opens. This quick tour shows you around the home screen.</string>
+    <string name="tour_draw_title">Draw here</string>
+    <string name="tour_draw_body">Draw a shape you\'ve taught the launcher anywhere in this area. A gesture can open an app, a link, search, notifications or quick settings.</string>
+    <string name="tour_search_title">Search everything</string>
+    <string name="tour_search_body">Tap to search your apps, or type a command: timer 10 min, alarm 7am, event dinner fri 7pm, web …, map … or ask Claude …. Sums and time zones are answered as you type.</string>
+    <string name="tour_search_hold">Touch and hold this button for the full app list. Its ⚙ opens Settings.</string>
+    <string name="tour_pages_title">Pages and voice</string>
+    <string name="tour_voice_title">Voice search</string>
+    <string name="tour_pages_both">Swipe along here for your widgets page on the left and your notes page on the right.</string>
+    <string name="tour_pages_widgets">Swipe along here for your widgets page on the left.</string>
+    <string name="tour_pages_notes">Swipe along here for your notes page on the right.</string>
+    <string name="tour_voice_body">Touch and hold here to speak a search: “open Spotify” opens it straight away.</string>
+    <string name="tour_clock_title">Time, date and today</string>
+    <string name="tour_clock_body">Tap the time for your alarms and the date for your calendar. What\'s left of today is listed underneath.</string>
+    <string name="tour_anywhere_title">Search from any app</string>
+    <string name="tour_anywhere_body">Turn on the floating search bar and make Gessearch your digital assistant, then hold the power button to search from anywhere. Swipe a result right to open it in a floating window.</string>
+    <string name="tour_anywhere_hold">Once it\'s on, a tap on the search button opens the floating bar, so touch and hold the button for the app list and Settings.</string>
+    <string name="tour_first_gesture_title">Teach your first gesture</string>
+    <string name="tour_first_gesture_body">Pick what it should do, draw the shape three times, and save. Then draw it here whenever you like.\n\nYou can replay this tour from Settings.</string>
+    <string name="tour_gestures_title">Your gestures</string>
+    <string name="tour_gestures_body">Add, redraw or delete gestures under Settings → Gestures.\n\nYou can replay this tour from Settings.</string>
+    <string name="empty_canvas_title">No gestures yet</string>
+    <string name="empty_canvas_body">Teach the launcher a shape: pick what it should do, then draw it three times.</string>
+    <string name="quick_search_setup_title">Floating search</string>
+    <string name="quick_search_setup_body">Turn this on, then tap Quick search trigger below to make Gessearch your digital assistant.</string>
+    <string name="quick_search_on_title">Finding Settings from now on</string>
+    <string name="quick_search_on_body">A tap on the home screen\'s search button now opens the floating bar. Touch and hold that button for the full app list, and tap its ⚙ to come back here. You can also type settings in the bar.</string>
+    <string name="tour_replay">Show the tours again</string>
+    <string name="tour_replay_subtitle">The home screen walk-through, and the tips for search, widgets and notes</string>
+    <!-- The floating search bar's tour, on its first plain open. -->
+    <string name="qs_tour_buttons_title">One-tap commands</string>
+    <string name="qs_tour_buttons_body">Each button types a command into the bar for you: a new event, timer, alarm, web search or a question for an AI app. Then add the rest, like the time, the length or what to look up.</string>
+    <string name="qs_tour_voice_title">Speak instead</string>
+    <string name="qs_tour_voice_body">Tap the mic and say what you want. “Open Spotify” opens it straight away; anything else lands here with its results ready to tap.</string>
+    <string name="qs_tour_results_title">Open results your way</string>
+    <string name="qs_tour_results_body">Enter opens the top result. Swipe a result to the right to open it in a floating window. Type settings to reach Launcher settings.</string>
+    <!-- The widgets and notes pages' tips, the first time each page is turned to. -->
+    <string name="widgets_tour_title">Your widgets</string>
+    <string name="widgets_tour_body">Tap ⋮ here to add a widget. To rearrange, choose Edit: move widgets up or down, drag the grip under one to resize it, or remove it. Tap Done when you\'re finished.</string>
+    <string name="notes_tour_title">Quick notes</string>
+    <string name="notes_tour_body">Type a note and send it. Notes stay here, grouped by day, newest at the bottom. Touch and hold a note to copy, edit or delete it.</string>
+    <string name="notes_tour_write">Write a note</string>
 
     <string name="battery_level">%1$d%%</string>
     <string name="battery_level_charging">%1$d%%, charging</string>

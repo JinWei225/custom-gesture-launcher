@@ -38,6 +38,10 @@
     <!-- A destructive row in a menu over the wallpaper: red, but light enough to read on the
          dark glass. -->
     <color name="wallpaper_overlay_danger">#FFFF8A80</color>
+    <!-- Dims the screen around a tour pop-up's spotlight; the same over the wallpaper and over
+         settings, so the guide looks alike wherever it opens. -->
+    <color name="tour_scrim">#A6000000</color>
+    <color name="tour_card_fill">#FF121212</color>
 
     <!-- ============================================================================
          Material 3 palette — LIGHT.
