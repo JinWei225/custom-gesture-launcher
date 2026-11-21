@@ -72,10 +72,17 @@ class HomeTour(
             Prefs.notesPage(activity) -> R.string.tour_pages_notes
             else -> null
         }
-        add(Tour.Step(dockStrip, Placement.ABOVE, Backdrop.SPOT_ROUND_RECT,
-            text(if (pages != null) R.string.tour_pages_title else R.string.tour_voice_title),
-            if (pages != null) "${text(pages)} ${text(R.string.tour_voice_body)}" else text(R.string.tour_voice_body),
-            next, skip))
+        val voice = Prefs.voiceEnabled(activity)
+        val dockBody = when {
+            pages != null && voice -> "${text(pages)} ${text(R.string.tour_voice_body)}"
+            pages != null -> text(pages)
+            else -> text(R.string.tour_voice_body)
+        }
+        if (pages != null || voice) {
+            add(Tour.Step(dockStrip, Placement.ABOVE, Backdrop.SPOT_ROUND_RECT,
+                text(if (pages != null) R.string.tour_pages_title else R.string.tour_voice_title),
+                dockBody, next, skip))
+        }
 
         add(Tour.Step(clockPanel, Placement.BELOW, Backdrop.SPOT_ROUND_RECT,
             text(R.string.tour_clock_title), text(R.string.tour_clock_body), next, skip))

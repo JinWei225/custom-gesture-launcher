@@ -117,6 +117,21 @@ class CommandsTest {
     }
 
     @Test
+    fun `a number too long to be a length is left alone rather than overflowing`() {
+        // Five digits is the most a bare minutes count may have; beyond it nothing is read.
+        assertEquals(Duration.ofMinutes(99999), timer("timer 99999").length)
+        assertNull(timer("timer 123456789012345678901234567890").length)
+    }
+
+    @Test
+    fun `a relative count too long to be a date stays in the title`() {
+        assertEquals(d("2026-10-03"), event("event x in 14 days").date)
+        val long = event("event x in 99999999999999 days")
+        assertNull(long.date)
+        assertEquals("x in 99999999999999 days", long.title)
+    }
+
+    @Test
     fun `the rest is the timer label`() {
         assertEquals("pasta", timer("timer 10 min pasta").label)
         assertEquals("pasta", timer("timer pasta 10 min").label)

@@ -18,6 +18,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -106,7 +107,7 @@ object Commands {
                 "weekdays" -> WEEKDAYS
                 "weekends" -> WEEKENDS
                 "daily", "everyday", "every day" -> DayOfWeek.entries
-                else -> listOf(weekday(found))
+                else -> listOf(Dates.weekday(found))
             }
         }
         // An alarm is always for the next time its hour comes round, which is what "tomorrow"
@@ -284,7 +285,7 @@ object Commands {
                 }
             }
             is Command.Timer -> Intent(AlarmClock.ACTION_SET_TIMER).apply {
-                command.length?.let { putExtra(AlarmClock.EXTRA_LENGTH, it.seconds.toInt()) }
+                command.length?.let { putExtra(AlarmClock.EXTRA_LENGTH, it.seconds.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
                 if (command.label.isNotEmpty()) putExtra(AlarmClock.EXTRA_MESSAGE, command.label)
             }
             is Command.Event -> Intent(Intent.ACTION_INSERT).apply {
@@ -294,7 +295,10 @@ object Commands {
                 val start = command.start
                 if (start == null) {
                     putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
-                    putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, millis(date.atStartOfDay(), zone))
+                    // An all-day event's times are UTC midnights whatever zone the phone is in —
+                    // the calendar editor reads this one in UTC, so local midnight east of UTC
+                    // would be the evening of the day before.
+                    putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, millis(date.atStartOfDay(), ZoneOffset.UTC))
                     return@apply
                 }
                 putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, millis(date.atTime(start), zone))
@@ -315,9 +319,6 @@ object Commands {
 
     /** java.time's Monday-first weekdays to the Sunday-first [Calendar] constants the extra wants. */
     private fun calendarDay(day: DayOfWeek): Int = day.value % 7 + Calendar.SUNDAY
-
-    private fun weekday(name: String): DayOfWeek =
-        DayOfWeek.of(WEEKDAY_NAMES.indexOf(name.take(3)) + 1)
 
     // --- grammar ------------------------------------------------------------
 
@@ -349,20 +350,18 @@ object Commands {
     private const val LEFT = """(?<![\w:])"""
     private const val RIGHT = """(?![\w:])"""
 
-    private val WEEKDAY_NAMES = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-    private const val WEEKDAY =
-        """(?:mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)"""
     private val WEEKDAYS: Set<DayOfWeek> = DayOfWeek.entries.take(5).toSet()
     private val WEEKENDS: Set<DayOfWeek> = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 
     private val ALARM_TIME = Regex("""$LEFT(?:at )?(${Times.TIME})$RIGHT""", RegexOption.IGNORE_CASE)
     private val ALARM_DAYS = Regex(
-        """\b(?:every |on )?(weekdays|weekends|daily|every ?day|$WEEKDAY)\b,?""", RegexOption.IGNORE_CASE
+        """\b(?:every |on )?(weekdays|weekends|daily|every ?day|${Dates.WEEKDAY})\b,?""", RegexOption.IGNORE_CASE
     )
     private val ALARM_DAY_WORDS = Regex("""\b(?:today|tomorrow|tmrw?)\b""", RegexOption.IGNORE_CASE)
 
     private val TIMER_LENGTH = Regex("""$LEFT(?:for )?(${Times.DURATION})""", RegexOption.IGNORE_CASE)
-    private val BARE_NUMBER = Regex("""$LEFT(\d+)$RIGHT""")
+    /** Up to five digits — more minutes than any timer runs, and short enough never to overflow. */
+    private val BARE_NUMBER = Regex("""$LEFT(\d{1,5})$RIGHT""")
 
     private val EVENT_RANGE = Regex(
         """$LEFT(?:from )?(${Times.TIME}) ?(?:-|–|to) ?(${Times.TIME})$RIGHT""", RegexOption.IGNORE_CASE

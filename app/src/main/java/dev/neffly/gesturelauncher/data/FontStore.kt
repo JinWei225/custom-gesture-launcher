@@ -5,6 +5,8 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 
 /**
  * The user's imported font file, kept as a private copy in filesDir.
@@ -59,10 +61,9 @@ object FontStore {
         val tmp = File(dir, IMPORT_TMP)
         return runCatching {
             dir.mkdirs()
-            val copied = context.contentResolver.openInputStream(uri)?.use { input ->
-                tmp.outputStream().use { output -> input.copyTo(output) }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tmp.outputStream().use { output -> copyCapped(input, output) }
             } ?: error("could not open the selected file")
-            require(copied <= MAX_BYTES) { "font is larger than 8 MB" }
             require(!isWebFont(tmp)) { "WOFF web fonts aren't supported — use a .ttf or .otf" }
             require(isSfnt(tmp)) { "that isn't a TrueType or OpenType font" }
 
@@ -71,11 +72,24 @@ object FontStore {
             // it just hands back the system default. Identity-checking it is what catches those.
             require(typeface != null && typeface != Typeface.DEFAULT) { "font could not be parsed" }
 
-            val target = file(context)
-            target.delete()
-            require(tmp.renameTo(target)) { "could not install the font" }
+            // A rename replaces the live file in one step, so a failure here leaves it in place.
+            require(tmp.renameTo(file(context))) { "could not install the font" }
             typeface
         }.also { tmp.delete() }
+    }
+
+    /** Copies [input] to [output], giving up as soon as it passes [MAX_BYTES] rather than after
+     *  the whole of an oversized pick has been written to storage. */
+    private fun copyCapped(input: InputStream, output: OutputStream) {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) return
+            total += read
+            require(total <= MAX_BYTES) { "font is larger than 8 MB" }
+            output.write(buffer, 0, read)
+        }
     }
 
     /** Removes the installed font, reverting to the system default. */

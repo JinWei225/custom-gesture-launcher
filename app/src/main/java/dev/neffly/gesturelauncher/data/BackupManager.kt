@@ -45,6 +45,8 @@ data class BackupData(
     val mapsApp: String = MapSearch.App.DEFAULT.name,
     /** Voice search's own vocabulary, as [Prefs.voiceWords] keeps it. */
     val voiceWords: List<String> = emptyList(),
+    val voice: Boolean = true,
+    val voiceOnAssist: Boolean = true,
     val widgetsPage: Boolean = true,
     val notesPage: Boolean = true,
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
@@ -80,6 +82,8 @@ object BackupManager {
         searchEngine = Prefs.searchEngine(context).name,
         mapsApp = Prefs.mapsApp(context).name,
         voiceWords = Prefs.voiceWords(context),
+        voice = Prefs.voiceEnabled(context),
+        voiceOnAssist = Prefs.voiceOnAssist(context),
         widgetsPage = Prefs.widgetsPage(context),
         notesPage = Prefs.notesPage(context)
     )
@@ -122,6 +126,8 @@ object BackupManager {
         Prefs.setSearchOnLeft(context, data.searchOnLeft)
         Prefs.setSearchEngine(context, WebSearch.Engine.fromName(data.searchEngine))
         Prefs.setMapsApp(context, MapSearch.App.fromName(data.mapsApp))
+        Prefs.setVoiceEnabled(context, data.voice)
+        Prefs.setVoiceOnAssist(context, data.voiceOnAssist)
         Prefs.setWidgetsPage(context, data.widgetsPage)
         Prefs.setNotesPage(context, data.notesPage)
         // Theme and font size are written here but not *applied* here — this is the data layer,
@@ -129,7 +135,8 @@ object BackupManager {
         // the user has read the summary; see SettingsHubActivity.applyImport.
 
         val missingApps = data.gestures.filter {
-            runCatching { context.packageManager.getApplicationInfo(it.packageName, 0) }.isFailure
+            it.action == GestureAction.LAUNCH_APP &&
+                runCatching { context.packageManager.getApplicationInfo(it.packageName, 0) }.isFailure
         }.map { it.label }
 
         return ImportResult(

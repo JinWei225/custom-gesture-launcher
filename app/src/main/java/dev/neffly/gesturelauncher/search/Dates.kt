@@ -6,7 +6,8 @@ import java.time.Month
 
 /**
  * Calendar days the way they get typed: `today`, `tomorrow`, `mon`, `next friday`, `21 sep`,
- * `sep 21 2027`, `2026-09-21`, `in 3 days`, `in 2 weeks`.
+ * `sep 21 2027`, `2026-09-21`, `in 3 days`, `in 2 weeks`. A relative count has at most four digits:
+ * anything longer is not a date anyone means, and is left in the title rather than overflowing.
  *
  * "friday" is the coming Friday — today, when today is one. "next friday" is the same day, unless
  * that would be today, in which case it is a week on. That is how the phone's own assistant
@@ -15,7 +16,8 @@ import java.time.Month
  */
 object Dates {
 
-    private const val WEEKDAY =
+    /** Regex fragment for a weekday name, capturing nothing; [weekday] reads what it matched. */
+    const val WEEKDAY =
         """(?:mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)"""
     private const val MONTH =
         """(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"""
@@ -24,9 +26,9 @@ object Dates {
 
     /** Regex fragment matching one day phrase, capturing nothing. Lower-case input, word-bounded. */
     const val DATE =
-        """\b(?:today|tomorrow|tmrw?|(?:next |this )?$WEEKDAY|in \d+ (?:days?|weeks?)|$DAY $MONTH(?: $YEAR)?|$MONTH $DAY(?:,? $YEAR)?|$YEAR-\d{2}-\d{2})\b"""
+        """\b(?:today|tomorrow|tmrw?|(?:next |this )?$WEEKDAY|in \d{1,4} (?:days?|weeks?)|$DAY $MONTH(?: $YEAR)?|$MONTH $DAY(?:,? $YEAR)?|$YEAR-\d{2}-\d{2})\b"""
 
-    private val RELATIVE = Regex("""in (\d+) (day|week)s?""")
+    private val RELATIVE = Regex("""in (\d{1,4}) (day|week)s?""")
     private val NAMED_DAY = Regex("""(next |this )?($WEEKDAY)""")
     private val DAY_MONTH = Regex("""(\d{1,2})(?:st|nd|rd|th)? ($MONTH)(?: ($YEAR))?""")
     private val MONTH_DAY = Regex("""($MONTH) (\d{1,2})(?:st|nd|rd|th)?(?:,? ($YEAR))?""")
@@ -74,7 +76,7 @@ object Dates {
 
     // By fixed English prefixes rather than the platform's month names: those follow CLDR, which
     // spells September "Sept" in some English locales and would silently stop matching "sep".
-    private fun weekday(name: String): DayOfWeek =
+    fun weekday(name: String): DayOfWeek =
         DayOfWeek.of(WEEKDAYS.indexOf(name.take(3)) + 1)
 
     private fun month(name: String): Month = Month.of(MONTHS.indexOf(name.take(3)) + 1)

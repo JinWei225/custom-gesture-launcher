@@ -68,6 +68,11 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var mapsAppRow: View
     private lateinit var mapsAppSubtitle: TextView
     private lateinit var voiceWordsSubtitle: TextView
+    private lateinit var voiceSwitch: MaterialSwitch
+    private lateinit var voiceOnAssistRow: View
+    private lateinit var voiceOnAssistTitle: TextView
+    private lateinit var voiceOnAssistSubtitle: TextView
+    private lateinit var voiceOnAssistSwitch: MaterialSwitch
     private lateinit var quickSearchSwitch: MaterialSwitch
     private lateinit var quickSearchRow: View
     /** The guide pop-up open over a row, if any — see [pointAtQuickSearch]. */
@@ -164,6 +169,22 @@ class SettingsHubActivity : SlidePanelActivity() {
         findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
 
         searchEngineSubtitle = findViewById(R.id.searchEngineSubtitle)
+        voiceSwitch = findViewById(R.id.voiceSwitch)
+        findViewById<View>(R.id.voiceRow).setOnClickListener {
+            val enabled = !Prefs.voiceEnabled(this)
+            Prefs.setVoiceEnabled(this, enabled)
+            voiceSwitch.isChecked = enabled
+            updateVoice()
+        }
+        voiceOnAssistRow = findViewById(R.id.voiceOnAssistRow)
+        voiceOnAssistTitle = findViewById(R.id.voiceOnAssistTitle)
+        voiceOnAssistSubtitle = findViewById(R.id.voiceOnAssistSubtitle)
+        voiceOnAssistSwitch = findViewById(R.id.voiceOnAssistSwitch)
+        voiceOnAssistRow.setOnClickListener {
+            val enabled = !Prefs.voiceOnAssist(this)
+            Prefs.setVoiceOnAssist(this, enabled)
+            voiceOnAssistSwitch.isChecked = enabled
+        }
         voiceWordsSubtitle = findViewById(R.id.voiceWordsSubtitle)
         findViewById<View>(R.id.voiceWordsRow).setOnClickListener { showVoiceWordsDialog() }
         showVoiceWords()
@@ -290,6 +311,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         mapsAppSubtitle.setText(MapSearch.app(this).label)
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
+        updateVoice()
         keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)
         // Re-read for the same reason the battery row is: the access is granted on a system screen
         // this one can't get a result from, so coming back is the only moment to notice.
@@ -376,6 +398,16 @@ class SettingsHubActivity : SlidePanelActivity() {
      * The shortcut opens the quick-search window and nothing else, so with the overlay switched
      * off there is nothing for it to open — the same relationship the trigger row above has.
      */
+    /** Both voice switches' state, and the assistant-listening row greyed while voice search is
+     *  off — with nothing to start, its choice means nothing. */
+    private fun updateVoice() {
+        val voice = Prefs.voiceEnabled(this)
+        voiceSwitch.isChecked = voice
+        voiceOnAssistSwitch.isChecked = Prefs.voiceOnAssist(this)
+        setRowEnabled(voiceOnAssistRow, voice, voiceOnAssistTitle, voiceOnAssistSubtitle)
+        voiceOnAssistSwitch.isEnabled = voice
+    }
+
     private fun updateKeyboardShortcut() {
         val quickSearch = Prefs.quickSearchEnabled(this)
         setRowEnabled(keyboardShortcutRow, quickSearch, keyboardShortcutTitle, keyboardShortcutSubtitle)

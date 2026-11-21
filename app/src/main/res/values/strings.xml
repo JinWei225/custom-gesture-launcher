@@ -252,6 +252,10 @@
     <string name="voice_error_generic">Speech recognition stopped</string>
     <string name="voice_unavailable">This phone has no speech recognition service</string>
     <string name="voice_permission_denied">Voice search needs microphone access</string>
+    <string name="voice_search">Voice search</string>
+    <string name="voice_search_subtitle">Hold the dock to talk, and use the mic in quick search</string>
+    <string name="voice_on_assist">Listen when opened as assistant</string>
+    <string name="voice_on_assist_subtitle">Start listening as soon as a long-press of the home or power button opens quick search</string>
     <string name="voice_words">Voice words</string>
     <string name="voice_words_none">Names and terms voice search keeps mishearing</string>
     <string name="voice_words_hint">e.g. Ollama</string>

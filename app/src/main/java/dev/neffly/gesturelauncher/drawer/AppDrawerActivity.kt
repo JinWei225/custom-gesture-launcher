@@ -391,7 +391,7 @@ class AppDrawerActivity : BaseActivity() {
                 )
             }
         }
-        GlassMenu.show(anchor, items, xOffsetDp = MENU_INSET_DP)
+        GlassMenu.show(anchor, items, xOffsetDp = MENU_INSET_DP, endClearanceDp = INDEX_CLEARANCE_DP)
     }
 
     private fun editLabel(app: AppInfo) {
@@ -441,6 +441,9 @@ class AppDrawerActivity : BaseActivity() {
 
         /** The app menu's start edge sits in from the row's, under the label rather than the icon. */
         private const val MENU_INSET_DP = 20
+
+        /** The alphabet rail's 28dp plus its 8dp margin, and a little air beyond. */
+        private const val INDEX_CLEARANCE_DP = 48
 
         /** Scroll distance, in dp, over which the header goes from translucent to near-solid. */
         private const val HEADER_FADE_SPAN_DP = 90f

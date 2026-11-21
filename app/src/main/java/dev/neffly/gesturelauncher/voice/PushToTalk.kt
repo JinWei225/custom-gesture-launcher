@@ -64,6 +64,7 @@ class PushToTalk(private val activity: ComponentActivity, private val caption: T
     private val hideCaption = Runnable { hide() }
 
     fun press() {
+        if (!Prefs.voiceEnabled(activity)) return
         if (!VoiceInput.isAvailable(activity)) {
             Toast.makeText(activity, R.string.voice_unavailable, Toast.LENGTH_SHORT).show()
             return

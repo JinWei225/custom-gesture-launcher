@@ -187,4 +187,13 @@ class VoiceQueryTest {
             VoiceQuery.resolve(listOf("navigate to home depot"), apps)
         )
     }
+
+    @Test
+    fun `an app's own name is searched as heard, whatever word it starts with`() {
+        val maps = app("Google Maps")
+        assertEquals(Spoken("Google Maps", open = false), VoiceQuery.read("Google Maps", apps + maps))
+        assertEquals(Resolution.Search("Google Maps"), VoiceQuery.resolve(listOf("Google Maps"), apps + maps))
+        // Still a web search when no app is called that.
+        assertEquals(Spoken("web tall buildings", open = false), VoiceQuery.read("google tall buildings", apps + maps))
+    }
 }

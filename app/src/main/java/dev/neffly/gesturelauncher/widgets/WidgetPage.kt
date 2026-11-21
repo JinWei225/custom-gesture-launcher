@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import dev.neffly.gesturelauncher.R
@@ -65,7 +66,9 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
     private var editing = false
 
     /** The id allocated for the widget being added, until binding, or its configuration screen,
-     *  says whether it is wanted. */
+     *  says whether it is wanted. Kept in the activity's saved state: both of those are other
+     *  apps' screens, and the home screen behind them can be recreated, or its process killed,
+     *  before they answer. */
     private var pendingId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     private val pickWidget: ActivityResultLauncher<Intent> =
@@ -93,6 +96,12 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
     private val tour = Tour(activity, Hint.WIDGETS)
 
     init {
+        activity.savedStateRegistry.consumeRestoredStateForKey(STATE_KEY)?.let {
+            pendingId = it.getInt(STATE_PENDING_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        }
+        activity.savedStateRegistry.registerSavedStateProvider(STATE_KEY) {
+            bundleOf(STATE_PENDING_ID to pendingId)
+        }
         menuButton.setOnClickListener { showMenu() }
         showAll()
     }
@@ -388,6 +397,8 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
 
         /** Widget configuration screens report back by request code, see [onActivityResult]. */
         const val REQUEST_CONFIGURE = 1
+        const val STATE_KEY = "widget_page"
+        const val STATE_PENDING_ID = "pending_id"
         const val MIN_HEIGHT_DP = 56
         const val MAX_HEIGHT_FRACTION = 0.85f
         const val DISABLED_ALPHA = 0.35f

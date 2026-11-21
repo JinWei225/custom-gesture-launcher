@@ -244,7 +244,7 @@ class QuickSearchActivity : BaseActivity() {
 
         voiceButton = findViewById(R.id.voiceButton)
         voice = VoiceInput(this, voiceListener)
-        if (VoiceInput.isAvailable(this)) setUpVoice() else voiceButton.visibility = View.GONE
+        if (Prefs.voiceEnabled(this) && VoiceInput.isAvailable(this)) setUpVoice() else voiceButton.visibility = View.GONE
 
         positionCard()
         applyInsets()
@@ -256,7 +256,7 @@ class QuickSearchActivity : BaseActivity() {
         // The power button is the hands-free way in, so it opens listening rather than typing —
         // once the microphone has been granted: a permission dialog on every power-button hold
         // would be a toll on the people who type. The keyboard is a tap on the field away.
-        val listenOnOpen = intent.action == Intent.ACTION_ASSIST &&
+        val listenOnOpen = intent.action == Intent.ACTION_ASSIST && Prefs.voiceOnAssist(this) &&
             voiceButton.isVisible && VoiceInput.hasPermission(this)
         // The first plain open walks through the bar's buttons, with the keyboard held back until
         // it's over — it would only cover the pop-ups. Not over a spoken query or while listening:

@@ -73,7 +73,8 @@ object GlassMenu {
         items: List<Item>,
         overWallpaper: Boolean = false,
         gravity: Int = Gravity.START,
-        xOffsetDp: Int = 0
+        xOffsetDp: Int = 0,
+        endClearanceDp: Int = 0
     ) {
         val context = anchor.context
         val content = LayoutInflater.from(context)
@@ -122,13 +123,6 @@ object GlassMenu {
         popup.isOutsideTouchable = true
         popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
 
-        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        content.measure(unspecified, unspecified)
-        val width = content.measuredWidth
-        val height = content.measuredHeight
-        popup.width = width
-        popup.height = height
-
         // Everything in window coordinates: the anchor's place, and the part of the window not
         // under the keyboard or the system bars. From the insets rather than the "visible display
         // frame", which on this OEM's keyboard stops short of its toolbar.
@@ -136,10 +130,26 @@ object GlassMenu {
         val covered = ViewCompat.getRootWindowInsets(anchor)
             ?.getInsets(WindowInsetsCompat.Type.ime() or WindowInsetsCompat.Type.systemBars())
             ?: Insets.NONE
-        val room = Rect(covered.left, covered.top, root.width - covered.right, root.height - covered.bottom)
+        val room = Rect(
+            covered.left,
+            covered.top,
+            root.width - covered.right - dp(context, endClearanceDp),
+            root.height - covered.bottom
+        )
         val at = IntArray(2).also { anchor.getLocationInWindow(it) }
         val overlap = dp(context, 6)
         val inset = dp(context, xOffsetDp)
+
+        // A row too long for the room is cut short with an ellipsis rather than the menu running
+        // off the screen: measured at no wider than what is left.
+        val limit = View.MeasureSpec.makeMeasureSpec(room.width(), View.MeasureSpec.AT_MOST)
+        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        content.measure(limit, unspecified)
+        val width = content.measuredWidth
+        val height = content.measuredHeight
+        popup.width = width
+        popup.height = height
+
         val x = (if (gravity == Gravity.END) at[0] + anchor.width - width - inset else at[0] + inset)
             .coerceIn(room.left, (room.right - width).coerceAtLeast(room.left))
         val below = at[1] + anchor.height - overlap

@@ -51,7 +51,7 @@ object VoiceQuery {
     fun resolve(candidates: List<String>, apps: List<AppInfo>, words: List<String> = emptyList()): Resolution {
         val spoken = candidates
             .sortedByDescending { c -> words.any { c.contains(it, ignoreCase = true) } }
-            .map(::read)
+            .map { read(it, apps) }
         for (s in spoken) {
             if (!s.open) continue
             val matches = matchingApps(apps, s.query)
@@ -84,12 +84,18 @@ object VoiceQuery {
             .filter { it.isNotEmpty() }
             .distinct()
 
-    fun read(utterance: String): Spoken {
+    /**
+     * An utterance that is itself the name of one of [apps] is searched as heard, before any
+     * lead-in is looked for: "Google Maps" and "Search Console" are apps being asked for, not
+     * requests to google "maps" or search for "console".
+     */
+    fun read(utterance: String, apps: List<AppInfo> = emptyList()): Spoken {
         val text = utterance
             .replace(SPOKEN_MERIDIEM, "$1m")
             .trim()
             .trimEnd('.', '!', '?', '。', '！', '？')
             .trim()
+        if (matchingApps(apps, text).isNotEmpty()) return Spoken(text, open = false)
         for ((pattern, keyword) in REWRITES) {
             pattern.matchEntire(text)?.let { match ->
                 // The space after the keyword is what makes it a command, even with nothing after.

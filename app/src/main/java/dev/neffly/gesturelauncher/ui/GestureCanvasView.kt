@@ -152,6 +152,9 @@ class GestureCanvasView @JvmOverloads constructor(
     }
 
     private fun addPoint(point: PointF) {
+        // clearStroke() can land mid-touch (a second finger on Redo): the rest of that touch
+        // belongs to a stroke that no longer exists.
+        if (subStrokeLengths.isEmpty()) return
         points.add(point)
         path.lineTo(point.x, point.y)
         subStrokeLengths[subStrokeLengths.size - 1]++

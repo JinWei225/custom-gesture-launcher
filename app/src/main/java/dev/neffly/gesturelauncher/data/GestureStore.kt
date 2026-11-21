@@ -14,12 +14,14 @@ import java.io.File
  *
  * Writes go through [AtomicFile] (write-to-temp + rename), so a crash or power loss mid-write
  * can never leave a truncated file behind. If the file is ever unparseable anyway, it's kept as
- * `gestures.json.bak` instead of being silently overwritten with an empty store.
+ * `gestures.json.corrupt` instead of being silently overwritten with an empty store — not `.bak`,
+ * which is the name [AtomicFile] keeps for itself and clears on the next write.
  */
 object GestureStore {
 
     private const val TAG = "GestureStore"
     private const val FILE_NAME = "gestures.json"
+    private const val CORRUPT_NAME = "$FILE_NAME.corrupt"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     @Volatile
@@ -68,8 +70,8 @@ object GestureStore {
                 )
             }.getOrElse { e ->
                 // Don't silently start empty over a corrupt file — preserve it for recovery.
-                Log.e(TAG, "failed to parse $FILE_NAME; keeping it as $FILE_NAME.bak", e)
-                file.renameTo(File(context.filesDir, "$FILE_NAME.bak"))
+                Log.e(TAG, "failed to parse $FILE_NAME; keeping it as $CORRUPT_NAME", e)
+                file.renameTo(File(context.filesDir, CORRUPT_NAME))
                 emptyList()
             }
         } else {

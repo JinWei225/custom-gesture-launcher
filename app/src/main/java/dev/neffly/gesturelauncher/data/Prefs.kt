@@ -27,6 +27,8 @@ object Prefs {
     private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
     private const val KEY_VOICE_WORDS = "voice_words"
+    private const val KEY_VOICE = "voice_enabled"
+    private const val KEY_VOICE_ON_ASSIST = "voice_on_assist"
     private const val KEY_WIDGETS_PAGE = "widgets_page"
     private const val KEY_NOTES_PAGE = "notes_page"
     private const val KEY_HINTS_SEEN = "hints_seen"
@@ -195,6 +197,22 @@ object Prefs {
 
     fun clearHintsSeen(context: Context) {
         prefs(context).edit().remove(KEY_HINTS_SEEN).apply()
+    }
+
+    /** Master switch for voice search — the dock's push-to-talk and quick search's mic (default
+     *  ON). Off, neither is offered and nothing listens. */
+    fun voiceEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_VOICE, true)
+
+    fun setVoiceEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VOICE, value).apply()
+    }
+
+    /** Whether quick search starts listening by itself when the assistant gesture opens it
+     *  (default ON). Off, it opens to the keyboard like any other way in; the mic is still there. */
+    fun voiceOnAssist(context: Context): Boolean = prefs(context).getBoolean(KEY_VOICE_ON_ASSIST, true)
+
+    fun setVoiceOnAssist(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VOICE_ON_ASSIST, value).apply()
     }
 
     /** Words and names the user has told voice search to listen for — see
