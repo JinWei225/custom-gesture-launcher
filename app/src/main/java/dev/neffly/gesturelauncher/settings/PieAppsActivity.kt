@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -138,6 +139,11 @@ class PieAppsActivity : BaseActivity() {
             pickerAdapter.submit(SearchScoring.rankApps(candidates, text?.toString().orEmpty()))
         }
         sheet.setContentView(view)
+        // The sheet wraps its content by default, and it is anchored to the bottom: a query down
+        // to one or two apps shrinks it and drags the search box down the screen with it. Full
+        // height keeps the box where it is; the list fills in or empties out below it.
+        sheet.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            ?.updateLayoutParams { height = ViewGroup.LayoutParams.MATCH_PARENT }
         sheet.behavior.skipCollapsed = true
         sheet.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         sheet.show()
