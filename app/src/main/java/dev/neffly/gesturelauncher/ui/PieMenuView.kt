@@ -3,6 +3,7 @@ package dev.neffly.gesturelauncher.ui
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
@@ -74,20 +75,23 @@ class PieMenuView @JvmOverloads constructor(
     private var progress = 0f
     private var animator: ValueAnimator? = null
 
-    private val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.scrim)
-    }
-    private val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
-    }
-    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
+    // The quick-search card's glass, unblurred (see the pie_* note in colors.xml); every colour
+    // follows the light or dark theme. Each paint's alpha is scaled by the open animation, so the
+    // colour's own alpha is kept to scale from.
+    private val outerPaint = fill(R.color.glass_veil_flat)
+    private val outerStrokePaint = stroke(R.color.glass_stroke)
+    private val innerPaint = fill(R.color.pie_inner)
+    private val innerStrokePaint = stroke(R.color.pie_inner_stroke)
+    private val highlightPaint = fill(R.color.pie_highlight)
+    /** The card's soft outer shadow (bg_card_glow), as rings fading outwards from the edge. */
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = density
+        strokeWidth = GLOW_RING_DP * density
+        color = Color.BLACK
     }
-    private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
-    }
+    private val paints = listOf(outerPaint, outerStrokePaint, innerPaint, innerStrokePaint, highlightPaint)
+    private val baseAlphas = paints.map { it.alpha }
+
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
         textAlign = Paint.Align.CENTER
@@ -97,6 +101,16 @@ class PieMenuView @JvmOverloads constructor(
 
     init {
         isClickable = true
+    }
+
+    private fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = ContextCompat.getColor(context, color)
+    }
+
+    private fun stroke(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = ContextCompat.getColor(context, color)
+        style = Paint.Style.STROKE
+        strokeWidth = density
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -143,7 +157,9 @@ class PieMenuView @JvmOverloads constructor(
         val fullRadius = PieGeometry.radius(items.size, fullIcon, fullGap, fullIcon * MIN_RADIUS_RATIO)
         val fit = PieGeometry.fit(
             x, y, width.toFloat(), height.toFloat(),
-            reach = outerRadius(fullRadius, fullIcon, fullGap), minScale = MIN_SCALE
+            // The glow is the outermost thing drawn, so it is what has to fit.
+            reach = outerRadius(fullRadius, fullIcon, fullGap) + GLOW_ALPHAS.size * GLOW_RING_DP * density,
+            minScale = MIN_SCALE
         )
         centerX = fit.centerX
         centerY = fit.centerY
@@ -187,16 +203,20 @@ class PieMenuView @JvmOverloads constructor(
         if (!open || items.isEmpty()) return
         val r = radius * (OPEN_START_SCALE + (1 - OPEN_START_SCALE) * progress)
 
-        outerPaint.alpha = (OUTER_ALPHA * progress).roundToInt()
-        canvas.drawCircle(centerX, centerY, outerRadius(r, icon, gap), outerPaint)
-        innerPaint.alpha = (INNER_ALPHA * progress).roundToInt()
-        edgePaint.alpha = (EDGE_ALPHA * progress).roundToInt()
+        paints.forEachIndexed { i, paint -> paint.alpha = (baseAlphas[i] * progress).roundToInt() }
+        val outer = outerRadius(r, icon, gap)
+        val ring = glowPaint.strokeWidth
+        GLOW_ALPHAS.forEachIndexed { i, alpha ->
+            glowPaint.alpha = (alpha * progress).roundToInt()
+            canvas.drawCircle(centerX, centerY, outer + ring * (i + 0.5f), glowPaint)
+        }
+        canvas.drawCircle(centerX, centerY, outer, outerPaint)
+        canvas.drawCircle(centerX, centerY, outer, outerStrokePaint)
         val inner = innerRadius(r)
         canvas.drawCircle(centerX, centerY, inner, innerPaint)
-        canvas.drawCircle(centerX, centerY, inner, edgePaint)
+        canvas.drawCircle(centerX, centerY, inner, innerStrokePaint)
 
         val iconAlpha = (progress * 255).roundToInt()
-        highlightPaint.alpha = (HIGHLIGHT_ALPHA * progress).roundToInt()
         items.forEachIndexed { index, item ->
             val angle = PieGeometry.angleOf(index, items.size)
             val x = centerX + r * cos(angle).toFloat()
@@ -214,7 +234,6 @@ class PieMenuView @JvmOverloads constructor(
         items.getOrNull(selected)?.let { item ->
             // Above the pie rather than in its middle, where the finger is; below it when the pie
             // is at the top of the screen.
-            val outer = outerRadius(r, icon, gap)
             val above = centerY - outer - labelPaint.textSize / 2
             val y = if (above - labelPaint.textSize > 0) above else centerY + outer + labelPaint.textSize * 1.5f
             canvas.drawText(item.label, centerX, y, labelPaint)
@@ -238,10 +257,9 @@ class PieMenuView @JvmOverloads constructor(
         private const val SELECTED_SCALE = 1.25f
         private const val OPEN_START_SCALE = 0.6f
         private const val OPEN_MILLIS = 140L
-        private const val OUTER_ALPHA = 150
-        private const val INNER_ALPHA = 36
-        private const val EDGE_ALPHA = 70
-        private const val HIGHLIGHT_ALPHA = 70
+        private const val GLOW_RING_DP = 2f
+        /** Innermost ring first — the same steps as bg_card_glow. */
+        private val GLOW_ALPHAS = intArrayOf(0x20, 0x16, 0x0E, 0x08)
     }
 }
 

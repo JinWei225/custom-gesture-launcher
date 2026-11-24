@@ -136,4 +136,12 @@
          readable, dark enough to give the card's shadow something to read against. -->
     <color name="quick_search_scrim">#4D000000</color>
 
+    <!-- The pie (ui/PieMenuView.kt): the same glass as the quick-search card, in its unblurred
+         form — a view on the home screen can't blur the wallpaper behind it, so its outer layer is
+         glass_veil_flat with the glass_stroke edge. These are the pieces only the pie has: the
+         inner layer, a shade off the outer one so the two read as separate rings, its edge, and
+         the disc behind the app under the finger. -->
+    <color name="pie_inner">#123C3223</color>
+    <color name="pie_inner_stroke">#2E3C3223</color>
+    <color name="pie_highlight">#263C3223</color>
 </resources>
