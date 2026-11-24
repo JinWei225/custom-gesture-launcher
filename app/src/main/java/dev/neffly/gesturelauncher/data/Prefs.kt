@@ -195,10 +195,11 @@ object Prefs {
         prefs(context).edit().putString(KEY_LAUNCH_STYLE, value.name).apply()
     }
 
-    /** Size of the pie's icons at full scale, in dp; the ring's size follows from it. */
+    /** Size of the pie's icons at full scale, in dp; the ring's size follows from it. Snapped to
+     *  the settings slider's steps, which refuses (by crashing) any value off them — a restored
+     *  backup can hold any number. */
     fun pieIconDp(context: Context): Int =
-        prefs(context).getInt(KEY_PIE_ICON_DP, PieMenuView.DEFAULT_ICON_DP)
-            .coerceIn(PieMenuView.MIN_ICON_DP, PieMenuView.MAX_ICON_DP)
+        PieMenuView.snapIconDp(prefs(context).getInt(KEY_PIE_ICON_DP, PieMenuView.DEFAULT_ICON_DP))
 
     fun setPieIconDp(context: Context, value: Int) {
         prefs(context).edit().putInt(KEY_PIE_ICON_DP, value).apply()

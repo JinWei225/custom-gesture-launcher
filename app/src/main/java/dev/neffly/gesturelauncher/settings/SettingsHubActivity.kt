@@ -245,6 +245,10 @@ class SettingsHubActivity : SlidePanelActivity() {
         keyboardShortcutAccessTitle = findViewById(R.id.keyboardShortcutAccessTitle)
         keyboardShortcutAccessSubtitle = findViewById(R.id.keyboardShortcutAccessSubtitle)
         keyboardShortcutAccessRow.setOnClickListener { requestAccessibilityAccess() }
+        if (!LauncherAccessibilityService.isDeclared(this)) {
+            keyboardShortcutRow.isVisible = false
+            keyboardShortcutAccessRow.isVisible = false
+        }
 
         // Every tour is due again: home's on the next resume, and the others the next time their
         // screen or page comes up. Home is singleTask, so bringing it forward closes this screen

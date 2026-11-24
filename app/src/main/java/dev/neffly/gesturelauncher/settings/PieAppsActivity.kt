@@ -2,14 +2,13 @@ package dev.neffly.gesturelauncher.settings
 
 import android.os.Bundle
 import android.os.Process
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -53,11 +52,13 @@ class PieAppsActivity : BaseActivity() {
         emptyView = findViewById(R.id.emptyView)
         addButton = findViewById(R.id.addButton)
         addButton.setOnClickListener { pickApp() }
+        // Until load() has the installed apps there would be nothing to pick from.
+        addButton.isEnabled = false
 
         findViewById<Slider>(R.id.iconSizeSlider).apply {
             valueFrom = PieMenuView.MIN_ICON_DP.toFloat()
             valueTo = PieMenuView.MAX_ICON_DP.toFloat()
-            stepSize = ICON_STEP_DP.toFloat()
+            stepSize = PieMenuView.ICON_STEP_DP.toFloat()
             value = Prefs.pieIconDp(this@PieAppsActivity).toFloat()
             addOnChangeListener { _, size, fromUser ->
                 if (fromUser) Prefs.setPieIconDp(this@PieAppsActivity, size.toInt())
@@ -71,6 +72,8 @@ class PieAppsActivity : BaseActivity() {
             override fun onMove(rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder): Boolean {
                 val a = from.bindingAdapterPosition
                 val b = to.bindingAdapterPosition
+                // A row mid-removal has no position any more.
+                if (a == RecyclerView.NO_POSITION || b == RecyclerView.NO_POSITION) return false
                 apps.add(b, apps.removeAt(a))
                 adapter.notifyItemMoved(a, b)
                 return true
@@ -131,13 +134,9 @@ class PieAppsActivity : BaseActivity() {
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = pickerAdapter
         pickerAdapter.submit(candidates)
-        search.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                pickerAdapter.submit(SearchScoring.rankApps(candidates, s?.toString().orEmpty()))
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+        search.doOnTextChanged { text, _, _, _ ->
+            pickerAdapter.submit(SearchScoring.rankApps(candidates, text?.toString().orEmpty()))
+        }
         sheet.setContentView(view)
         sheet.behavior.skipCollapsed = true
         sheet.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -180,9 +179,5 @@ class PieAppsActivity : BaseActivity() {
                 save()
             }
         }
-    }
-
-    private companion object {
-        const val ICON_STEP_DP = 4
     }
 }

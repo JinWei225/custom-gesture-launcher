@@ -38,6 +38,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dev.neffly.gesturelauncher.crash.SafeModeActivity
@@ -121,6 +122,8 @@ class MainActivity : BaseActivity() {
     private lateinit var pie: PieMenuView
     /** What [pie] is showing, by ring position — what [PieMenuView.onPick] indexes into. */
     private var pieApps: List<AppInfo> = emptyList()
+    /** The load behind [pieApps]; a newer one cancels it, so a slow, stale load can't land last. */
+    private var pieLoad: Job? = null
     private lateinit var eventsContainer: LinearLayout
 
     /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
@@ -549,7 +552,8 @@ class MainActivity : BaseActivity() {
         pie.haptics = Prefs.hapticFeedback(this)
         pie.iconDp = Prefs.pieIconDp(this)
         val components = PieStore.all(this)
-        lifecycleScope.launch {
+        pieLoad?.cancel()
+        pieLoad = lifecycleScope.launch {
             val items = withContext(Dispatchers.IO) {
                 val apps = PieStore.resolve(components, AppRepository.load(this@MainActivity))
                 apps to apps.map { PieMenuView.Item(it.label, IconCache.load(this@MainActivity, it)) }

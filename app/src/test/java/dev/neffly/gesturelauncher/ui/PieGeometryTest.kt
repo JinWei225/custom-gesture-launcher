@@ -64,6 +64,15 @@ class PieGeometryTest {
     }
 
     @Test
+    fun `icon sizes snap onto the slider's steps and range`() {
+        assertEquals(48, PieMenuView.snapIconDp(48))
+        assertEquals(52, PieMenuView.snapIconDp(50))
+        assertEquals(48, PieMenuView.snapIconDp(49))
+        assertEquals(PieMenuView.MIN_ICON_DP, PieMenuView.snapIconDp(0))
+        assertEquals(PieMenuView.MAX_ICON_DP, PieMenuView.snapIconDp(500))
+    }
+
+    @Test
     fun `past its smallest size the pie moves just enough to stay in view`() {
         val fit = PieGeometry.fit(40f, 800f, width = 1000f, height = 1600f, reach = 200f, minScale = 0.5f)
         assertEquals(0.5f, fit.scale)

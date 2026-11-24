@@ -128,9 +128,8 @@ object BackupManager {
             AppTagStore.mergeAll(context, data.appTags)
             NoteStore.merge(context, data.notes)
             Prefs.setVoiceWords(context, Prefs.voiceWords(context) + data.voiceWords)
-            // Imported apps join the end of the ring; the pie can't grow past its limit.
-            val pie = PieStore.all(context)
-            PieStore.replaceAll(context, (pie + data.pieApps.filterNot { it in pie }).take(PieStore.MAX_APPS))
+            // Imported apps join the end of the ring (PieStore drops repeats and the overflow).
+            PieStore.replaceAll(context, PieStore.all(context) + data.pieApps)
         }
         QuicklinkStore.import(context, data.quicklinks, replace)
         Prefs.setLaunchStyle(context, LaunchStyle.fromName(data.launchStyle))

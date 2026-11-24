@@ -20,20 +20,24 @@ object PieStore {
 
     fun all(context: Context): List<String> = file.read(context)
 
-    fun replaceAll(context: Context, components: List<String>) = file.write(context, components)
+    /** Every writer goes through here, so the pie never holds a repeat or more than [MAX_APPS]. */
+    fun replaceAll(context: Context, components: List<String>) =
+        file.write(context, components.distinct().take(MAX_APPS))
 
     /**
-     * The installed apps behind [components], in order. A component an app has since swapped for
-     * another launcher alias (seasonal icons do this) falls back to that package's entry; one whose
-     * app is gone is left out.
+     * The installed apps behind [components], in order, each at most once. A component an app has
+     * since swapped for another launcher alias (seasonal icons do this) falls back to that
+     * package's entry — only when the package has just the one, since otherwise there is no
+     * telling which was meant. One whose app is gone is left out.
      */
     fun resolve(components: List<String>, apps: List<AppInfo>): List<AppInfo> {
         val personal = apps.filter { it.user == Process.myUserHandle() }
         val byComponent = personal.associateBy { it.componentName.flattenToString() }
+        val byPackage = personal.groupBy { it.packageName }
         return components.mapNotNull { flat ->
             byComponent[flat] ?: ComponentName.unflattenFromString(flat)?.let { comp ->
-                personal.firstOrNull { it.packageName == comp.packageName }
+                byPackage[comp.packageName]?.singleOrNull()
             }
-        }
+        }.distinctBy { it.key }
     }
 }

@@ -64,6 +64,12 @@ class LauncherAccessibilityService : AccessibilityService() {
          *  it would need a physical keyboard attached just to configure the feature. */
         private const val SHORTCUT_KEY_CODE = KeyEvent.KEYCODE_SPACE
 
+        /** Whether this build has the service at all: debug builds leave it out of the manifest
+         *  (see src/debug/AndroidManifest.xml), and the keyboard shortcut goes with it. */
+        fun isDeclared(context: Context): Boolean = runCatching {
+            context.packageManager.getServiceInfo(ComponentName(context, LauncherAccessibilityService::class.java), 0)
+        }.isSuccess
+
         /**
          * Whether the user has granted this service accessibility access.
          *

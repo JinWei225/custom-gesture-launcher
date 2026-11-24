@@ -10,8 +10,10 @@ import android.util.AttributeSet
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import dev.neffly.gesturelauncher.R
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -39,7 +41,8 @@ class PieMenuView @JvmOverloads constructor(
     /** Called with the index into [items] the finger was lifted on. */
     var onPick: ((Int) -> Unit)? = null
 
-    /** Called when a touch ends on a pie with nothing in it, so the owner can say how to fill it. */
+    /** Called when a deliberate touch ends on a pie with nothing in it, so the owner can say how
+     *  to fill it. */
     var onEmpty: (() -> Unit)? = null
 
     /** Whether moving onto a new item ticks. */
@@ -58,12 +61,25 @@ class PieMenuView @JvmOverloads constructor(
             // here while drawing must not leak into the lists that show the same drawables.
             field = value.map { Item(it.label, it.icon?.constantState?.newDrawable(resources)?.mutate() ?: it.icon) }
             dismiss()
+            // The ring can't be aimed without sight, so screen readers get one action per app.
+            accessibilityActionIds.forEach { ViewCompat.removeAccessibilityAction(this, it) }
+            accessibilityActionIds = value.mapIndexed { index, item ->
+                ViewCompat.addAccessibilityAction(this, context.getString(R.string.pie_open_app, item.label)) { _, _ ->
+                    onPick?.invoke(index)
+                    true
+                }
+            }
         }
+
+    private var accessibilityActionIds: List<Int> = emptyList()
 
     private val density = resources.displayMetrics.density
     private val edgePx = EDGE_DP * density
     private val deadZonePx = DEAD_ZONE_DP * density
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
+    private var downX = 0f
+    private var downY = 0f
     private var open = false
     private var centerX = 0f
     private var centerY = 0f
@@ -101,6 +117,7 @@ class PieMenuView @JvmOverloads constructor(
 
     init {
         isClickable = true
+        contentDescription = context.getString(R.string.pie_description)
     }
 
     private fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -116,9 +133,12 @@ class PieMenuView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // A sideways slide would otherwise be taken by the home screen's pager.
-                parent?.requestDisallowInterceptTouchEvent(true)
-                if (items.isNotEmpty() && event.x >= edgePx && event.x <= width - edgePx) {
+                downX = event.x
+                downY = event.y
+                if (items.isNotEmpty() && inReach(event.x)) {
+                    // A sideways slide would otherwise be taken by the home screen's pager. Only
+                    // once a ring is open: anywhere else a sideways swipe should turn the page.
+                    parent?.requestDisallowInterceptTouchEvent(true)
                     show(event.x, event.y)
                 }
                 return true
@@ -135,7 +155,7 @@ class PieMenuView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 if (items.isEmpty()) {
-                    onEmpty?.invoke()
+                    if (isDeliberate(event)) performClick()
                 } else {
                     val pick = selected
                     dismiss()
@@ -150,6 +170,26 @@ class PieMenuView @JvmOverloads constructor(
         }
         return super.onTouchEvent(event)
     }
+
+    /** An empty pie's only click: saying how to fill it. Also what TalkBack's double-tap reaches. */
+    override fun performClick(): Boolean {
+        super.performClick()
+        if (items.isEmpty()) onEmpty?.invoke()
+        return true
+    }
+
+    private fun inReach(x: Float) = x >= edgePx && x <= width - edgePx
+
+    /**
+     * Whether a touch on an empty pie was an attempt to open it — a press held or slid, away from
+     * the edges — rather than a stray tap. Same idea as the gesture canvas ignoring strokes too
+     * short to be real attempts. A sideways swipe never gets here: the pager takes it.
+     */
+    private fun isDeliberate(up: MotionEvent): Boolean =
+        inReach(downX) && (
+            up.eventTime - up.downTime >= ViewConfiguration.getLongPressTimeout() ||
+                hypot(up.x - downX, up.y - downY) > touchSlop
+            )
 
     private fun show(x: Float, y: Float) {
         val fullIcon = iconDp * density
@@ -244,6 +284,14 @@ class PieMenuView @JvmOverloads constructor(
         const val DEFAULT_ICON_DP = 48
         const val MIN_ICON_DP = 32
         const val MAX_ICON_DP = 72
+        /** The settings slider's step: every stored size is one of these. */
+        const val ICON_STEP_DP = 4
+
+        /** [dp] as a size the settings slider can show: in range, and on a step. */
+        fun snapIconDp(dp: Int): Int {
+            val steps = ((dp - MIN_ICON_DP) / ICON_STEP_DP.toFloat()).roundToInt()
+            return (MIN_ICON_DP + steps * ICON_STEP_DP).coerceIn(MIN_ICON_DP, MAX_ICON_DP)
+        }
 
         /** Spacing between neighbouring icons, as a share of the icon size. */
         private const val GAP_RATIO = 0.2f
