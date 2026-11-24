@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
+import dev.neffly.gesturelauncher.ui.PieMenuView
 
 /**
  * SharedPreferences wrapper for every setting the app keeps: the crash-counter safety net, the
@@ -31,6 +32,8 @@ object Prefs {
     private const val KEY_VOICE_ON_ASSIST = "voice_on_assist"
     private const val KEY_WIDGETS_PAGE = "widgets_page"
     private const val KEY_NOTES_PAGE = "notes_page"
+    private const val KEY_LAUNCH_STYLE = "launch_style"
+    private const val KEY_PIE_ICON_DP = "pie_icon_dp"
     private const val KEY_HINTS_SEEN = "hints_seen"
 
     /** Repeated crashes before the home screen drops into Safe Mode. */
@@ -181,6 +184,24 @@ object Prefs {
 
     fun setNotesPage(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NOTES_PAGE, value).apply()
+    }
+
+    /** How the home screen's lower area launches apps (default [LaunchStyle.GESTURES]). Stored by
+     *  enum name; a name this build doesn't know falls back to the default. */
+    fun launchStyle(context: Context): LaunchStyle =
+        LaunchStyle.fromName(prefs(context).getString(KEY_LAUNCH_STYLE, null))
+
+    fun setLaunchStyle(context: Context, value: LaunchStyle) {
+        prefs(context).edit().putString(KEY_LAUNCH_STYLE, value.name).apply()
+    }
+
+    /** Size of the pie's icons at full scale, in dp; the ring's size follows from it. */
+    fun pieIconDp(context: Context): Int =
+        prefs(context).getInt(KEY_PIE_ICON_DP, PieMenuView.DEFAULT_ICON_DP)
+            .coerceIn(PieMenuView.MIN_ICON_DP, PieMenuView.MAX_ICON_DP)
+
+    fun setPieIconDp(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_PIE_ICON_DP, value).apply()
     }
 
     /** Which guided tours have been finished or skipped, by [dev.neffly.gesturelauncher.onboarding.Hint]

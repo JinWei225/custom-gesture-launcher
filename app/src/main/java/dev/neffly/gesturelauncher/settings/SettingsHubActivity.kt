@@ -24,6 +24,9 @@ import dev.neffly.gesturelauncher.data.BackupData
 import dev.neffly.gesturelauncher.data.BackupManager
 import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
+import dev.neffly.gesturelauncher.data.LaunchStyle
+import dev.neffly.gesturelauncher.data.PieStore
+import dev.neffly.gesturelauncher.data.QuicklinkStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.MapSearch
@@ -66,6 +69,12 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var fontScaleSubtitle: TextView
     private lateinit var searchEngineSubtitle: TextView
     private lateinit var mapsAppRow: View
+    private lateinit var gesturesRow: View
+    private lateinit var sensitivityRow: View
+    private lateinit var pieAppsRow: View
+    private lateinit var pieAppsSubtitle: TextView
+    private lateinit var launchStyleSubtitle: TextView
+    private lateinit var quicklinksSubtitle: TextView
     private lateinit var mapsAppSubtitle: TextView
     private lateinit var voiceWordsSubtitle: TextView
     private lateinit var voiceSwitch: MaterialSwitch
@@ -115,11 +124,22 @@ class SettingsHubActivity : SlidePanelActivity() {
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
         gesturesSubtitle = findViewById(R.id.gesturesSubtitle)
+        gesturesRow = findViewById(R.id.gesturesRow)
+        sensitivityRow = findViewById(R.id.sensitivityRow)
+        pieAppsRow = findViewById(R.id.pieAppsRow)
+        pieAppsSubtitle = findViewById(R.id.pieAppsSubtitle)
+        launchStyleSubtitle = findViewById(R.id.launchStyleSubtitle)
+        quicklinksSubtitle = findViewById(R.id.quicklinksSubtitle)
+        findViewById<View>(R.id.launchStyleRow).setOnClickListener { showLaunchStyleDialog() }
+        pieAppsRow.setOnClickListener { startActivity(Intent(this, PieAppsActivity::class.java)) }
+        findViewById<View>(R.id.quicklinksRow).setOnClickListener {
+            startActivity(Intent(this, QuicklinksActivity::class.java))
+        }
 
-        findViewById<View>(R.id.gesturesRow).setOnClickListener {
+        gesturesRow.setOnClickListener {
             startActivity(Intent(this, GestureSettingsActivity::class.java))
         }
-        findViewById<View>(R.id.sensitivityRow).setOnClickListener {
+        sensitivityRow.setOnClickListener {
             startActivity(Intent(this, GestureSensitivityActivity::class.java))
         }
         findViewById<View>(R.id.exportRow).setOnClickListener {
@@ -292,6 +312,10 @@ class SettingsHubActivity : SlidePanelActivity() {
     override fun onResume() {
         super.onResume()
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
+        updateLaunchStyle()
+        pieAppsSubtitle.text = getString(R.string.pie_apps_row_subtitle, PieStore.all(this).size, PieStore.MAX_APPS)
+        val links = QuicklinkStore.all(this).size
+        quicklinksSubtitle.text = resources.getQuantityString(R.plurals.quicklinks_row_subtitle, links, links)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
         widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
@@ -527,6 +551,38 @@ class SettingsHubActivity : SlidePanelActivity() {
         recreate()
     }
 
+    /** Only the rows that belong to the chosen style are shown — the gesture list means nothing
+     *  while the pie is in use, and the other way round. */
+    private fun updateLaunchStyle() {
+        val style = Prefs.launchStyle(this)
+        launchStyleSubtitle.setText(launchStyleLabel(style))
+        val pie = style == LaunchStyle.PIE
+        gesturesRow.isVisible = !pie
+        sensitivityRow.isVisible = !pie
+        pieAppsRow.isVisible = pie
+    }
+
+    @StringRes
+    private fun launchStyleLabel(style: LaunchStyle): Int = when (style) {
+        LaunchStyle.GESTURES -> R.string.launch_style_gestures
+        LaunchStyle.PIE -> R.string.launch_style_pie
+    }
+
+    /** The home screen switches surfaces on its next resume, which is the moment this panel closes. */
+    private fun showLaunchStyleDialog() {
+        val styles = LaunchStyle.entries
+        val labels = styles.map { getString(launchStyleLabel(it)) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.launch_style_title)
+            .setSingleChoiceItems(labels, styles.indexOf(Prefs.launchStyle(this))) { dialog, which ->
+                Prefs.setLaunchStyle(this, styles[which])
+                updateLaunchStyle()
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .showWithFont()
+    }
+
     @StringRes
     private fun searchSideLabel(left: Boolean): Int =
         if (left) R.string.search_side_left else R.string.search_side_right
@@ -629,6 +685,10 @@ class SettingsHubActivity : SlidePanelActivity() {
         val result = BackupManager.apply(this, data, replace)
         AppRepository.invalidate()
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
+        updateLaunchStyle()
+        pieAppsSubtitle.text = getString(R.string.pie_apps_row_subtitle, PieStore.all(this).size, PieStore.MAX_APPS)
+        val links = QuicklinkStore.all(this).size
+        quicklinksSubtitle.text = resources.getQuantityString(R.plurals.quicklinks_row_subtitle, links, links)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
         widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)

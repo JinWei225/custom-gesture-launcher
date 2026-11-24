@@ -161,6 +161,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- The pie launch style's surface, in place of the canvas when that style is chosen
+             (MainActivity swaps the two on resume). -->
+        <dev.neffly.gesturelauncher.ui.PieMenuView
+            android:id="@+id/pieMenu"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
         <!-- Shown briefly after a long/deliberate stroke matches nothing, so a real attempt
              gets feedback instead of silently doing nothing. Never intercepts touch. -->
         <TextView

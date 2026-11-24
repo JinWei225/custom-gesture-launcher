@@ -7,6 +7,7 @@ import dev.neffly.gesturelauncher.notes.Note
 import dev.neffly.gesturelauncher.notes.NoteStore
 import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
+import dev.neffly.gesturelauncher.ui.PieMenuView
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -51,7 +52,13 @@ data class BackupData(
     val notesPage: Boolean = true,
     /** The notes page, oldest first. Widgets are left out: an app-widget id only means
      *  something to the device that allocated it. */
-    val notes: List<Note> = emptyList()
+    val notes: List<Note> = emptyList(),
+    val quicklinks: List<Quicklink> = emptyList(),
+    /** A [LaunchStyle] name, exactly as [Prefs.launchStyle] stores it. */
+    val launchStyle: String = LaunchStyle.DEFAULT.name,
+    /** The pie's apps as flattened component names, in ring order (see [PieStore]). */
+    val pieApps: List<String> = emptyList(),
+    val pieIconDp: Int = PieMenuView.DEFAULT_ICON_DP
 )
 
 /** Result of applying an imported [BackupData], for the user-facing summary dialog. */
@@ -85,7 +92,11 @@ object BackupManager {
         voice = Prefs.voiceEnabled(context),
         voiceOnAssist = Prefs.voiceOnAssist(context),
         widgetsPage = Prefs.widgetsPage(context),
-        notesPage = Prefs.notesPage(context)
+        notesPage = Prefs.notesPage(context),
+        quicklinks = QuicklinkStore.all(context),
+        launchStyle = Prefs.launchStyle(context).name,
+        pieApps = PieStore.all(context),
+        pieIconDp = Prefs.pieIconDp(context)
     )
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
@@ -106,6 +117,7 @@ object BackupManager {
             AppTagStore.replaceAll(context, data.appTags)
             NoteStore.save(context, data.notes)
             Prefs.setVoiceWords(context, data.voiceWords)
+            PieStore.replaceAll(context, data.pieApps)
         } else {
             // Upsert by id, not append: a gesture's id is its identity everywhere else (the home
             // screen looks mappings up by it, and update/remove key on it), so merging a backup
@@ -116,7 +128,13 @@ object BackupManager {
             AppTagStore.mergeAll(context, data.appTags)
             NoteStore.merge(context, data.notes)
             Prefs.setVoiceWords(context, Prefs.voiceWords(context) + data.voiceWords)
+            // Imported apps join the end of the ring; the pie can't grow past its limit.
+            val pie = PieStore.all(context)
+            PieStore.replaceAll(context, (pie + data.pieApps.filterNot { it in pie }).take(PieStore.MAX_APPS))
         }
+        QuicklinkStore.import(context, data.quicklinks, replace)
+        Prefs.setLaunchStyle(context, LaunchStyle.fromName(data.launchStyle))
+        Prefs.setPieIconDp(context, data.pieIconDp)
         Prefs.setMatchThreshold(context, data.matchThreshold)
         Prefs.setAutoKeyboard(context, data.autoKeyboard)
         Prefs.setHapticFeedback(context, data.hapticFeedback)

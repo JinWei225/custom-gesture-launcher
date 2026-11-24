@@ -34,6 +34,7 @@ import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.search.Clipboard
 import dev.neffly.gesturelauncher.search.Commands
 import dev.neffly.gesturelauncher.search.SearchController
+import dev.neffly.gesturelauncher.search.Links
 import dev.neffly.gesturelauncher.search.SearchResult
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
@@ -138,7 +139,8 @@ class AppDrawerActivity : BaseActivity() {
             onSettingsClick = { openSettings(); clearSearch() },
             onCalculationClick = { calculation -> open(calculation) },
             onTimeClick = { time -> open(time) },
-            onActionClick = { action -> open(action) }
+            onActionClick = { action -> open(action) },
+            onLinkClick = { link -> open(link) }
         )
         appList.adapter = adapter
         // Swipe a row right to open it floating instead of full screen. Closing the drawer after
@@ -221,6 +223,7 @@ class AppDrawerActivity : BaseActivity() {
             is SearchResult.App -> launchAndClearSearch(result.app)
             is SearchResult.Settings -> { openSettings(); clearSearch() }
             is SearchResult.Action -> { Commands.open(this, result.command); clearSearch() }
+            is SearchResult.Link -> { Links.open(this, result.link.url); clearSearch() }
             // The only rows that leave the drawer open: the query stays in the box so a second
             // sum can be typed over it, which is the whole point of a calculator in a search bar.
             is SearchResult.Calculation -> Clipboard.copy(this, result.expression, result.result)

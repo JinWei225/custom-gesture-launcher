@@ -11,9 +11,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.text.inSpans
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.GestureStore
+import dev.neffly.gesturelauncher.data.LaunchStyle
+import dev.neffly.gesturelauncher.data.PieStore
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.settings.GestureActionChooserActivity
 import dev.neffly.gesturelauncher.settings.GestureSettingsActivity
+import dev.neffly.gesturelauncher.settings.PieAppsActivity
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
@@ -59,8 +62,10 @@ class HomeTour(
             text(R.string.tour_welcome_title), text(R.string.tour_welcome_body),
             Tour.Choice(R.string.tour_start, Tour.Move.Next), skip))
 
+        val pie = Prefs.launchStyle(activity) == LaunchStyle.PIE
         add(Tour.Step(canvasFrame, Placement.CENTER, Backdrop.SPOT_ROUND_RECT,
-            text(R.string.tour_draw_title), text(R.string.tour_draw_body), next, skip))
+            text(if (pie) R.string.tour_pie_title else R.string.tour_draw_title),
+            text(if (pie) R.string.tour_pie_body else R.string.tour_draw_body), next, skip))
 
         add(Tour.Step(searchButton, Placement.ABOVE, Backdrop.SPOT_CIRCLE,
             text(R.string.tour_search_title),
@@ -101,7 +106,16 @@ class HomeTour(
                 Tour.Choice(R.string.tour_not_now, Tour.Move.Next)))
         }
 
-        if (GestureStore.all(activity).isEmpty()) {
+        if (pie) {
+            val empty = PieStore.all(activity).isEmpty()
+            add(Tour.Step(canvasFrame, Placement.CENTER, Backdrop.DIM,
+                text(if (empty) R.string.tour_first_pie_title else R.string.tour_pie_apps_title),
+                text(if (empty) R.string.tour_first_pie_body else R.string.tour_pie_apps_body),
+                Tour.Choice(if (empty) R.string.pie_add_apps else R.string.tour_open, Tour.Move.Open(resume = false) {
+                    activity.startActivity(Intent(activity, PieAppsActivity::class.java))
+                }),
+                Tour.Choice(if (empty) R.string.tour_later else R.string.tour_done, Tour.Move.End)))
+        } else if (GestureStore.all(activity).isEmpty()) {
             add(Tour.Step(canvasFrame, Placement.CENTER, Backdrop.DIM,
                 text(R.string.tour_first_gesture_title), text(R.string.tour_first_gesture_body),
                 Tour.Choice(R.string.tour_add_gesture, Tour.Move.Open(resume = false) {

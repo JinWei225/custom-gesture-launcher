@@ -166,7 +166,6 @@
     <string name="ok">OK</string>
 
     <string name="settings_hub_title">Settings</string>
-    <string name="section_gestures">Gestures</string>
     <string name="section_backup">Backup</string>
     <string name="gestures_row_subtitle">%1$d saved</string>
     <string name="export_row_subtitle">Save your gestures, app aliases, and settings to a file</string>
@@ -353,4 +352,41 @@
 
     <string name="battery_level">%1$d%%</string>
     <string name="battery_level_charging">%1$d%%, charging</string>
+
+    <!-- Launch style: gestures or the pie -->
+    <string name="section_launching">Launching apps</string>
+    <string name="launch_style_title">Launch style</string>
+    <string name="launch_style_gestures">Gestures — draw a shape</string>
+    <string name="launch_style_pie">Pie — slide to an app in a ring</string>
+    <string name="pie_apps_title">Pie apps</string>
+    <string name="pie_apps_row_subtitle">%1$d of %2$d</string>
+    <string name="pie_apps_explainer">Touch the home screen and a ring of these apps opens under your finger. Slide toward one and lift to open it. The first app sits at the top, the rest go clockwise — long-press a row and drag to reorder.</string>
+    <string name="pie_apps_empty">No apps in the pie yet — tap + to add one.</string>
+    <string name="pie_add_apps">Add apps</string>
+    <string name="pie_remove">Remove from pie</string>
+    <string name="pie_icon_size">Icon size</string>
+    <string name="pie_full">The pie holds up to %1$d apps</string>
+    <string name="empty_pie_title">Your pie is empty</string>
+    <string name="empty_pie_body">Choose the apps that should open in a ring wherever you touch.</string>
+    <string name="tour_pie_title">Touch to open your pie</string>
+    <string name="tour_pie_body">Put a finger down anywhere here and your apps open in a ring around it. Slide toward one and lift to open it, or lift in the middle to close the ring.</string>
+    <string name="tour_first_pie_title">Fill your pie</string>
+    <string name="tour_first_pie_body">Pick the apps you open most. They\'ll sit in the ring in the order you choose.</string>
+    <string name="tour_pie_apps_title">Your pie</string>
+    <string name="tour_pie_apps_body">Add, remove and reorder its apps any time in settings.</string>
+
+    <!-- Quicklinks -->
+    <string name="quicklinks_title">Quicklinks</string>
+    <plurals name="quicklinks_row_subtitle">
+        <item quantity="one">%1$d link — found by name or alias in search</item>
+        <item quantity="other">%1$d links — found by name or alias in search</item>
+    </plurals>
+    <string name="quicklinks_empty">No quicklinks yet — tap + to save a web address you can open from search.</string>
+    <string name="quicklink_add">Add quicklink</string>
+    <string name="quicklink_edit">Edit quicklink</string>
+    <string name="quicklink_url_hint">Address</string>
+    <string name="quicklink_name_hint">Name (optional)</string>
+    <string name="quicklink_alias_hint">Alias (optional, e.g. gh)</string>
+    <string name="quicklink_deleted">Quicklink deleted</string>
+    <string name="search_section_links">Quicklinks</string>
 </resources>

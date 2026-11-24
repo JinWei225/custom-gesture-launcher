@@ -1,5 +1,6 @@
 package dev.neffly.gesturelauncher.search
 
+import dev.neffly.gesturelauncher.data.Quicklink
 import dev.neffly.gesturelauncher.drawer.AppInfo
 
 /** One openable row in a search result list, whatever kind of thing it points at. */
@@ -28,4 +29,7 @@ sealed class SearchResult {
      * [detail] are the reading of it, already worded for the row.
      */
     data class Action(val command: Command, val title: String, val detail: String) : SearchResult()
+
+    /** A saved web address — see [dev.neffly.gesturelauncher.data.QuicklinkStore]. */
+    data class Link(val link: Quicklink) : SearchResult()
 }
