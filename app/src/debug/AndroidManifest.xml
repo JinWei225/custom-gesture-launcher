@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds leave out the accessibility service. Play Protect's fraud protection refuses to
+     install, from a file, any app that declares one, with no way to override it, so with the
+     service in a debug APK can only reach a real phone over adb. Without it the build installs
+     from Drive or a download like any other app. The cost is only the Alt + Space keyboard
+     shortcut it powers, which a debug build doesn't need. Release builds keep the service. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <service
+            android:name=".accessibility.LauncherAccessibilityService"
+            tools:node="remove" />
+    </application>
+
+</manifest>
