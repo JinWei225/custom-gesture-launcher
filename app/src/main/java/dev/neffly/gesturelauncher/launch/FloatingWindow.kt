@@ -74,7 +74,7 @@ object FloatingWindow {
         // None has a window of its own: the settings hub is a screen of this very app, and the
         // answer rows are text to copy. Exhaustive rather than a negated list, so a new kind of
         // result has to say which side it falls on.
-        is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
+        is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time, is SearchResult.Link -> false
         is SearchResult.App, is SearchResult.Action ->
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
     }
@@ -90,7 +90,7 @@ object FloatingWindow {
                     Commands.failureMessage(result.command)
                 )
             // None opens a window, so there is nothing for the system to react to.
-            is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time -> false
+            is SearchResult.Settings, is SearchResult.Calculation, is SearchResult.Time, is SearchResult.Link -> false
         }
         // Gated on a window having actually appeared, because that is what provokes the system's
         // home launch. Arming after a start that failed — an app that has gone, an intent nothing

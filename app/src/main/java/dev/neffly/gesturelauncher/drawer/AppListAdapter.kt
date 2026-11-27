@@ -38,7 +38,8 @@ class AppListAdapter(
     private val onSettingsClick: (() -> Unit)? = null,
     private val onCalculationClick: ((SearchResult.Calculation) -> Unit)? = null,
     private val onTimeClick: ((SearchResult.Time) -> Unit)? = null,
-    private val onActionClick: ((SearchResult.Action) -> Unit)? = null
+    private val onActionClick: ((SearchResult.Action) -> Unit)? = null,
+    private val onLinkClick: ((SearchResult.Link) -> Unit)? = null
 ) : ListAdapter<AppListAdapter.Row, RecyclerView.ViewHolder>(DIFF) {
 
     sealed class Row {
@@ -53,6 +54,7 @@ class AppListAdapter(
         data class CalculationRow(val calculation: SearchResult.Calculation) : Row()
         data class TimeRow(val time: SearchResult.Time) : Row()
         data class ActionRow(val action: SearchResult.Action) : Row()
+        data class LinkRow(val link: SearchResult.Link) : Row()
     }
 
     private var headersShown = false
@@ -115,6 +117,7 @@ class AppListAdapter(
                     is SearchResult.Calculation -> Row.CalculationRow(result)
                     is SearchResult.Time -> Row.TimeRow(result)
                     is SearchResult.Action -> Row.ActionRow(result)
+                    is SearchResult.Link -> Row.LinkRow(result)
                 }
             )
         }
@@ -128,6 +131,7 @@ class AppListAdapter(
         is SearchResult.Calculation -> R.string.search_section_calculator
         is SearchResult.Time -> R.string.search_section_time
         is SearchResult.Action -> R.string.search_section_actions
+        is SearchResult.Link -> R.string.search_section_links
     }
 
     /** The openable thing at [position], or null when that row is a header, a section label, or
@@ -165,6 +169,7 @@ class AppListAdapter(
             is Row.CalculationRow -> row.calculation
             is Row.TimeRow -> row.time
             is Row.ActionRow -> row.action
+            is Row.LinkRow -> row.link
             is Row.Header, is Row.Section -> null
         }
 
@@ -195,7 +200,7 @@ class AppListAdapter(
         is Row.Section -> VIEW_TYPE_SECTION
         is Row.Item -> VIEW_TYPE_APP
         // Settings, action and answer rows share one layout and holder; only the bind differs.
-        is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow, is Row.ActionRow ->
+        is Row.SettingsRow, is Row.CalculationRow, is Row.TimeRow, is Row.ActionRow, is Row.LinkRow ->
             VIEW_TYPE_ENTRY
     }
 
@@ -282,6 +287,21 @@ class AppListAdapter(
                 // before tapping, and it must not be the part that gets cut.
                 holder.showSubtitle(action.detail, TextUtils.TruncateAt.END, lines = 2)
                 holder.itemView.setOnClickListener { onActionClick?.invoke(action) }
+                holder.itemView.setOnLongClickListener(null)
+            }
+            is Row.LinkRow -> {
+                val result = row.link
+                val link = result.link
+                holder as EntryVH
+                holder.icon.setImageResource(R.drawable.ic_link)
+                holder.title.text = link.name
+                // The alias leads because it is what the user types to get here; the address is
+                // what to check before tapping, and its middle is the part that can go.
+                holder.showSubtitle(
+                    link.alias?.let { "$it · ${link.url}" } ?: link.url,
+                    TextUtils.TruncateAt.MIDDLE
+                )
+                holder.itemView.setOnClickListener { onLinkClick?.invoke(result) }
                 holder.itemView.setOnLongClickListener(null)
             }
             is Row.SettingsRow -> {
@@ -378,6 +398,7 @@ class AppListAdapter(
                 old is Row.TimeRow && new is Row.TimeRow -> true
                 old is Row.ActionRow && new is Row.ActionRow -> true
                 old is Row.SettingsRow && new is Row.SettingsRow -> true
+                old is Row.LinkRow && new is Row.LinkRow -> old.link.link.id == new.link.link.id
                 else -> false
             }
 

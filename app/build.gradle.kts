@@ -46,6 +46,13 @@ android {
     }
 
     buildTypes {
+        // Its own package, so a debug build installs beside the published launcher instead of
+        // colliding with it (different signing key): try a build on a real phone, and go back by
+        // picking the other home app. Its name comes from src/debug/res, so the two can be told
+        // apart in the home-app picker.
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         release {
             signingConfig = signingConfigs.findByName("release")
             // R8 on: a home screen is cold-started more than any other app on the phone, and a

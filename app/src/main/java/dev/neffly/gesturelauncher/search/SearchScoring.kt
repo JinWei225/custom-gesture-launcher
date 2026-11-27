@@ -73,23 +73,28 @@ internal object SearchScoring {
      * guaranteed-findable alias. Any tag match is boosted above label matches (it's a deliberate
      * shortcut the user typed themselves); an exact tag match is pinned above everything.
      */
-    fun rankApps(apps: List<AppInfo>, query: String): List<AppInfo> {
+    fun rankApps(apps: List<AppInfo>, query: String): List<AppInfo> =
+        rank(apps, query, { it.normalizedLabel }, { it.normalizedTag })
+
+    /**
+     * The ranking [rankApps] describes, for anything with a name and an optional alias — apps and
+     * quicklinks alike, so a quicklink's alias behaves exactly like an app's. [label] and [tag]
+     * must return already-[normalize]d text.
+     */
+    fun <T> rank(items: List<T>, query: String, label: (T) -> String, tag: (T) -> String?): List<T> {
         val q = normalize(query)
-        if (q.isEmpty()) return apps
-        // Labels and tags arrive pre-normalized (see AppInfo): this runs on every keystroke, and
-        // folding every label each time was most of what a keystroke cost.
-        return apps.mapNotNull { app ->
-            val tagNorm = app.normalizedTag
+        if (q.isEmpty()) return items
+        return items.mapNotNull { item ->
+            val tagNorm = tag(item)
             val score = if (tagNorm != null && tagNorm == q) {
                 TAG_EXACT_SCORE
             } else {
                 val tagScore = tagNorm?.let { fuzzyScore(it, q) }?.plus(TAG_MATCH_BONUS)
-                val labelScore = fuzzyScore(app.normalizedLabel, q)
+                val labelScore = fuzzyScore(label(item), q)
                 listOfNotNull(tagScore, labelScore).maxOrNull()
             }
-            score?.let { app to it }
-        }.sortedWith(compareByDescending<Pair<AppInfo, Int>> { it.second }
-            .thenBy { it.first.normalizedLabel })
+            score?.let { Triple(item, it, label(item)) }
+        }.sortedWith(compareByDescending<Triple<T, Int, String>> { it.second }.thenBy { it.third })
             .map { it.first }
     }
 

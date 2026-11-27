@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds install beside the published launcher (see applicationIdSuffix in
+     app/build.gradle.kts); this name tells them apart in the home-app picker. -->
+<resources>
+    <string name="app_name">Gessearch Dev</string>
+</resources>

@@ -2,13 +2,13 @@ package dev.neffly.gesturelauncher.settings
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import dev.neffly.gesturelauncher.R
+import dev.neffly.gesturelauncher.search.Links
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
@@ -54,12 +54,12 @@ class GestureUrlEntryActivity : SlidePanelActivity() {
             Toast.makeText(this, R.string.gesture_url_empty, Toast.LENGTH_SHORT).show()
             return
         }
-        val normalized = normalizeUrl(typed)
+        val normalized = Links.normalize(typed)
 
         val id = editingId
         if (id != null) {
             val mapping = GestureStore.all(this).firstOrNull { it.id == id } ?: return finish()
-            GestureStore.update(this, mapping.copy(url = normalized, label = hostLabel(normalized)))
+            GestureStore.update(this, mapping.copy(url = normalized, label = Links.host(normalized)))
             Toast.makeText(this, R.string.gesture_saved, Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -67,7 +67,7 @@ class GestureUrlEntryActivity : SlidePanelActivity() {
 
         startActivity(
             GestureTrainingActivity.newGestureIntent(
-                this, GestureAction.OPEN_URL, url = normalized, label = hostLabel(normalized)
+                this, GestureAction.OPEN_URL, url = normalized, label = Links.host(normalized)
             )
         )
         overrideNextTransition()
@@ -76,11 +76,6 @@ class GestureUrlEntryActivity : SlidePanelActivity() {
         // lands on the chooser directly instead of bouncing through this now-stale form again.
         finish()
     }
-
-    private fun normalizeUrl(raw: String): String =
-        if (Uri.parse(raw).scheme == null) "https://$raw" else raw
-
-    private fun hostLabel(url: String): String = Uri.parse(url).host ?: url
 
     companion object {
         private const val EXTRA_MAPPING_ID = "mapping_id"

@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
@@ -12,6 +11,7 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.launch.SystemPanels
+import dev.neffly.gesturelauncher.search.Links
 import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 
@@ -42,14 +42,8 @@ object GestureActionDispatcher {
             }
             GestureAction.OPEN_URL -> {
                 val url = mapping.url
-                val launched = url != null && runCatching {
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                }.isSuccess
-                if (!launched) {
-                    Toast.makeText(context, R.string.gesture_url_open_failed, Toast.LENGTH_SHORT).show()
-                }
+                if (url != null) Links.open(context, url)
+                else Toast.makeText(context, R.string.gesture_url_open_failed, Toast.LENGTH_SHORT).show()
             }
         }
     }

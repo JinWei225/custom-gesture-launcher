@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.search
 
 import android.content.Context
+import dev.neffly.gesturelauncher.data.Quicklink
 import dev.neffly.gesturelauncher.drawer.AppInfo
 
 /** The sources one result list is composed from — see [SearchController] for the order. */
@@ -9,6 +10,20 @@ object SearchEngine {
     /** Fuzzy app matches, exactly as the drawer has always ranked them. */
     fun apps(allApps: List<AppInfo>, query: String): List<SearchResult.App> =
         SearchScoring.rankApps(allApps, query).map { SearchResult.App(it) }
+
+    /** Quicklinks matched by name and alias, ranked exactly as apps are. */
+    fun links(links: List<Quicklink>, query: String): List<SearchResult.Link> =
+        SearchScoring.rank(
+            links, query,
+            label = { SearchScoring.normalize(it.name) },
+            tag = { link -> link.alias?.let(SearchScoring::normalize) }
+        ).map { SearchResult.Link(it) }
+
+    /** Whether [query] is exactly one of these links' aliases — typed on purpose, so it outranks apps. */
+    fun isLinkAlias(links: List<SearchResult.Link>, query: String): Boolean {
+        val q = SearchScoring.normalize(query)
+        return links.any { result -> result.link.alias?.let(SearchScoring::normalize) == q }
+    }
 
     /**
      * The launcher's own settings, when the query plainly refers to them.

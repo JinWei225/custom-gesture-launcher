@@ -143,6 +143,18 @@
             android:theme="@style/Theme.GestureLauncher" />
 
         <activity
+            android:name=".settings.QuicklinksActivity"
+            android:exported="false"
+            android:label="@string/quicklinks_title"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <activity
+            android:name=".settings.PieAppsActivity"
+            android:exported="false"
+            android:label="@string/pie_apps_title"
+            android:theme="@style/Theme.GestureLauncher" />
+
+        <activity
             android:name=".settings.GestureTrainingActivity"
             android:exported="false"
             android:label="@string/training_title"

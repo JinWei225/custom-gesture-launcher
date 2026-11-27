@@ -33,10 +33,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dev.neffly.gesturelauncher.crash.SafeModeActivity
@@ -44,6 +46,11 @@ import dev.neffly.gesturelauncher.data.CalendarRepository
 import dev.neffly.gesturelauncher.data.DayEvent
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
+import dev.neffly.gesturelauncher.data.LaunchStyle
+import dev.neffly.gesturelauncher.data.PieStore
+import dev.neffly.gesturelauncher.drawer.AppInfo
+import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.drawer.IconCache
 import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
@@ -64,9 +71,11 @@ import dev.neffly.gesturelauncher.onboarding.Placement
 import dev.neffly.gesturelauncher.onboarding.TourBalloon
 import dev.neffly.gesturelauncher.onboarding.TourCard
 import dev.neffly.gesturelauncher.settings.GestureActionChooserActivity
+import dev.neffly.gesturelauncher.settings.PieAppsActivity
 import com.skydoves.balloon.Balloon
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
+import dev.neffly.gesturelauncher.ui.PieMenuView
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
@@ -112,6 +121,11 @@ class MainActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var canvas: GestureCanvasView
+    private lateinit var pie: PieMenuView
+    /** What [pie] is showing, by ring position — what [PieMenuView.onPick] indexes into. */
+    private var pieApps: List<AppInfo> = emptyList()
+    /** The load behind [pieApps]; a newer one cancels it, so a slow, stale load can't land last. */
+    private var pieLoad: Job? = null
     private lateinit var eventsContainer: LinearLayout
 
     /** Every view on this screen that draws touch feedback — see [clearFrozenTapFeedback]. */
@@ -226,6 +240,9 @@ class MainActivity : BaseActivity() {
             bottomMargin = dp(DOCK_GAP_DP) + dock.layoutParams.height + dp(CANVAS_SWIPE_STRIP_DP)
         }
         canvas.onStroke = { points, subStrokes -> onHomeStroke(points, subStrokes.size) }
+        pie = home.findViewById(R.id.pieMenu)
+        pie.onPick = { index -> pieApps.getOrNull(index)?.let(::launchFromPie) }
+        pie.onEmpty = { showEmptyCanvasHint() }
 
         recognitionHint = home.findViewById(R.id.recognitionHint)
         eventsContainer = home.findViewById(R.id.eventsContainer)
@@ -497,7 +514,7 @@ class MainActivity : BaseActivity() {
         }
         clearFrozenTapFeedback()
         placeSearch()
-        rebuildTemplates()
+        applyLaunchStyle()
         refreshEvents()
         notesPage?.refresh()
         tour.onResume()
@@ -515,6 +532,53 @@ class MainActivity : BaseActivity() {
         // Safe mode finishes from onCreate before anything below was built.
         if (::pushToTalk.isInitialized) pushToTalk.destroy()
         super.onDestroy()
+    }
+
+    // --- launching ---------------------------------------------------------
+
+    /** Shows the surface for the chosen launch style and loads what it launches. Run on every
+     *  resume: the style, the gestures and the pie are all edited in settings, over this screen. */
+    private fun applyLaunchStyle() {
+        val usePie = Prefs.launchStyle(this) == LaunchStyle.PIE
+        canvas.isVisible = !usePie
+        pie.isVisible = usePie
+        if (usePie) {
+            hideRecognitionHint()
+            canvas.clearStroke()
+            refreshPie()
+        } else {
+            rebuildTemplates()
+        }
+    }
+
+    private fun refreshPie() {
+        pie.haptics = Prefs.hapticFeedback(this)
+        pie.iconDp = Prefs.pieIconDp(this)
+        val components = PieStore.all(this)
+        pieLoad?.cancel()
+        pieLoad = lifecycleScope.launch {
+            val items = withContext(Dispatchers.IO) {
+                val apps = PieStore.resolve(components, AppRepository.load(this@MainActivity))
+                apps to apps.map { PieMenuView.Item(it.label, IconCache.load(this@MainActivity, it)) }
+            }
+            pieApps = items.first
+            pie.items = items.second
+        }
+    }
+
+    private fun launchFromPie(app: AppInfo) {
+        confirmLaunchHaptic(pie)
+        AppRepository.launch(this, app)
+    }
+
+    /** Instant confirmation that something is happening — the app window (or whatever else the
+     *  gesture does) can take a beat to appear. */
+    private fun confirmLaunchHaptic(view: View) {
+        if (!Prefs.hapticFeedback(this)) return
+        view.performHapticFeedback(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) HapticFeedbackConstants.CONFIRM
+            else HapticFeedbackConstants.VIRTUAL_KEY
+        )
     }
 
     // --- gestures ---------------------------------------------------------
@@ -547,17 +611,7 @@ class MainActivity : BaseActivity() {
         val mapping = result.name?.let { mappingsById[it] }
         if (mapping != null && result.score >= threshold) {
             hideRecognitionHint()
-            if (Prefs.hapticFeedback(this)) {
-                // Instant confirmation that something is happening — the app window (or whatever
-                // else the gesture does) can take a beat to appear.
-                canvas.performHapticFeedback(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        HapticFeedbackConstants.CONFIRM
-                    } else {
-                        HapticFeedbackConstants.VIRTUAL_KEY
-                    }
-                )
-            }
+            confirmLaunchHaptic(canvas)
             GestureActionDispatcher.perform(this, mapping)
         } else {
             showRecognitionHint()
@@ -565,22 +619,27 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Someone drew with nothing to match: rather than a sentence parked on the home screen for
-     * good, a pop-up at the moment it matters, with the way to make one.
+     * Someone drew with nothing to match, or touched an empty pie: rather than a sentence parked on
+     * the home screen for good, a pop-up at the moment it matters, with the way to fill it.
      */
     private fun showEmptyCanvasHint() {
         if (tour.isShowing || emptyCanvasHint?.isShowing == true) return
+        val usePie = Prefs.launchStyle(this) == LaunchStyle.PIE
         emptyCanvasHint = TourBalloon.show(
             this,
             canvasFrame,
             Placement.CENTER,
             Backdrop.NONE,
             TourCard(
-                title = getText(R.string.empty_canvas_title),
-                body = getText(R.string.empty_canvas_body),
-                primary = TourCard.Action(getText(R.string.tour_add_gesture)) {
-                    startActivity(Intent(this, GestureActionChooserActivity::class.java))
-                    overrideNextTransition()
+                title = getText(if (usePie) R.string.empty_pie_title else R.string.empty_canvas_title),
+                body = getText(if (usePie) R.string.empty_pie_body else R.string.empty_canvas_body),
+                primary = TourCard.Action(getText(if (usePie) R.string.pie_add_apps else R.string.tour_add_gesture)) {
+                    if (usePie) {
+                        startActivity(Intent(this, PieAppsActivity::class.java))
+                    } else {
+                        startActivity(Intent(this, GestureActionChooserActivity::class.java))
+                        overrideNextTransition()
+                    }
                 },
                 secondary = TourCard.Action(getText(R.string.tour_not_now)) {},
             ),

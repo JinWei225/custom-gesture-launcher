@@ -209,7 +209,8 @@ class QuickSearchActivity : BaseActivity() {
             onSettingsClick = { openSettings() },
             onCalculationClick = { calculation -> open(calculation) },
             onTimeClick = { time -> open(time) },
-            onActionClick = { action -> open(action) }
+            onActionClick = { action -> open(action) },
+            onLinkClick = { link -> open(link) }
         )
         resultList.adapter = adapter
         // Same gesture as the drawer's list: swipe a result right to open it floating. This window
@@ -589,6 +590,7 @@ class QuickSearchActivity : BaseActivity() {
             is SearchResult.App -> AppRepository.launch(this, result.app)
             is SearchResult.Settings -> { openSettings(); return }
             is SearchResult.Action -> Commands.open(this, result.command)
+            is SearchResult.Link -> Links.open(this, result.link.url)
             // Copies and closes, unlike the drawer, which stays open. This window is a panel over
             // whatever app the number is wanted in, so tapping the row means "give me that and get
             // out of the way"; someone who only wanted to read the answer never taps it at all.

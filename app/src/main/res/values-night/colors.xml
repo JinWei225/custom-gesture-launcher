@@ -69,4 +69,8 @@
     <color name="glass_stroke">#47FFFFFF</color>
     <color name="glass_divider">#1FFFFFFF</color>
 
+    <!-- Dark half of the pie's own colours; see values/colors.xml. -->
+    <color name="pie_inner">#14FFFFFF</color>
+    <color name="pie_inner_stroke">#33FFFFFF</color>
+    <color name="pie_highlight">#33FFFFFF</color>
 </resources>

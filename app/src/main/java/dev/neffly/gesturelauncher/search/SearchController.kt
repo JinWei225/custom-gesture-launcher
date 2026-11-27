@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.search
 
 import android.content.Context
+import dev.neffly.gesturelauncher.data.QuicklinkStore
 import dev.neffly.gesturelauncher.drawer.AppInfo
 
 /**
@@ -39,7 +40,14 @@ class SearchController(
         results += SearchEngine.commands(context, query, apps)
         SearchEngine.calculation(query)?.let { results += it }
         SearchEngine.time(context, query)?.let { results += it }
+        // Quicklinks sit under the apps, unless the query is one of their aliases: an alias is a
+        // shortcut the user made for exactly this, so it goes first. All links move together so
+        // the list never shows two Quicklinks sections.
+        val links = SearchEngine.links(QuicklinkStore.all(context), query)
+        val linksFirst = SearchEngine.isLinkAlias(links, query)
+        if (linksFirst) results += links
         results += SearchEngine.apps(apps, query)
+        if (!linksFirst) results += links
         SearchEngine.settings(query)?.let { results += it }
         onResults(query, results)
     }
