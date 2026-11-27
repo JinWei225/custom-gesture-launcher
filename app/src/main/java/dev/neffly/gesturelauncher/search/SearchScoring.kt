@@ -5,8 +5,8 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * How this app ranks anything against a typed query: app labels, their user-set aliases, and file
- * names, all by the same rules — so a change made for one can't quietly reorder another.
+ * How this app ranks anything against a typed query: app labels, quicklink names, and their
+ * user-set aliases, all by the same rules — so a change made for one can't quietly reorder another.
  *
  * Kept apart from [dev.neffly.gesturelauncher.drawer.AppRepository], which loads and caches the
  * app list; what that list is *sorted by* for a given query is this file's business.
@@ -114,7 +114,7 @@ internal object SearchScoring {
     private const val CONSECUTIVE_BONUS = 12
     private const val WORD_BOUNDARY_BONUS = 10
     private const val GAP_PENALTY = 1
-    // '/' is here for file names, which the app-label side never contains.
+    // '/' for names like "Mail/Work".
     private val SEPARATORS = charArrayOf(' ', '-', '_', '.', '/')
     private const val NO_MATCH = Int.MIN_VALUE / 2
 

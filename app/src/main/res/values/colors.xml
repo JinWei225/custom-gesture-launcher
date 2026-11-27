@@ -4,10 +4,7 @@
          Raw values. Only for places that genuinely mean "the literal colour", never
          for theming — everything theme-dependent goes through the md_* tokens below.
          ============================================================================ -->
-    <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="stroke_trail">#FFFFFFFF</color>
-    <color name="stroke_preview">#8AFFFFFF</color>
 
     <!-- Adaptive-icon background. Deliberately has no values-night/ variant: the OS renders
          launcher icons against its own backdrop and never applies our night qualifier to them. -->

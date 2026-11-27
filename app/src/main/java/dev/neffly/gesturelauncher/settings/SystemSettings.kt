@@ -51,7 +51,6 @@ fun Context.isBatteryOptimizationExempt(): Boolean {
 fun Activity.openBatteryOptimizationSettings() {
     val candidates = buildList {
         add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        OEM_AUTOSTART_SCREENS.forEach { add(Intent().setComponent(it)) }
         add(
             Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -125,28 +124,3 @@ private fun Activity.startFirstThatOpens(candidates: List<Intent>) {
     }
     Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
 }
-
-/** OEM "autostart" / background-app managers, which on those skins gate more than the AOSP
- *  battery-optimization exemption does. Tried only after the standard intents fail. */
-private val OEM_AUTOSTART_SCREENS = listOf(
-    ComponentName(
-        "com.miui.securitycenter",
-        "com.miui.permcenter.autostart.AutoStartManagementActivity"
-    ),
-    ComponentName(
-        "com.huawei.systemmanager",
-        "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
-    ),
-    ComponentName(
-        "com.coloros.safecenter",
-        "com.coloros.safecenter.permission.startup.StartupAppListActivity"
-    ),
-    ComponentName(
-        "com.vivo.permissionmanager",
-        "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"
-    ),
-    ComponentName(
-        "com.samsung.android.lool",
-        "com.samsung.android.sm.ui.battery.BatteryActivity"
-    )
-)

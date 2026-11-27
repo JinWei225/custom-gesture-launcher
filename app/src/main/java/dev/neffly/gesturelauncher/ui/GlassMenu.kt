@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -20,6 +19,7 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.ImageViewCompat
+import com.google.android.material.color.MaterialColors
 import dev.neffly.gesturelauncher.R
 import kotlin.math.roundToInt
 
@@ -85,12 +85,12 @@ object GlassMenu {
         val text = if (overWallpaper) {
             ContextCompat.getColor(context, R.color.wallpaper_overlay_text)
         } else {
-            themeColor(context, com.google.android.material.R.attr.colorOnSurface)
+            MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, 0)
         }
         val danger = if (overWallpaper) {
             ContextCompat.getColor(context, R.color.wallpaper_overlay_danger)
         } else {
-            themeColor(context, com.google.android.material.R.attr.colorError)
+            MaterialColors.getColor(context, com.google.android.material.R.attr.colorError, 0)
         }
 
         val popup = PopupWindow(
@@ -161,12 +161,6 @@ object GlassMenu {
             R.style.Animation_GestureLauncher_GlassMenu_Up
         }
         popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y)
-    }
-
-    private fun themeColor(context: Context, attr: Int): Int {
-        val value = TypedValue()
-        context.theme.resolveAttribute(attr, value, true)
-        return value.data
     }
 
     private fun dp(context: Context, value: Int): Int =

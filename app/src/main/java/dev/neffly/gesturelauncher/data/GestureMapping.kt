@@ -29,16 +29,18 @@ data class GestureMapping(
     val componentName: String, // ComponentName.flattenToString()
     val label: String,
     val templates: List<List<SPoint>>,
-    /** True if any training attempt was drawn as multiple pen-lift sub-strokes. Gates whether the
-     *  home screen waits out the multi-stroke gap-timeout before recognizing (see MainActivity). */
-    val isMultiStroke: Boolean = false,
     /** Per-template point-count of each sub-stroke (mirrors [templates] by index), so previews can
      *  render the pen-lift gaps instead of a connecting line. Empty means "single sub-stroke" —
      *  true for gestures saved before this field existed. */
     val subStrokeLengths: List<List<Int>> = emptyList(),
     val action: GestureAction = GestureAction.LAUNCH_APP,
     val url: String? = null
-)
+) {
+    /** True if any training attempt was drawn as multiple pen-lift sub-strokes. Gates whether the
+     *  home screen waits out the multi-stroke gap-timeout before recognizing (see MainActivity).
+     *  Derived rather than stored, so it can't disagree with the strokes it describes. */
+    val isMultiStroke: Boolean get() = subStrokeLengths.any { it.size > 1 }
+}
 
 /**
  * Every trained stroke in these mappings, as recognizer templates tagged with the id of the

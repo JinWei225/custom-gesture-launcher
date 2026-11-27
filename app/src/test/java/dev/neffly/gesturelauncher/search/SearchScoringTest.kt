@@ -7,8 +7,8 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * Guards the ranking rules now that this scorer is shared between app labels and file names —
- * a change made for files must not quietly reorder the drawer.
+ * Guards the ranking rules now that this scorer is shared between app labels and quicklinks —
+ * a change made for one must not quietly reorder the other.
  */
 class SearchScoringTest {
 
@@ -50,9 +50,9 @@ class SearchScoringTest {
     }
 
     @Test
-    fun `separators in file names count as word boundaries`() {
-        val boundary = score("tax_return_2025.pdf", "tr")!!
-        val buried = score("attribute.txt", "tr")!!
+    fun `separators inside a name count as word boundaries`() {
+        val boundary = score("tax_return", "tr")!!
+        val buried = score("attribute", "tr")!!
         assertTrue("$boundary should beat $buried", boundary > buried)
     }
 

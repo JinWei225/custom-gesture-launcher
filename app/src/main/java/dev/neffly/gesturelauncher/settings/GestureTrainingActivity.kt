@@ -369,7 +369,6 @@ class GestureTrainingActivity : BaseActivity() {
         val pkg = selPackage ?: return
         val comp = selComponent ?: return
         val label = selLabel ?: return
-        val isMultiStroke = strokeSubLengths.any { it.size > 1 }
         when (mode) {
             MODE_REDRAW -> {
                 val m = editingMapping ?: return
@@ -377,7 +376,6 @@ class GestureTrainingActivity : BaseActivity() {
                     this,
                     m.copy(
                         templates = strokes.toList(),
-                        isMultiStroke = isMultiStroke,
                         subStrokeLengths = strokeSubLengths.toList()
                     )
                 )
@@ -391,7 +389,6 @@ class GestureTrainingActivity : BaseActivity() {
                         componentName = comp,
                         label = label,
                         templates = strokes.toList(),
-                        isMultiStroke = isMultiStroke,
                         subStrokeLengths = strokeSubLengths.toList(),
                         action = pendingAction,
                         url = pendingUrl

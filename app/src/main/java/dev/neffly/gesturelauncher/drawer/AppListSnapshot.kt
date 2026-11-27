@@ -53,7 +53,7 @@ object AppListSnapshot {
     )
 
     @Serializable
-    private data class Snapshot(val version: Int = 1, val entries: List<Entry> = emptyList())
+    private data class Snapshot(val entries: List<Entry> = emptyList())
 
     private fun file(context: Context) = File(context.filesDir, FILE_NAME)
 

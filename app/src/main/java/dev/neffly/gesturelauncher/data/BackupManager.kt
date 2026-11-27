@@ -18,9 +18,7 @@ import kotlinx.serialization.json.Json
  * another device.
  *
  * Each field carries the same default [Prefs] uses, which does double duty: a file written before
- * a field existed still decodes, and it decodes to the behaviour it was actually taken with. Older
- * files also carry a `profileName` from when the app had a local profile — `Json` is configured
- * with `ignoreUnknownKeys` below, so those import cleanly too.
+ * a field existed still decodes, and it decodes to the behaviour it was actually taken with.
  *
  * The one setting deliberately left out is the name of the imported font. The font *file* lives in
  * filesDir and can't travel inside a JSON backup, so restoring the name would leave the settings

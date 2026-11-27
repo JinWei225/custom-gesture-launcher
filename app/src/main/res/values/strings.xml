@@ -83,7 +83,6 @@
     <string name="menu_auto_keyboard">Auto keyboard</string>
     <string name="menu_haptic_feedback">Haptic feedback</string>
 
-    <string name="today">Today</string>
     <string name="no_events_today">No events today</string>
     <string name="no_events_left">Nothing left today</string>
     <string name="enable_calendar">Tap to show today\'s events</string>
