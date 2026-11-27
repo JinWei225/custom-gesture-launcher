@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own backup, up to Android 11. Gestures, aliases, notes, settings and an imported font
+     travel to a new phone; what describes only this one stays behind:
+
+     - widgets.xml: app-widget ids, which mean nothing to another device's widget host
+     - crash_state.xml: the Safe Mode crash counter; restored mid-count, it would open a new phone
+       straight into Safe Mode
+     - app_list.json: the last scan's app list, which is this phone's apps, not the new one's
+
+     data_extraction_rules.xml says the same for Android 12 and up; keep the two in step. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="widgets.xml" />
+    <exclude domain="sharedpref" path="crash_state.xml" />
+    <exclude domain="file" path="app_list.json" />
+</full-backup-content>

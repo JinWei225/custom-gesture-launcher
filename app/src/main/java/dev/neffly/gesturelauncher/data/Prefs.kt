@@ -7,15 +7,19 @@ import dev.neffly.gesturelauncher.search.WebSearch
 import kotlin.math.abs
 
 /**
- * SharedPreferences wrapper for every setting the app keeps: the crash-counter safety net, the
- * recognition threshold, the search engine and quick-search toggle, theme, font and font scale. One
- * file, so the first read pages everything in — see App.onCreate.
+ * SharedPreferences wrapper for every setting the app keeps: the recognition threshold, the search
+ * engine and quick-search toggle, theme, font and font scale. One file, so the first read pages
+ * everything in — see App.onCreate.
+ *
+ * The crash counter behind Safe Mode is the exception, in a file of its own: it describes this
+ * install's last few seconds, not a choice the user made, so Android's own backup leaves it behind
+ * (see res/xml/backup_rules.xml) where the settings travel to a new phone.
  */
 object Prefs {
 
     private const val FILE = "gesture_launcher_prefs"
+    private const val CRASH_FILE = "crash_state"
     private const val KEY_CRASH_COUNT = "crash_count"
-    private const val KEY_LAST_CRASH = "last_crash_ts"
     private const val KEY_THRESHOLD = "match_threshold"
     private const val KEY_AUTO_KEYBOARD = "auto_keyboard"
     private const val KEY_HAPTIC_FEEDBACK = "haptic_feedback"
@@ -59,21 +63,22 @@ object Prefs {
     private fun prefs(context: Context) =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
+    private fun crashPrefs(context: Context) =
+        context.getSharedPreferences(CRASH_FILE, Context.MODE_PRIVATE)
+
     fun recordCrash(context: Context) {
-        val p = prefs(context)
+        val p = crashPrefs(context)
         val count = p.getInt(KEY_CRASH_COUNT, 0) + 1
         // commit() (synchronous) so it lands before the process dies.
-        p.edit().putInt(KEY_CRASH_COUNT, count)
-            .putLong(KEY_LAST_CRASH, System.currentTimeMillis())
-            .commit()
+        p.edit().putInt(KEY_CRASH_COUNT, count).commit()
     }
 
     /** Called by the 10s "heartbeat" and by the Safe Mode reset button. */
     fun resetCrashCount(context: Context) {
-        prefs(context).edit().putInt(KEY_CRASH_COUNT, 0).apply()
+        crashPrefs(context).edit().putInt(KEY_CRASH_COUNT, 0).apply()
     }
 
-    fun crashCount(context: Context): Int = prefs(context).getInt(KEY_CRASH_COUNT, 0)
+    fun crashCount(context: Context): Int = crashPrefs(context).getInt(KEY_CRASH_COUNT, 0)
 
     fun shouldEnterSafeMode(context: Context): Boolean =
         crashCount(context) >= SAFE_MODE_CRASH_LIMIT

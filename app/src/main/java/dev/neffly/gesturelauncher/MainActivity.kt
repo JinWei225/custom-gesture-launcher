@@ -93,6 +93,10 @@ class MainActivity : BaseActivity() {
     private lateinit var searchButton: ImageButton
     /** Null while the user has that page turned off. */
     private var widgetPage: WidgetPage? = null
+
+    /** The launch that created this instance, until the first onStart has judged it — see
+     *  [declineIfUnrequested]. */
+    private var createdWith: Intent? = null
     private var notesPage: NotesPage? = null
 
     /** Which side pages this screen was built with — compared on resume, see [onResume]. */
@@ -174,6 +178,7 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createdWith = intent
 
         // Safety net: after repeated crashes, don't render the gesture canvas at all.
         if (Prefs.shouldEnterSafeMode(this)) {
@@ -392,7 +397,22 @@ class MainActivity : BaseActivity() {
     /** Home, pressed while on a side page, comes back to the home page — as any launcher does. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (declineIfUnrequested(intent)) return
         if (::pager.isInitialized && pager.currentItem != pageHome) pager.setCurrentItem(pageHome, true)
+    }
+
+    /**
+     * The system launcher starts HOME right after a floating window opens; when it does, give the
+     * app underneath its screen back. See UnrequestedHomeLaunch.
+     *
+     * Judged on the launch's own intent, which is what tells a Home key press apart — so from
+     * onNewIntent when this screen is brought back (onStart runs before the new intent arrives),
+     * and from the first onStart when it was created by the launch.
+     */
+    private fun declineIfUnrequested(launch: Intent): Boolean {
+        val unrequested = UnrequestedHomeLaunch.consume(launch)
+        if (unrequested) moveTaskToBack(true)
+        return unrequested
     }
 
     @Deprecated("Deprecated in Java")
@@ -428,9 +448,8 @@ class MainActivity : BaseActivity() {
 
     override fun onStart() {
         super.onStart()
-        // The system launcher starts HOME right after a floating window opens; when it does, give
-        // the app underneath its screen back. See UnrequestedHomeLaunch.
-        if (UnrequestedHomeLaunch.consume()) moveTaskToBack(true)
+        createdWith?.let { declineIfUnrequested(it) }
+        createdWith = null
         // Sticky broadcast: registering hands back the current battery state immediately, so the
         // indicator is already correct on the first frame instead of blank until the next change.
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))

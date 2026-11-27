@@ -25,12 +25,12 @@ import java.lang.reflect.Proxy
  * HyperOS, and everything here fails closed: on any other device the class lookup throws, no
  * watch is installed, and the launcher behaves exactly as it would without this file.
  *
- * The callback's arguments are deliberately never read. The interface carries a single method,
- * `dispatchFreeFormStackModeChanged(int action, MiuiFreeFormStackInfo info)`, and *which*
- * transition it describes doesn't matter — measured on device, ordinary use of a floating window
- * (scrolling it, tapping it, dragging it about) produces no callback at all, so any callback at
- * all is the signal. Not parsing the parcel means nothing here depends on the argument layout, the
- * OEM's action numbering, or the shape of a Parcelable this app can't see.
+ * The interface carries a single method, `dispatchFreeFormStackModeChanged(int action,
+ * MiuiFreeFormStackInfo info)`. Ordinary use of a floating window (scrolling it, tapping it,
+ * dragging it about) produces no callback at all, so a callback always means a window changed
+ * mode — but that includes a window going away, not only one appearing, which is why the action is
+ * passed on. Only that leading int is read: its position doesn't depend on the shape of a
+ * Parcelable this app can't see. When even that can't be read, the action is reported as null.
  */
 object MiuiFreeformWindows {
 
@@ -52,7 +52,7 @@ object MiuiFreeformWindows {
      * activities, and the changes worth hearing about happen while the home screen is stopped.
      * There is no matching stop — the system drops the callback when the process dies.
      */
-    fun watch(onChanged: () -> Unit): Boolean =
+    fun watch(onChanged: (action: Int?) -> Unit): Boolean =
         runCatching {
             val manager = Class.forName(MANAGER_CLASS)
             val callbackType = Class.forName(CALLBACK_CLASS)
@@ -73,7 +73,7 @@ object MiuiFreeformWindows {
      * does with it is ask for `asBinder()` and hand that to system_server, so the proxy answers
      * that one call with a real Binder and the calls come back through [Binder.onTransact].
      */
-    private fun callback(callbackType: Class<*>, onChanged: () -> Unit): Any {
+    private fun callback(callbackType: Class<*>, onChanged: (action: Int?) -> Unit): Any {
         val binder = object : Binder() {
             override fun onTransact(
                 code: Int,
@@ -88,8 +88,9 @@ object MiuiFreeformWindows {
                 // failure means this transaction isn't the one we registered for, so it is
                 // swallowed rather than acted on.
                 if (runCatching { data.enforceInterface(CALLBACK_CLASS) }.isFailure) return true
+                val action = runCatching { data.readInt() }.getOrNull()
                 reply?.writeNoException()
-                onChanged()
+                onChanged(action)
                 return true
             }
         }
@@ -101,7 +102,7 @@ object MiuiFreeformWindows {
                 "toString" -> TAG
                 // The single interface method, were it ever called in-process rather than over
                 // Binder: same meaning, same response.
-                else -> onChanged()
+                else -> onChanged(args?.getOrNull(0) as? Int)
             }
         }
     }

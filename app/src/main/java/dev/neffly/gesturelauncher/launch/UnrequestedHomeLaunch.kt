@@ -1,5 +1,6 @@
 package dev.neffly.gesturelauncher.launch
 
+import android.content.Intent
 import android.os.SystemClock
 
 /**
@@ -35,6 +36,14 @@ import android.os.SystemClock
  * genuinely is what belongs behind it — never arms at all. The third is the deadline, which covers
  * the case where the system doesn't take the foreground: the expectation lapses rather than lying
  * in wait for the user's next real Home press.
+ *
+ * And a launch from the Home key is never declined, whatever is armed. The system marks those with
+ * `FROM_HOME_KEY`, which its own launch after a float never carries — measured on a Xiaomi Pad
+ * (HyperOS 3): that one arrives bare, a navigation-key press with the extra. It matters because the
+ * deadline can't protect everything. Closing a floating window and pressing Home straight after is
+ * an ordinary sequence, and on HyperOS 4 the launcher is frozen in the background, so callbacks
+ * queued while it was frozen are delivered all at once as the Home press thaws it — however long
+ * ago they were sent.
  */
 object UnrequestedHomeLaunch {
 
@@ -42,6 +51,19 @@ object UnrequestedHomeLaunch {
      *  before anyone reaches for Home deliberately. Too long swallows a genuine Home press; too
      *  short leaves the user looking at a home screen they didn't ask for. */
     private const val DEADLINE_MILLIS = 2_000L
+
+    /** WindowManagerPolicy.EXTRA_FROM_HOME_KEY, which the SDK doesn't expose: set on the home
+     *  intent the system starts for a Home key press. */
+    private const val EXTRA_FROM_HOME_KEY = "android.intent.extra.FROM_HOME_KEY"
+
+    /**
+     * Freeform actions after which the system launches no home screen, as HyperOS logs them
+     * (`MiuiFreeFormManagerNotifier`, the same on HyperOS 3 and 4): 3 is a window going full
+     * screen or closed, 9 one stashed at the screen edge, and 21 follows both a close from the
+     * window's own ✕ and a restore. The home launch follows 0, a window appearing, and 11, one
+     * restored from the edge.
+     */
+    private val WINDOW_LEAVING_ACTIONS = setOf(3, 9, 21)
 
     /** Whether this device is one whose foreground is worth declining at all — see [install]. */
     @Volatile private var installed = false
@@ -78,9 +100,18 @@ object UnrequestedHomeLaunch {
         installed = MiuiFreeformWindows.watch(::onFreeformChanged)
     }
 
-    /** The system's own signal. Unguarded, and safe to be: this can only ever be called by a
-     *  callback that exists on no other platform. */
-    private fun onFreeformChanged() = arm()
+    /**
+     * The system's own signal, ignored when the window is going away rather than appearing:
+     * closing or stashing a floating window launches no home screen, so arming then would only
+     * lie in wait for the user's next real Home press.
+     *
+     * Otherwise unguarded, and safe to be: this can only ever be called by a callback that exists
+     * on no other platform. An action not listed — or one that couldn't be read — still arms, so a
+     * window restored by a transition the list doesn't know is still handed back.
+     */
+    private fun onFreeformChanged(action: Int?) {
+        if (action !in WINDOW_LEAVING_ACTIONS) arm()
+    }
 
     /** Records that a floating window just appeared over another app, and that a home launch
      *  arriving on its heels is therefore the system's doing rather than the user's. Unlike the
@@ -94,11 +125,12 @@ object UnrequestedHomeLaunch {
         if (screensShowing == 0) armedAtUptime = SystemClock.uptimeMillis()
     }
 
-    /** True once, for a home screen being started by the launch described above. */
-    fun consume(): Boolean {
+    /** True once, for a home screen being started by [launch] when it is the launch described
+     *  above — never for one from the Home key. */
+    fun consume(launch: Intent): Boolean {
         val expected = armedAtUptime != 0L &&
             SystemClock.uptimeMillis() - armedAtUptime < DEADLINE_MILLIS
         armedAtUptime = 0L
-        return expected
+        return expected && !launch.getBooleanExtra(EXTRA_FROM_HOME_KEY, false)
     }
 }
