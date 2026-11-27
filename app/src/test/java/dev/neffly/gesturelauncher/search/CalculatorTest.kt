@@ -120,6 +120,21 @@ class CalculatorTest {
         assertEquals("1E16", calc("10^16"))
     }
 
+    @Test
+    fun `a leading minus applies after the power, as on paper`() {
+        assertEquals("-4", calc("-2^2"))
+        assertEquals("-1E16", calc("-10^16"))
+        assertEquals("4", calc("(-2)^2"))
+        assertEquals("-9", calc("1-10^1"))
+    }
+
+    @Test
+    fun `a negative exponent still reads as one`() {
+        assertEquals("0.5", calc("2^-1"))
+        assertEquals("0.25", calc("2 ^ - 2"))
+        assertEquals("-0.5", calc("-2^-1"))
+    }
+
     // --- knowing when not to answer -----------------------------------------
 
     @Test

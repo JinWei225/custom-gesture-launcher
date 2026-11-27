@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
 import android.graphics.drawable.Drawable
-import android.os.Process
+import android.os.UserHandle
 import android.widget.Toast
 
 /**
@@ -16,7 +16,7 @@ object AppShortcutHelper {
 
     private const val MAX_SHORTCUTS = 4
 
-    fun queryShortcuts(context: Context, packageName: String): List<ShortcutInfo> {
+    fun queryShortcuts(context: Context, packageName: String, user: UserHandle): List<ShortcutInfo> {
         val launcherApps = context.getSystemService(LauncherApps::class.java) ?: return emptyList()
         if (!launcherApps.hasShortcutHostPermission()) return emptyList()
         val query = LauncherApps.ShortcutQuery().apply {
@@ -27,7 +27,7 @@ object AppShortcutHelper {
                     LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
             )
         }
-        return runCatching { launcherApps.getShortcuts(query, Process.myUserHandle()) }
+        return runCatching { launcherApps.getShortcuts(query, user) }
             .getOrNull().orEmpty().take(MAX_SHORTCUTS)
     }
 

@@ -2,7 +2,7 @@
 #
 #   git tag v1.2.3 && git push origin v1.2.3
 #
-# The tag is the single source of the version — versionName "1.2.3" and versionCode 10203 are
+# The tag is the single source of the version — versionName "1.2.3" and versionCode 1002003 are
 # derived from it — and the GitHub Release it creates is what Obtainium watches for updates. The
 # APK is for sideloading and Obtainium (which only looks at .apk assets); the .aab is the file
 # uploaded to Google Play, which takes nothing else for a new app.
@@ -34,8 +34,14 @@ jobs:
         run: |
           name="${GITHUB_REF_NAME#v}"
           IFS=. read -r major minor patch <<< "$name"
+          # Three digits each for minor and patch: patches are bumped for every small change, and
+          # two digits would give v1.7.100 the same code as v1.8.0.
+          if [ "$minor" -gt 999 ] || [ "$patch" -gt 999 ]; then
+            echo "::error::minor and patch must stay below 1000 for the versionCode scheme"
+            exit 1
+          fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "code=$((major * 10000 + minor * 100 + patch))" >> "$GITHUB_OUTPUT"
+          echo "code=$((major * 1000000 + minor * 1000 + patch))" >> "$GITHUB_OUTPUT"
 
       # The keystore itself is a base64 secret; app/build.gradle.kts reads the rest from
       # keystore.properties, the same file a local signed build uses.

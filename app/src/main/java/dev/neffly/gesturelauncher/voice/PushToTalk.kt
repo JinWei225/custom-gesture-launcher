@@ -65,6 +65,10 @@ class PushToTalk(private val activity: ComponentActivity, private val caption: T
 
     fun press() {
         if (!Prefs.voiceEnabled(activity)) return
+        // The last request is still being recognized, and its answer is on the way. Starting
+        // another now would have the service refuse it as busy — on the same callbacks, which
+        // would end the first one too and lose both.
+        if (voice.active) return
         if (!VoiceInput.isAvailable(activity)) {
             Toast.makeText(activity, R.string.voice_unavailable, Toast.LENGTH_SHORT).show()
             return

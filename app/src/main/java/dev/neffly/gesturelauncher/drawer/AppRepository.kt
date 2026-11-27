@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.os.Process
+import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
 import android.widget.Toast
@@ -37,6 +38,11 @@ object AppRepository {
     // — the drawer's onResume and its package-change listener, say — don't both pay the full scan
     // cost: the second caller just waits for the first's result instead of duplicating the work.
     private val loadLock = Any()
+
+    // Guards publishing to [cache] and [cacheFromDisk] together. Separate from [loadLock], which is
+    // held for a whole scan: the main thread primes from disk through this one, and must never
+    // wait out a 1-2 s scan just to find out the cache is still empty.
+    private val publishLock = Any()
 
     /**
      * Bumped by every [invalidate]. A scan records it before it starts and publishes its result
@@ -82,7 +88,7 @@ object AppRepository {
         if (cache != null) return
         val apps = AppListSnapshot.read(context)
         if (apps.isEmpty()) return
-        synchronized(loadLock) {
+        synchronized(publishLock) {
             if (cache != null) return
             cache = apps
             cacheFromDisk = true
@@ -130,29 +136,22 @@ object AppRepository {
             // Left needing a scan, not cached, when the list changed under us — the caller's
             // listener has already been told and will come back for a fresh one. The result is
             // still returned: it is the best list anyone has right now.
-            if (generation == scanned) {
-                cache = apps
-                cacheFromDisk = false
-                // Cheap: a no-op unless the list actually changed since the last scan.
-                AppListSnapshot.write(context, apps)
+            val current = synchronized(publishLock) {
+                (generation == scanned).also {
+                    if (it) {
+                        cache = apps
+                        cacheFromDisk = false
+                    }
+                }
             }
+            // Cheap: a no-op unless the list actually changed since the last scan.
+            if (current) AppListSnapshot.write(context, apps)
             return apps
         }
     }
 
-    /** Launches a drawer entry, honoring its profile: work-profile apps must go through
-     *  LauncherApps (a plain Intent can only target the current user). */
-    fun launch(context: Context, app: AppInfo) {
-        if (app.user == Process.myUserHandle()) {
-            launch(context, app.componentName)
-        } else {
-            runCatching {
-                val launcherApps =
-                    context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-                launcherApps.startMainActivity(app.componentName, app.user, null, null)
-            }.onFailure { Log.w("AppRepository", "work-profile launch failed for ${app.componentName}", it) }
-        }
-    }
+    /** Launches a drawer entry in its own profile. */
+    fun launch(context: Context, app: AppInfo) = launch(context, app.componentName, app.user)
 
     /**
      * The intent that opens [componentName], or null when the package offers none.
@@ -182,18 +181,29 @@ object AppRepository {
     }
 
     /**
-     * Opens [componentName], or reports that it is gone.
+     * Opens [componentName] in [user]'s profile, or reports that it is gone.
      *
      * The other way a component goes stale is the drawer rendering a disk snapshot (see
-     * [AppListSnapshot]) that was written before an app was uninstalled while this process was
-     * dead. When nothing can be launched, the list is invalidated so it self-heals immediately
-     * rather than waiting for a LauncherApps callback that already fired while nothing was
-     * listening.
+     * [AppListSnapshot]) that was written before an app was uninstalled — or its work profile
+     * removed — while this process was dead. When nothing can be launched, the list is invalidated
+     * so it self-heals immediately rather than waiting for a callback that already fired while
+     * nothing was listening.
+     *
+     * Another profile's apps go through LauncherApps: a plain Intent can only reach this user.
      */
-    fun launch(context: Context, componentName: ComponentName) {
-        val intent = launchIntent(context, componentName)
-        if (intent != null && runCatching { context.startActivity(intent) }.isSuccess) return
-        Log.w("AppRepository", "launch failed for $componentName (no valid launcher intent)")
+    fun launch(context: Context, componentName: ComponentName, user: UserHandle = Process.myUserHandle()) {
+        val launched = if (user == Process.myUserHandle()) {
+            val intent = launchIntent(context, componentName)
+            intent != null && runCatching { context.startActivity(intent) }.isSuccess
+        } else {
+            runCatching {
+                val launcherApps =
+                    context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+                launcherApps.startMainActivity(componentName, user, null, null)
+            }.isSuccess
+        }
+        if (launched) return
+        Log.w("AppRepository", "launch failed for $componentName in $user")
         Toast.makeText(context, R.string.app_not_available, Toast.LENGTH_SHORT).show()
         invalidate()
     }

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.widget.Toast
 import dev.neffly.gesturelauncher.data.GestureAction
 import dev.neffly.gesturelauncher.data.GestureMapping
+import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.launch.SystemPanels
@@ -31,16 +32,8 @@ object GestureActionDispatcher {
                 ComponentName.unflattenFromString(mapping.componentName)?.let { comp ->
                     AppRepository.launch(context, comp)
                 }
-            GestureAction.OPEN_DRAWER -> {
-                context.startActivity(Intent(context, AppDrawerActivity::class.java))
-                // The drawer animates its own slide-up; keep the OS transition out of it.
-                (context as? Activity)?.overrideNextTransition()
-            }
-            GestureAction.QUICK_SEARCH -> {
-                context.startActivity(QuickSearchActivity.intent(context))
-                // The card animates its own fade/rise — same reasoning as the drawer above.
-                (context as? Activity)?.overrideNextTransition()
-            }
+            GestureAction.OPEN_DRAWER -> openDrawer(context)
+            GestureAction.QUICK_SEARCH -> openSearch(context)
             GestureAction.NOTIFICATIONS -> if (!SystemPanels.expandNotifications(context)) {
                 Toast.makeText(context, R.string.system_panel_failed, Toast.LENGTH_SHORT).show()
             }
@@ -59,5 +52,25 @@ object GestureActionDispatcher {
                 }
             }
         }
+    }
+
+    fun openDrawer(context: Context) {
+        context.startActivity(Intent(context, AppDrawerActivity::class.java))
+        // The drawer animates its own slide-up; keep the OS transition out of it, so it can't
+        // fight with (or be replaced by an OEM "app open" animation instead of) that slide. On
+        // Android 14+ the drawer's own overrideActivityTransition(..., 0, 0) handles its side.
+        (context as? Activity)?.overrideNextTransition()
+    }
+
+    /**
+     * The floating search when it is switched on, else the drawer. The overlay switch is off by
+     * default, and a search the user asked for — a tap on the search button or a drawn gesture —
+     * must never be a dead end: the drawer has a search field of its own.
+     */
+    fun openSearch(context: Context) {
+        if (!Prefs.quickSearchEnabled(context)) return openDrawer(context)
+        context.startActivity(QuickSearchActivity.intent(context))
+        // The card animates its own fade/rise — same reasoning as the drawer.
+        (context as? Activity)?.overrideNextTransition()
     }
 }

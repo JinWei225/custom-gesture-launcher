@@ -4,6 +4,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /**
  * Guards the ranking rules now that this scorer is shared between app labels and file names —
@@ -53,5 +54,16 @@ class SearchScoringTest {
         val boundary = score("tax_return_2025.pdf", "tr")!!
         val buried = score("attribute.txt", "tr")!!
         assertTrue("$boundary should beat $buried", boundary > buried)
+    }
+
+    @Test
+    fun `matching ignores the device locale's casing rules`() {
+        val saved = Locale.getDefault()
+        Locale.setDefault(Locale.forLanguageTag("tr"))
+        try {
+            assertNotNull(score("Instagram", "insta"))
+        } finally {
+            Locale.setDefault(saved)
+        }
     }
 }

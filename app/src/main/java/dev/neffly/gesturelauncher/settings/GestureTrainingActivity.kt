@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -43,6 +44,10 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Wizard for adding/editing a gesture:
@@ -117,6 +122,11 @@ class GestureTrainingActivity : BaseActivity() {
             ?: GestureAction.LAUNCH_APP
         pendingUrl = intent.getStringExtra(EXTRA_URL)
 
+        val draft = savedInstanceState?.getString(STATE_DRAFT)?.let { Json.decodeFromString<Draft>(it) }
+        if (draft != null) {
+            restore(draft)
+            return
+        }
         when (mode) {
             MODE_REDRAW -> {
                 val m = editingMapping ?: run { finish(); return }
@@ -140,6 +150,44 @@ class GestureTrainingActivity : BaseActivity() {
             }
             else -> showPicker() // CHANGE_APP
         }
+    }
+
+    // --- surviving recreation ---------------------------------------------
+
+    /**
+     * Everything picked and drawn so far. The screen is recreated by a rotation, a fold or the
+     * system switching dark mode at sunset, and none of those should cost the strokes already
+     * drawn. The extras say what is being trained and are re-read on their own.
+     */
+    @Serializable
+    private data class Draft(
+        val pkg: String?,
+        val component: String?,
+        val label: String?,
+        val drawing: Boolean,
+        val strokes: List<List<SPoint>>,
+        val subLengths: List<List<Int>>
+    )
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val draft = Draft(
+            selPackage, selComponent, selLabel, drawContainer.isVisible, strokes, strokeSubLengths
+        )
+        outState.putString(STATE_DRAFT, Json.encodeToString(draft))
+    }
+
+    private fun restore(draft: Draft) {
+        selPackage = draft.pkg
+        selComponent = draft.component
+        selLabel = draft.label
+        if (!draft.drawing) return showPicker()
+        showDraw()
+        strokes.addAll(draft.strokes)
+        strokeSubLengths.addAll(draft.subLengths)
+        updateStepUi()
+        // The confirm dialog went down with the old window; all attempts are in, so ask again.
+        if (strokes.size >= REQUIRED) confirmAndSave()
     }
 
     // --- app picker -------------------------------------------------------
@@ -361,6 +409,7 @@ class GestureTrainingActivity : BaseActivity() {
         private const val REQUIRED = 3
         private const val CONSISTENCY_MIN = 0.5
 
+        private const val STATE_DRAFT = "draft"
         private const val EXTRA_MODE = "mode"
         private const val EXTRA_ID = "mapping_id"
         private const val EXTRA_ACTION = "action"

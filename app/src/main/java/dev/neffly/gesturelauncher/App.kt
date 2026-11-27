@@ -56,7 +56,7 @@ class App : Application() {
 
         // Keep the drawer's app list live. LauncherApps callbacks are the launcher-grade
         // replacement for PACKAGE_ADDED/REMOVED broadcasts (which stopped reaching manifest
-        // receivers in API 26) and also cover work-profile changes.
+        // receivers in API 26), for every profile's packages.
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         launcherApps.registerCallback(object : LauncherApps.Callback() {
             override fun onPackageRemoved(packageName: String, user: UserHandle) =
@@ -72,6 +72,22 @@ class App : Application() {
                 packageNames: Array<out String>, user: UserHandle, replacing: Boolean
             ) = AppRepository.invalidate()
         })
+
+        // A work profile appearing, going away, or being paused or resumed changes the app list
+        // without any per-package callback above. These broadcasts reach registered receivers only.
+        ContextCompat.registerReceiver(
+            this,
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) = AppRepository.invalidate()
+            },
+            IntentFilter().apply {
+                addAction(Intent.ACTION_MANAGED_PROFILE_ADDED)
+                addAction(Intent.ACTION_MANAGED_PROFILE_REMOVED)
+                addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
+                addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // OEM theme engines (e.g. Xiaomi/HyperOS "Themes") re-skin icons in place — no package is
         // installed/updated/removed, so the LauncherApps callback above never fires. What they do

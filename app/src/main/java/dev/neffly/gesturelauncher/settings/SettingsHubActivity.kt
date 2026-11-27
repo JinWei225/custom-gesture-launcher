@@ -28,8 +28,6 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.drawer.AppRepository
 import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
-import dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService
-import dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess
 import dev.neffly.gesturelauncher.onboarding.Backdrop
 import dev.neffly.gesturelauncher.onboarding.Placement
 import dev.neffly.gesturelauncher.onboarding.TourBalloon
@@ -80,13 +78,6 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
     private lateinit var quickSearchTriggerSubtitle: TextView
-    private lateinit var keyboardShortcutSwitch: MaterialSwitch
-    private lateinit var keyboardShortcutRow: View
-    private lateinit var keyboardShortcutTitle: TextView
-    private lateinit var keyboardShortcutSubtitle: TextView
-    private lateinit var keyboardShortcutAccessRow: View
-    private lateinit var keyboardShortcutAccessTitle: TextView
-    private lateinit var keyboardShortcutAccessSubtitle: TextView
 
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
      *  whether the imported one is actually different before rebuilding the screen. */
@@ -200,8 +191,6 @@ class SettingsHubActivity : SlidePanelActivity() {
             Prefs.setQuickSearchEnabled(this, enabled)
             quickSearchSwitch.isChecked = enabled
             updateQuickSearchTrigger()
-            // The keyboard shortcut opens this same window, so it follows the master switch too.
-            updateKeyboardShortcut()
             if (enabled) explainSettingsAfterQuickSearch()
         }
 
@@ -209,22 +198,6 @@ class SettingsHubActivity : SlidePanelActivity() {
         quickSearchTriggerTitle = findViewById(R.id.quickSearchTriggerTitle)
         quickSearchTriggerSubtitle = findViewById(R.id.quickSearchTriggerSubtitle)
         quickSearchTriggerRow.setOnClickListener { openAssistantSettings() }
-
-        keyboardShortcutRow = findViewById(R.id.keyboardShortcutRow)
-        keyboardShortcutTitle = findViewById(R.id.keyboardShortcutTitle)
-        keyboardShortcutSubtitle = findViewById(R.id.keyboardShortcutSubtitle)
-        keyboardShortcutSwitch = findViewById(R.id.keyboardShortcutSwitch)
-        keyboardShortcutRow.setOnClickListener {
-            val enabled = !Prefs.keyboardShortcutEnabled(this)
-            Prefs.setKeyboardShortcutEnabled(this, enabled)
-            keyboardShortcutSwitch.isChecked = enabled
-            updateKeyboardShortcut()
-        }
-
-        keyboardShortcutAccessRow = findViewById(R.id.keyboardShortcutAccessRow)
-        keyboardShortcutAccessTitle = findViewById(R.id.keyboardShortcutAccessTitle)
-        keyboardShortcutAccessSubtitle = findViewById(R.id.keyboardShortcutAccessSubtitle)
-        keyboardShortcutAccessRow.setOnClickListener { requestAccessibilityAccess() }
 
         // Every tour is due again: home's on the next resume, and the others the next time their
         // screen or page comes up. Home is singleTask, so bringing it forward closes this screen
@@ -291,6 +264,13 @@ class SettingsHubActivity : SlidePanelActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshRows()
+    }
+
+    /** Every row's switch and subtitle from what is stored now. On resume, and after an import —
+     *  which writes nearly every setting at once, so it refreshes through the same path rather than
+     *  a list of its own that can fall behind this one. */
+    private fun refreshRows() {
         gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
         hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
@@ -312,10 +292,6 @@ class SettingsHubActivity : SlidePanelActivity() {
         quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
         updateQuickSearchTrigger()
         updateVoice()
-        keyboardShortcutSwitch.isChecked = Prefs.keyboardShortcutEnabled(this)
-        // Re-read for the same reason the battery row is: the access is granted on a system screen
-        // this one can't get a result from, so coming back is the only moment to notice.
-        updateKeyboardShortcut()
     }
 
     /** Where the `web` command searches. Read when the row is built, so nothing needs refreshing
@@ -391,13 +367,6 @@ class SettingsHubActivity : SlidePanelActivity() {
         )
     }
 
-    /**
-     * Greys both keyboard rows out while quick search itself is off, and reports whether the
-     * accessibility access the shortcut needs has been granted.
-     *
-     * The shortcut opens the quick-search window and nothing else, so with the overlay switched
-     * off there is nothing for it to open — the same relationship the trigger row above has.
-     */
     /** Both voice switches' state, and the assistant-listening row greyed while voice search is
      *  off — with nothing to start, its choice means nothing. */
     private fun updateVoice() {
@@ -406,25 +375,6 @@ class SettingsHubActivity : SlidePanelActivity() {
         voiceOnAssistSwitch.isChecked = Prefs.voiceOnAssist(this)
         setRowEnabled(voiceOnAssistRow, voice, voiceOnAssistTitle, voiceOnAssistSubtitle)
         voiceOnAssistSwitch.isEnabled = voice
-    }
-
-    private fun updateKeyboardShortcut() {
-        val quickSearch = Prefs.quickSearchEnabled(this)
-        setRowEnabled(keyboardShortcutRow, quickSearch, keyboardShortcutTitle, keyboardShortcutSubtitle)
-        keyboardShortcutSwitch.isEnabled = quickSearch
-
-        // The access row is only worth offering once the shortcut is actually switched on.
-        val shortcut = quickSearch && Prefs.keyboardShortcutEnabled(this)
-        setRowEnabled(
-            keyboardShortcutAccessRow,
-            shortcut,
-            keyboardShortcutAccessTitle,
-            keyboardShortcutAccessSubtitle
-        )
-        keyboardShortcutAccessSubtitle.setText(
-            if (LauncherAccessibilityService.isGranted(this)) R.string.keyboard_shortcut_access_granted
-            else R.string.keyboard_shortcut_access_missing
-        )
     }
 
     /** Both halves of "this row doesn't apply right now": it stops taking taps, and it dims. */
@@ -444,16 +394,15 @@ class SettingsHubActivity : SlidePanelActivity() {
         }
 
     private fun showFontScaleDialog() {
-        val labels = FONT_SCALES.map { fontScaleLabel(it) }.toTypedArray()
+        val scales = Prefs.FONT_SCALES
+        val labels = scales.map { fontScaleLabel(it) }.toTypedArray()
         val current = Prefs.fontScale(this)
-        // Nearest entry rather than indexOf: a value restored from an older build (or a future one
-        // with a different set of steps) should still preselect something sensible.
-        val selected = FONT_SCALES.indices.minBy { kotlin.math.abs(FONT_SCALES[it] - current) }
+        val selected = scales.indexOfFirst { it == current }
 
         AlertDialog.Builder(this)
             .setTitle(R.string.menu_font_size)
             .setSingleChoiceItems(labels, selected) { dialog, which ->
-                Prefs.setFontScale(this, FONT_SCALES[which])
+                Prefs.setFontScale(this, scales[which])
                 // Dismiss before recreating, for the same reason as the theme dialog above:
                 // tearing the window down with the dialog attached leaks it.
                 dialog.dismiss()
@@ -557,18 +506,9 @@ class SettingsHubActivity : SlidePanelActivity() {
     }
 
     private fun showThemeDialog() {
-        val modes = intArrayOf(
-            AppCompatDelegate.MODE_NIGHT_NO,
-            AppCompatDelegate.MODE_NIGHT_YES,
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        )
+        val modes = Prefs.THEME_MODES
         val labels = modes.map { getString(themeLabelFor(it)) }.toTypedArray()
-        // Fall back to follow-system for an unrecognised stored value, matching what
-        // themeLabelFor already displays for one — otherwise the row and the dialog's
-        // preselected item would disagree.
         val current = modes.indexOf(Prefs.themeMode(this))
-            .takeIf { it >= 0 }
-            ?: modes.indexOf(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
 
         AlertDialog.Builder(this)
             .setTitle(R.string.menu_theme)
@@ -628,13 +568,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         importedFromScale = Prefs.fontScale(this)
         val result = BackupManager.apply(this, data, replace)
         AppRepository.invalidate()
-        gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
-        autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
-        hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
-        widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
-        notesPageSwitch.isChecked = Prefs.notesPage(this)
-        searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
-        mapsAppSubtitle.setText(MapSearch.app(this).label)
+        refreshRows()
         showVoiceWords()
 
         var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
@@ -678,10 +612,5 @@ class SettingsHubActivity : SlidePanelActivity() {
 
         /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
         private const val DISABLED_ROW_ALPHA = 0.4f
-
-        /** Offered font-size multipliers. Skewed upward because the reason this setting exists is
-         *  imported fonts that render small at a given point size; 0.9 is there so the drawer can
-         *  still be made denser if someone wants that. */
-        private val FONT_SCALES = floatArrayOf(0.9f, 1f, 1.1f, 1.25f, 1.4f, 1.6f)
     }
 }

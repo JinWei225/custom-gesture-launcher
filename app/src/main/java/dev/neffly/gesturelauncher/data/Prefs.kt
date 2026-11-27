@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
+import kotlin.math.abs
 
 /**
  * SharedPreferences wrapper for every setting the app keeps: the crash-counter safety net, the
@@ -24,7 +25,6 @@ object Prefs {
     private const val KEY_SEARCH_ENGINE = "search_engine"
     private const val KEY_MAPS_APP = "maps_app"
     private const val KEY_QUICK_SEARCH = "quick_search_enabled"
-    private const val KEY_KEYBOARD_SHORTCUT = "keyboard_shortcut_enabled"
     private const val KEY_SEARCH_ON_LEFT = "search_on_left"
     private const val KEY_VOICE_WORDS = "voice_words"
     private const val KEY_VOICE = "voice_enabled"
@@ -38,6 +38,23 @@ object Prefs {
 
     /** Conservative default: stricter matching = fewer accidental launches. */
     const val DEFAULT_THRESHOLD = 0.80f
+
+    /** The sensitivity slider's range. Below it any long stroke launches something; above it
+     *  nothing a hand draws matches. */
+    const val MIN_THRESHOLD = 0.60f
+    const val MAX_THRESHOLD = 0.95f
+
+    /** The text sizes the settings offer, as multipliers of the system's own. Skewed upward
+     *  because the reason the setting exists is imported fonts that render small at a given point
+     *  size; 0.9 is there so the drawer can still be made denser if someone wants that. */
+    val FONT_SCALES = floatArrayOf(0.9f, 1f, 1.1f, 1.25f, 1.4f, 1.6f)
+
+    /** The theme choices the settings offer. */
+    val THEME_MODES = intArrayOf(
+        AppCompatDelegate.MODE_NIGHT_NO,
+        AppCompatDelegate.MODE_NIGHT_YES,
+        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+    )
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -64,8 +81,10 @@ object Prefs {
     fun matchThreshold(context: Context): Float =
         prefs(context).getFloat(KEY_THRESHOLD, DEFAULT_THRESHOLD)
 
+    /** Clamped: an imported backup is as able to write here as the slider is, and a threshold
+     *  outside its range either launches on any stroke or never matches. */
     fun setMatchThreshold(context: Context, value: Float) {
-        prefs(context).edit().putFloat(KEY_THRESHOLD, value).apply()
+        prefs(context).edit().putFloat(KEY_THRESHOLD, value.coerceIn(MIN_THRESHOLD, MAX_THRESHOLD)).apply()
     }
 
     /** Auto-open the soft keyboard when the app drawer appears (default ON). */
@@ -93,8 +112,10 @@ object Prefs {
     fun themeMode(context: Context): Int =
         prefs(context).getInt(KEY_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
 
+    /** An unknown value (only a backup file can carry one) falls back to following the system. */
     fun setThemeMode(context: Context, mode: Int) {
-        prefs(context).edit().putInt(KEY_THEME_MODE, mode).apply()
+        val valid = if (mode in THEME_MODES) mode else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        prefs(context).edit().putInt(KEY_THEME_MODE, valid).apply()
     }
 
     /** Display name of the user's imported font, or null for "use the system font".
@@ -115,8 +136,12 @@ object Prefs {
      *  1.0 means "exactly what the system says", which is the default. */
     fun fontScale(context: Context): Float = prefs(context).getFloat(KEY_FONT_SCALE, 1f)
 
+    /** Snapped to the nearest offered size: a backup file is as able to write here as the
+     *  settings are, and a scale of 0 or 40 would make every screen unreadable — the one that
+     *  fixes it included. */
     fun setFontScale(context: Context, value: Float) {
-        prefs(context).edit().putFloat(KEY_FONT_SCALE, value).apply()
+        val snapped = FONT_SCALES.minBy { abs(it - value) }
+        prefs(context).edit().putFloat(KEY_FONT_SCALE, snapped).apply()
     }
 
     /** Where the `web` command sends a search (default Google). Stored by enum name; a name this
@@ -145,19 +170,6 @@ object Prefs {
 
     fun setQuickSearchEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_QUICK_SEARCH, value).apply()
-    }
-
-    /** Whether Alt+Space on a physical keyboard opens quick search (default OFF).
-     *
-     *  Read by [dev.neffly.gesturelauncher.accessibility.LauncherAccessibilityService] on every key event, so
-     *  the accessibility service can stay bound while the feature is off — turning the shortcut off
-     *  should not make the user go back into the accessibility screen, and turning it on again
-     *  should not make them grant access a second time. */
-    fun keyboardShortcutEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_KEYBOARD_SHORTCUT, false)
-
-    fun setKeyboardShortcutEnabled(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_KEYBOARD_SHORTCUT, value).apply()
     }
 
     /** Which corner of the home screen's dock the search button sits in (default right). The

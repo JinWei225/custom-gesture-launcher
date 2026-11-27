@@ -109,24 +109,6 @@ fun Activity.openAssistantSettings() {
 }
 
 /**
- * Opens the accessibility screen, where the keyboard-shortcut service is switched on.
- *
- * There is no deep link to a single service's page that works across OEM builds, so this lands on
- * the list, and the disclosure that leads here names the entry to look for. Reached only through
- * [dev.neffly.gesturelauncher.accessibility.requestAccessibilityAccess]. Unlike the assistant role
- * above, this grant genuinely is user-toggleable — it just isn't requestable from an app, by
- * design: an accessibility service that could turn itself on would defeat the point of the screen.
- */
-fun Activity.openAccessibilitySettings() {
-    startFirstThatOpens(
-        listOf(
-            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-            Intent(Settings.ACTION_SETTINGS)
-        )
-    )
-}
-
-/**
  * Starts the first of [candidates] that opens, and tells the user if none do.
  *
  * Every deep link here is a best guess at where a given build keeps a setting, so each is a list

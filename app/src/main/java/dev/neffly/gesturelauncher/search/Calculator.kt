@@ -2,6 +2,7 @@ package dev.neffly.gesturelauncher.search
 
 import com.ezylang.evalex.Expression
 import com.ezylang.evalex.config.ExpressionConfiguration
+import com.ezylang.evalex.operators.OperatorIfc
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
@@ -57,7 +58,7 @@ object Calculator {
         if (math.none { it.isDigit() }) return null
 
         return try {
-            val expression = Expression(expandPercentages(math), CONFIG)
+            val expression = Expression(expandPercentages(groupNegativeExponents(math)), CONFIG)
             // Anything the evaluator can't name is a word, not a variable — this is the check that
             // keeps ordinary searches out of the calculator.
             if (expression.undefinedVariables.isNotEmpty()) return null
@@ -94,6 +95,14 @@ object Calculator {
         Normalizer.normalize(query, Normalizer.Form.NFKC)
             .map { CJK_OPERATORS[it] ?: it }
             .joinToString("")
+
+    /**
+     * `2^-1` -> `2^(-1)`. [CONFIG] makes `^` bind tighter than a leading minus, so that `-2^2` is
+     * `-4` as written on paper rather than `4` — and with that precedence the evaluator no longer
+     * reads a minus straight after `^` as the exponent's sign, so the sign is bracketed onto it.
+     */
+    private fun groupNegativeExponents(expression: String): String =
+        NEGATIVE_EXPONENT.replace(expression, "^(-$1)")
 
     /**
      * Rewrites the three ways people write a percentage into arithmetic the evaluator understands.
@@ -151,6 +160,7 @@ object Calculator {
     private val PLAIN_PATTERN = "#,##0." + "#".repeat(MAX_DECIMALS)
     private val SCIENTIFIC_PATTERN = "0." + "#".repeat(MAX_DECIMALS) + "E0"
 
+    private val NEGATIVE_EXPONENT = Regex("""\^\s*-\s*(\d+(?:\.\d+)?)""")
     private val PERCENT_OF = Regex("""(\d+(?:\.\d+)?)\s*%\s*of\s+""", RegexOption.IGNORE_CASE)
     private val PERCENT_ADJUST = Regex("""^(.+)([+\-])\s*(\d+(?:\.\d+)?)\s*%$""")
     private val PERCENT_BARE = Regex("""(\d+(?:\.\d+)?)\s*%""")
@@ -160,5 +170,7 @@ object Calculator {
      *  evaluator's own rounding showing through. */
     private val CONFIG: ExpressionConfiguration = ExpressionConfiguration.builder()
         .mathContext(MathContext(PRECISION, RoundingMode.HALF_UP))
+        // -2^2 is -4. The library's default reads it as (-2)^2.
+        .powerOfPrecedence(OperatorIfc.OPERATOR_PRECEDENCE_POWER_HIGHER)
         .build()
 }

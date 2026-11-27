@@ -53,9 +53,6 @@ persistence, min SDK 26 (Android 8.0+).
   power button opens the floating search already listening. App names and aliases are what it
   listens for, and **Voice words** in settings add names it keeps mishearing. Speech is turned
   into text by the phone's own speech recognition service.
-- **Alt + Space** on a physical keyboard opens the floating search from any app. Optional, and it
-  needs accessibility access, which the app asks for only after explaining exactly what it is used
-  for.
 - **Swipe a result right** to open it in a floating window instead of full screen — apps, actions
   and web searches alike, on devices that support freeform windows.
 - Full **app drawer** with alphabet-index fast scroll, app aliases, and long-press
@@ -160,7 +157,7 @@ git tag v1.2.3 && git push origin v1.2.3
 ```
 
 The workflow runs the unit tests, builds a release APK and app bundle with `versionName` `1.2.3`
-and `versionCode` `10203` derived from the tag, and publishes a GitHub Release with both attached
+and `versionCode` `1002003` derived from the tag, and publishes a GitHub Release with both attached
 and auto-generated notes. Obtainium picks up the APK from there; the `.aab` is the file to upload
 to Google Play.
 

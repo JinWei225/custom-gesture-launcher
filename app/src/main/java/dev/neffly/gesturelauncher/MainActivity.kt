@@ -45,8 +45,6 @@ import dev.neffly.gesturelauncher.data.DayEvent
 import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.Prefs
-import dev.neffly.gesturelauncher.drawer.AppDrawerActivity
-import dev.neffly.gesturelauncher.search.QuickSearchActivity
 import dev.neffly.gesturelauncher.ui.BaseActivity
 import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.PageDotsView
@@ -278,11 +276,11 @@ class MainActivity : BaseActivity() {
         // nothing — this button must never be a dead end.
         searchButton = findViewById(R.id.searchButton)
         searchButton.setOnClickListener {
-            if (Prefs.quickSearchEnabled(this)) openQuickSearch() else openDrawer()
+            GestureActionDispatcher.openSearch(this)
         }
         searchButton.setOnLongClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            openDrawer()
+            GestureActionDispatcher.openDrawer(this)
             true
         }
         dockStrip = findViewById(R.id.dockStrip)
@@ -426,20 +424,6 @@ class MainActivity : BaseActivity() {
             view.isPressed = false
             view.jumpDrawablesToCurrentState()
         }
-    }
-
-    private fun openDrawer() {
-        startActivity(Intent(this, AppDrawerActivity::class.java))
-        // The drawer animates its own content in; suppress the OS's default cross-activity
-        // transition so it can't fight with (or get replaced by an OEM "app open" animation
-        // instead of) that self-driven slide. On Android 14+ the drawer's own
-        // overrideActivityTransition(..., 0, 0) call handles this side of the pair.
-        overrideNextTransition()
-    }
-
-    private fun openQuickSearch() {
-        startActivity(QuickSearchActivity.intent(this))
-        overrideNextTransition()
     }
 
     override fun onStart() {

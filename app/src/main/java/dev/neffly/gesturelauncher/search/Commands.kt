@@ -99,7 +99,10 @@ object Commands {
     }
 
     private fun alarm(slots: Slots): Command.Alarm {
-        val time = slots.take(ALARM_TIME) { Times.parse(it.groupValues[1].lowercase(Locale.ROOT)) }
+        // A time that says it is one wins over a bare hour, wherever each sits: in "take 2 pills
+        // 8am" the 2 is part of the label. A bare hour still counts when it is all there is.
+        val time = slots.take(STATED_TIME, ::readStatedTime)
+            ?: slots.take(ALARM_TIME) { Times.parse(it.groupValues[1].lowercase(Locale.ROOT)) }
         val days = HashSet<DayOfWeek>()
         while (true) {
             val found = slots.take(ALARM_DAYS) { it.groupValues[1].lowercase(Locale.ROOT) } ?: break
@@ -129,9 +132,7 @@ object Commands {
             range(startText.lowercase(Locale.ROOT), endText.lowercase(Locale.ROOT))
         }
         val length = slots.take(EVENT_LENGTH) { Times.duration(it.groupValues[1].lowercase(Locale.ROOT)) }
-        val start = range?.first ?: slots.take(EVENT_TIME) { m ->
-            Times.parse(m.groupValues[1].ifEmpty { m.groupValues[2] }.lowercase(Locale.ROOT))
-        }
+        val start = range?.first ?: slots.take(STATED_TIME, ::readStatedTime)
         var end = range?.second
         var date = slots.take(EVENT_DATE) {
             Dates.resolve(it.groupValues[1].lowercase(Locale.ROOT), now.toLocalDate())
@@ -327,6 +328,9 @@ object Commands {
      * accepts, so a phrase that looks like a date but isn't one — "31 feb" — falls through to the
      * title instead of vanishing.
      */
+    private fun readStatedTime(m: MatchResult): LocalTime? =
+        Times.parse(m.groupValues[1].ifEmpty { m.groupValues[2] }.lowercase(Locale.ROOT))
+
     private class Slots(private var text: String) {
         fun <T : Any> take(regex: Regex, read: (MatchResult) -> T?): T? {
             for (m in regex.findAll(text)) {
@@ -367,8 +371,9 @@ object Commands {
         """$LEFT(?:from )?(${Times.TIME}) ?(?:-|–|to) ?(${Times.TIME})$RIGHT""", RegexOption.IGNORE_CASE
     )
     private val EVENT_LENGTH = Regex("""$LEFT(?:for )?(${Times.DURATION})""", RegexOption.IGNORE_CASE)
-    /** A bare hour only after "at" — "8" alone is more likely part of the title. */
-    private val EVENT_TIME = Regex(
+    /** A time that can't be mistaken for a number: a bare hour only after "at" — "8" alone is
+     *  more likely part of an event's title or an alarm's label. */
+    private val STATED_TIME = Regex(
         """$LEFT(?:at (${Times.TIME})|(${Times.TIME_STRICT}))$RIGHT""", RegexOption.IGNORE_CASE
     )
     private val EVENT_DATE = Regex("""\b(?:on )?(${Dates.DATE})""", RegexOption.IGNORE_CASE)

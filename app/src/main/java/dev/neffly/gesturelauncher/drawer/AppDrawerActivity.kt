@@ -2,9 +2,9 @@ package dev.neffly.gesturelauncher.drawer
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.LauncherApps
 import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
@@ -361,11 +361,14 @@ class AppDrawerActivity : BaseActivity() {
     }
 
     private fun showAppMenu(app: AppInfo, anchor: View) {
+        // Everything here goes through the entry's own profile: the same package can be installed
+        // in both, and asking the personal profile about a work row answers for the wrong copy.
+        val launcherApps = getSystemService(LauncherApps::class.java)
         val isSystemApp = runCatching {
-            packageManager.getApplicationInfo(app.packageName, 0).flags and
+            launcherApps.getApplicationInfo(app.packageName, 0, app.user).flags and
                 ApplicationInfo.FLAG_SYSTEM != 0
         }.getOrDefault(false)
-        val shortcuts = AppShortcutHelper.queryShortcuts(this, app.packageName)
+        val shortcuts = AppShortcutHelper.queryShortcuts(this, app.packageName, app.user)
 
         val items = buildList {
             add(GlassMenu.item(anchor, R.string.app_info, R.drawable.ic_info) { openAppInfo(app) })
@@ -423,15 +426,19 @@ class AppDrawerActivity : BaseActivity() {
     }
 
     private fun openAppInfo(app: AppInfo) {
-        val uri = Uri.parse("package:${app.packageName}")
-        runCatching { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri)) }
-            .onFailure { Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show() }
+        runCatching {
+            getSystemService(LauncherApps::class.java)
+                .startAppDetailsActivity(app.componentName, app.user, null, null)
+        }.onFailure { Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show() }
     }
 
+    /** EXTRA_USER is what makes the uninstaller act on a work row's copy rather than this
+     *  profile's; it accepts any of the caller's own profiles. */
     private fun uninstall(app: AppInfo) {
         val uri = Uri.parse("package:${app.packageName}")
-        runCatching { startActivity(Intent(Intent.ACTION_DELETE, uri)) }
-            .onFailure { Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show() }
+        runCatching {
+            startActivity(Intent(Intent.ACTION_DELETE, uri).putExtra(Intent.EXTRA_USER, app.user))
+        }.onFailure { Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show() }
     }
 
     companion object {

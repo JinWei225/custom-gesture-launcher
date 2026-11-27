@@ -27,7 +27,7 @@ android {
         // Android 17 device, and there is none here to verify them against — so that is a separate
         // step, taken when it can be tested rather than read about.
         targetSdk = 36
-        // Set by the release workflow from the git tag (v1.2.3 → "1.2.3" / 10203). A local build
+        // Set by the release workflow from the git tag (v1.2.3 → "1.2.3" / 1002003). A local build
         // is "dev": it can't be mistaken for a published one, and Obtainium — which compares
         // version names — will always see a release as an update to it.
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1

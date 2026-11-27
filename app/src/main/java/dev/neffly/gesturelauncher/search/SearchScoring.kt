@@ -25,7 +25,9 @@ internal object SearchScoring {
      * are only ever compared with each other here, never shown to anyone.
      */
     fun normalize(s: String): String =
-        Normalizer.normalize(s.lowercase(Locale.getDefault()), Normalizer.Form.NFKD)
+        // ROOT, not the device's locale: under Turkish rules "Instagram" lowercases to a dotless
+        // "ınstagram" that the "insta" typed on the same phone never matches.
+        Normalizer.normalize(s.lowercase(Locale.ROOT), Normalizer.Form.NFKD)
             .replace(INVISIBLE, "")
             .trim()
 

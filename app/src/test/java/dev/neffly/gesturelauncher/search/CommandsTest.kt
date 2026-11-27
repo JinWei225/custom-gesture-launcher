@@ -70,6 +70,9 @@ class CommandsTest {
         assertEquals(t("19:30"), alarm("alarm 19:30").time)
         assertEquals(t("07:00"), alarm("alarm 7").time)
         assertEquals(t("12:00"), alarm("alarm noon").time)
+        assertEquals(t("08:00"), alarm("alarm take 2 pills 8am").time)
+        assertEquals("take 2 pills", alarm("alarm take 2 pills 8am").label)
+        assertEquals(t("06:00"), alarm("alarm at 6 call 3 people").time)
     }
 
     @Test

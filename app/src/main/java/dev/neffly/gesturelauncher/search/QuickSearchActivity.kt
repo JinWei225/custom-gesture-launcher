@@ -264,7 +264,8 @@ class QuickSearchActivity : BaseActivity() {
         val tour = Tour(this, Hint.QUICK_SEARCH, onEnd = ::showKeyboard)
         val showTour = savedInstanceState == null && voiceQuery == null && !listenOnOpen && tour.isDue
         when {
-            voiceQuery != null -> showSpoken(voiceQuery)
+            // On a recreation the field restores what was there, which may since have been edited.
+            voiceQuery != null && savedInstanceState == null -> showSpoken(voiceQuery)
             listenOnOpen && savedInstanceState == null -> startListening()
             showTour -> {}
             else -> showKeyboard()
@@ -607,11 +608,12 @@ class QuickSearchActivity : BaseActivity() {
     }
 
     /** Nothing here is worth keeping across a trip away — switching apps is the whole point, and a
-     *  stale query waiting behind the next app would be a surprise. */
+     *  stale query waiting behind the next app would be a surprise. A rotation, fold or theme
+     *  switch is not a trip away: the window is recreated in place, query and all. */
     override fun onStop() {
         super.onStop()
         if (::voice.isInitialized) voice.cancel()
-        if (!isFinishing && !awaitingMicPermission) finish()
+        if (!isFinishing && !isChangingConfigurations && !awaitingMicPermission) finish()
     }
 
     override fun onDestroy() {
