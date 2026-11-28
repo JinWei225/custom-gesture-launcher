@@ -21,4 +21,14 @@
          smaller than the app icons sitting in the same list. -->
     <attr name="searchRowGlyphInset" format="dimension" />
 
+    <!-- One row of the settings screen — see SettingsRow. [subtitle] may be left out where the
+         screen fills it in from what is stored. -->
+    <declare-styleable name="SettingsRow">
+        <attr name="title" />
+        <attr name="subtitle" />
+        <!-- A switch at the end, for a row that turns something on and off. -->
+        <attr name="switchable" format="boolean" />
+        <attr name="subtitleMaxLines" format="integer" />
+    </declare-styleable>
+
 </resources>

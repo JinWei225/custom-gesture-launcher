@@ -1,6 +1,8 @@
 package dev.neffly.gesturelauncher.launch
 
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 
 /**
@@ -52,6 +54,12 @@ object UnrequestedHomeLaunch {
      *  short leaves the user looking at a home screen they didn't ask for. */
     private const val DEADLINE_MILLIS = 2_000L
 
+    private const val TICK_MILLIS = 1_000L
+    /** Well past a tick's own scheduling slack, well short of how long a freeze lasts. */
+    private const val STALL_MILLIS = 2_500L
+    /** Held callbacks are delivered within moments of the thaw that frees them. */
+    private const val THAW_WINDOW_MILLIS = 500L
+
     /** WindowManagerPolicy.EXTRA_FROM_HOME_KEY, which the SDK doesn't expose: set on the home
      *  intent the system starts for a Home key press. */
     private const val EXTRA_FROM_HOME_KEY = "android.intent.extra.FROM_HOME_KEY"
@@ -67,6 +75,40 @@ object UnrequestedHomeLaunch {
 
     /** Whether this device is one whose foreground is worth declining at all — see [install]. */
     @Volatile private var installed = false
+
+    /**
+     * A tick on the main thread every [TICK_MILLIS] while the watch is installed, so a callback can
+     * tell whether it sat in a queue.
+     *
+     * HyperOS 4 freezes the launcher in the background, and a frozen process runs nothing — so the
+     * callbacks sent meanwhile are held and delivered together when the next home launch thaws it,
+     * however long ago they were sent. A window floated or restored minutes earlier would then arm
+     * on the spot and swallow that very Home press: measured on a HyperOS 4 phone, where a Home
+     * gesture after restoring a stashed window was sent straight to the back. The tick stalls
+     * while the process is frozen, which is how a callback knows it is one of those. A process
+     * that isn't frozen ticks on schedule, and costs a few microseconds a second; uptime stops in
+     * deep sleep, so sleeping is never mistaken for a freeze.
+     */
+    private val ticker = Handler(Looper.getMainLooper())
+    @Volatile private var lastTick = 0L
+    /** When the tick last resumed after a stall — a thaw. */
+    @Volatile private var thawedAt = 0L
+    private val tick = object : Runnable {
+        override fun run() {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastTick > STALL_MILLIS) thawedAt = now
+            lastTick = now
+            ticker.postDelayed(this, TICK_MILLIS)
+        }
+    }
+
+    /** True for a callback held while the process was frozen: either the tick hasn't run since
+     *  the thaw yet, or it has only just resumed. Which of the two runs first after a thaw is a
+     *  race, so both are checked. */
+    private fun deliveredAfterFreeze(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        return now - lastTick > STALL_MILLIS || now - thawedAt < THAW_WINDOW_MILLIS
+    }
 
     /** Volatile for the reader rather than the writers: [onScreenStarted]/[onScreenStopped] are
      *  activity lifecycle callbacks, so their non-atomic `++`/`--` only ever run on the main thread
@@ -98,6 +140,10 @@ object UnrequestedHomeLaunch {
      */
     fun install() {
         installed = MiuiFreeformWindows.watch(::onFreeformChanged)
+        if (installed) {
+            lastTick = SystemClock.uptimeMillis()
+            ticker.postDelayed(tick, TICK_MILLIS)
+        }
     }
 
     /**
@@ -110,7 +156,7 @@ object UnrequestedHomeLaunch {
      * window restored by a transition the list doesn't know is still handed back.
      */
     private fun onFreeformChanged(action: Int?) {
-        if (action !in WINDOW_LEAVING_ACTIONS) arm()
+        if (action !in WINDOW_LEAVING_ACTIONS && !deliveredAfterFreeze()) arm()
     }
 
     /** Records that a floating window just appeared over another app, and that a home launch

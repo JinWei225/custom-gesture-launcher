@@ -9,8 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SPoint(val x: Float, val y: Float)
 
-/** What a recognized gesture does. Defaults to [LAUNCH_APP] so gesture files saved before this
- *  field existed still decode as plain app launches, unchanged. */
+/** What a recognized gesture does. */
 @Serializable
 enum class GestureAction { LAUNCH_APP, OPEN_DRAWER, OPEN_URL, QUICK_SEARCH, NOTIFICATIONS, QUICK_SETTINGS }
 
@@ -21,6 +20,10 @@ enum class GestureAction { LAUNCH_APP, OPEN_DRAWER, OPEN_URL, QUICK_SEARCH, NOTI
  * [packageName]/[componentName] are only meaningful for [GestureAction.LAUNCH_APP] (empty string
  * otherwise); [url] is only set for [GestureAction.OPEN_URL]. [label] is a free-form display
  * string reused for every action type (the app's name, "Open the app drawer", or the URL's host).
+ *
+ * Every field but [url] is required, and the strokes and their counts have to line up: a file
+ * that breaks either fails to decode, and the store keeps it aside as unreadable (see
+ * JsonListFile) rather than handing the home screen a gesture it would crash on.
  */
 @Serializable
 data class GestureMapping(
@@ -30,12 +33,18 @@ data class GestureMapping(
     val label: String,
     val templates: List<List<SPoint>>,
     /** Per-template point-count of each sub-stroke (mirrors [templates] by index), so previews can
-     *  render the pen-lift gaps instead of a connecting line. Empty means "single sub-stroke" —
-     *  true for gestures saved before this field existed. */
-    val subStrokeLengths: List<List<Int>> = emptyList(),
-    val action: GestureAction = GestureAction.LAUNCH_APP,
+     *  render the pen-lift gaps instead of a connecting line, and the recognizer can compare
+     *  pen-lift counts. */
+    val subStrokeLengths: List<List<Int>>,
+    val action: GestureAction,
     val url: String? = null
 ) {
+    init {
+        require(subStrokeLengths.size == templates.size && subStrokeLengths.all { it.isNotEmpty() }) {
+            "every template needs its sub-stroke lengths"
+        }
+    }
+
     /** True if any training attempt was drawn as multiple pen-lift sub-strokes. Gates whether the
      *  home screen waits out the multi-stroke gap-timeout before recognizing (see MainActivity).
      *  Derived rather than stored, so it can't disagree with the strokes it describes. */
@@ -55,7 +64,7 @@ fun List<GestureMapping>.toTemplates(): List<GestureTemplate> = flatMap { mappin
         GestureTemplate(
             mapping.id,
             stroke.toPt(),
-            mapping.subStrokeLengths.getOrNull(index)?.size?.coerceAtLeast(1) ?: 1
+            mapping.subStrokeLengths[index].size
         )
     }
 }
@@ -65,9 +74,9 @@ fun List<GestureMapping>.toTemplates(): List<GestureTemplate> = flatMap { mappin
 fun List<GestureMapping>.anyMultiStroke(): Boolean = any { it.isMultiStroke }
 
 /** The most pen-lift sub-strokes any trained sample has — once a session reaches it there is
- *  nothing further to wait for. 0 with no gestures; 1 for samples saved before counts existed. */
+ *  nothing further to wait for. 0 with no gestures. */
 fun List<GestureMapping>.maxExpectedSubStrokes(): Int =
-    maxOfOrNull { m -> m.subStrokeLengths.maxOfOrNull { it.size } ?: 1 } ?: 0
+    maxOfOrNull { m -> m.subStrokeLengths.maxOf { it.size } } ?: 0
 
 /** The recognizer works in doubles; the canvas and the stored gestures both work in floats. */
 @JvmName("pointFToPt")

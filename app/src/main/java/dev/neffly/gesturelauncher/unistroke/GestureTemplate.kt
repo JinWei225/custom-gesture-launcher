@@ -6,10 +6,9 @@ data class Pt(val x: Double, val y: Double)
 /**
  * A preprocessed template the recognizer compares against. [name] carries the owning
  * gesture-mapping id, so several templates (the 3 training strokes) can share one name.
- * [subStrokeCount] is how many pen-lift sub-strokes this training sample was drawn with
- * (1 for single-stroke gestures and for gestures saved before counts were recorded).
+ * [subStrokeCount] is how many pen-lift sub-strokes this training sample was drawn with.
  */
-class GestureTemplate(val name: String, rawPoints: List<Pt>, val subStrokeCount: Int = 1) {
+class GestureTemplate(val name: String, rawPoints: List<Pt>, val subStrokeCount: Int) {
     /** Unit-magnitude Protractor vector — see [OneDollarRecognizer.vectorize]. */
     val vector: DoubleArray = OneDollarRecognizer.vectorize(rawPoints)
 

@@ -78,13 +78,11 @@ object OneDollarRecognizer {
      *  2. **Straightness**: chord/path-length ratio on raw points catches residual overlap that
      *     scale-preserving vectorization misses (e.g. line vs. shallow "L").
      *  3. **Sub-strokes**: a pen-lift count mismatch with the template halves the score.
-     *
-     * [candidateSubStrokes] defaults to 1 for templates saved before counts existed.
      */
     fun recognize(
         points: List<Pt>,
         templates: List<GestureTemplate>,
-        candidateSubStrokes: Int = 1
+        candidateSubStrokes: Int
     ): MatchResult {
         if (points.size < 2 || templates.isEmpty()) return MatchResult(null, 0.0)
         val candidate = vectorize(points)

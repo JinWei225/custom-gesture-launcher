@@ -1,5 +1,6 @@
 package dev.neffly.gesturelauncher.settings
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -17,7 +18,6 @@ import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.skydoves.balloon.Balloon
 import dev.neffly.gesturelauncher.MainActivity
@@ -38,6 +38,7 @@ import dev.neffly.gesturelauncher.onboarding.TourCard
 import dev.neffly.gesturelauncher.search.MapSearch
 import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.ui.FontEngine
+import dev.neffly.gesturelauncher.ui.SettingsRow
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
@@ -57,33 +58,29 @@ import kotlinx.coroutines.withContext
  */
 class SettingsHubActivity : SlidePanelActivity() {
 
-    private lateinit var gesturesSubtitle: TextView
-    private lateinit var autoKeyboardSwitch: MaterialSwitch
-    private lateinit var hapticFeedbackSwitch: MaterialSwitch
-    private lateinit var widgetsPageSwitch: MaterialSwitch
-    private lateinit var notesPageSwitch: MaterialSwitch
-    private lateinit var searchSideSubtitle: TextView
-    private lateinit var themeSubtitle: TextView
-    private lateinit var batterySubtitle: TextView
-    private lateinit var fontSubtitle: TextView
-    private lateinit var fontScaleSubtitle: TextView
-    private lateinit var searchEngineSubtitle: TextView
-    private lateinit var mapsAppRow: View
-    private lateinit var gesturesRow: View
-    private lateinit var sensitivityRow: View
-    private lateinit var pieAppsRow: View
-    private lateinit var pieAppsSubtitle: TextView
-    private lateinit var launchStyleSubtitle: TextView
-    private lateinit var quicklinksSubtitle: TextView
-    private lateinit var mapsAppSubtitle: TextView
-    private lateinit var voiceWordsSubtitle: TextView
-    private lateinit var voiceSwitch: MaterialSwitch
-    private lateinit var voiceOnAssistRow: View
-    private lateinit var voiceOnAssistTitle: TextView
-    private lateinit var voiceOnAssistSubtitle: TextView
-    private lateinit var voiceOnAssistSwitch: MaterialSwitch
-    private lateinit var quickSearchSwitch: MaterialSwitch
-    private lateinit var quickSearchRow: View
+    private fun row(id: Int) = lazy { findViewById<SettingsRow>(id) }
+
+    private val launchStyleRow by row(R.id.launchStyleRow)
+    private val pieAppsRow by row(R.id.pieAppsRow)
+    private val gesturesRow by row(R.id.gesturesRow)
+    private val sensitivityRow by row(R.id.sensitivityRow)
+    private val searchSideRow by row(R.id.searchSideRow)
+    private val themeRow by row(R.id.themeRow)
+    private val fontRow by row(R.id.fontRow)
+    private val fontScaleRow by row(R.id.fontScaleRow)
+    private val quicklinksRow by row(R.id.quicklinksRow)
+    private val searchEngineRow by row(R.id.searchEngineRow)
+    private val mapsAppRow by row(R.id.mapsAppRow)
+    private val voiceRow by row(R.id.voiceRow)
+    private val voiceOnAssistRow by row(R.id.voiceOnAssistRow)
+    private val voiceWordsRow by row(R.id.voiceWordsRow)
+    private val quickSearchRow by row(R.id.quickSearchRow)
+    private val quickSearchTriggerRow by row(R.id.quickSearchTriggerRow)
+    private val batteryRow by row(R.id.batteryRow)
+
+    /** Every switch row with the setting it shows — see [bindToggle]. */
+    private val toggles = ArrayList<Pair<SettingsRow, () -> Boolean>>()
+
     /** The guide pop-up open over a row, if any — see [pointAtQuickSearch]. */
     private var guide: Balloon? = null
 
@@ -94,9 +91,6 @@ class SettingsHubActivity : SlidePanelActivity() {
             guide?.dismiss()
         }
     }
-    private lateinit var quickSearchTriggerRow: View
-    private lateinit var quickSearchTriggerTitle: TextView
-    private lateinit var quickSearchTriggerSubtitle: TextView
 
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
      *  whether the imported one is actually different before rebuilding the screen. */
@@ -133,25 +127,10 @@ class SettingsHubActivity : SlidePanelActivity() {
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
-        gesturesSubtitle = findViewById(R.id.gesturesSubtitle)
-        gesturesRow = findViewById(R.id.gesturesRow)
-        sensitivityRow = findViewById(R.id.sensitivityRow)
-        pieAppsRow = findViewById(R.id.pieAppsRow)
-        pieAppsSubtitle = findViewById(R.id.pieAppsSubtitle)
-        launchStyleSubtitle = findViewById(R.id.launchStyleSubtitle)
-        quicklinksSubtitle = findViewById(R.id.quicklinksSubtitle)
-        findViewById<View>(R.id.launchStyleRow).setOnClickListener { showLaunchStyleDialog() }
+        launchStyleRow.setOnClickListener { showLaunchStyleDialog() }
         pieAppsRow.setOnClickListener { startActivity(Intent(this, PieAppsActivity::class.java)) }
-        findViewById<View>(R.id.quicklinksRow).setOnClickListener {
-            startActivity(Intent(this, QuicklinksActivity::class.java))
-        }
-
-        gesturesRow.setOnClickListener {
-            startActivity(Intent(this, GestureSettingsActivity::class.java))
-        }
-        sensitivityRow.setOnClickListener {
-            startActivity(Intent(this, GestureSensitivityActivity::class.java))
-        }
+        gesturesRow.setOnClickListener { startActivity(Intent(this, GestureSettingsActivity::class.java)) }
+        sensitivityRow.setOnClickListener { startActivity(Intent(this, GestureSensitivityActivity::class.java)) }
         findViewById<View>(R.id.exportRow).setOnClickListener {
             launchPicker { exportLauncher.launch("gesture-launcher-backup.json") }
         }
@@ -159,83 +138,27 @@ class SettingsHubActivity : SlidePanelActivity() {
             launchPicker { importLauncher.launch(arrayOf("application/json")) }
         }
 
-        autoKeyboardSwitch = findViewById(R.id.autoKeyboardSwitch)
-        findViewById<View>(R.id.autoKeyboardRow).setOnClickListener {
-            val enabled = !Prefs.autoKeyboard(this)
-            Prefs.setAutoKeyboard(this, enabled)
-            autoKeyboardSwitch.isChecked = enabled
-        }
-
+        bindToggle(R.id.autoKeyboardRow, Prefs::autoKeyboard, Prefs::setAutoKeyboard)
+        bindToggle(R.id.hapticFeedbackRow, Prefs::hapticFeedback, Prefs::setHapticFeedback)
         // The home screen rebuilds itself with the new set of pages when it next comes back.
-        widgetsPageSwitch = findViewById(R.id.widgetsPageSwitch)
-        findViewById<View>(R.id.widgetsPageRow).setOnClickListener {
-            val enabled = !Prefs.widgetsPage(this)
-            Prefs.setWidgetsPage(this, enabled)
-            widgetsPageSwitch.isChecked = enabled
-        }
-        notesPageSwitch = findViewById(R.id.notesPageSwitch)
-        findViewById<View>(R.id.notesPageRow).setOnClickListener {
-            val enabled = !Prefs.notesPage(this)
-            Prefs.setNotesPage(this, enabled)
-            notesPageSwitch.isChecked = enabled
-        }
+        bindToggle(R.id.widgetsPageRow, Prefs::widgetsPage, Prefs::setWidgetsPage)
+        bindToggle(R.id.notesPageRow, Prefs::notesPage, Prefs::setNotesPage)
+        searchSideRow.setOnClickListener { showSearchSideDialog() }
+        themeRow.setOnClickListener { showThemeDialog() }
+        fontRow.setOnClickListener { showFontDialog() }
+        fontScaleRow.setOnClickListener { showFontScaleDialog() }
 
-        hapticFeedbackSwitch = findViewById(R.id.hapticFeedbackSwitch)
-        findViewById<View>(R.id.hapticFeedbackRow).setOnClickListener {
-            val enabled = !Prefs.hapticFeedback(this)
-            Prefs.setHapticFeedback(this, enabled)
-            hapticFeedbackSwitch.isChecked = enabled
-        }
-        searchSideSubtitle = findViewById(R.id.searchSideSubtitle)
-        findViewById<View>(R.id.searchSideRow).setOnClickListener { showSearchSideDialog() }
-
-        themeSubtitle = findViewById(R.id.themeSubtitle)
-        findViewById<View>(R.id.themeRow).setOnClickListener { showThemeDialog() }
-
-        fontSubtitle = findViewById(R.id.fontSubtitle)
-        findViewById<View>(R.id.fontRow).setOnClickListener { showFontDialog() }
-
-        fontScaleSubtitle = findViewById(R.id.fontScaleSubtitle)
-        findViewById<View>(R.id.fontScaleRow).setOnClickListener { showFontScaleDialog() }
-
-        searchEngineSubtitle = findViewById(R.id.searchEngineSubtitle)
-        voiceSwitch = findViewById(R.id.voiceSwitch)
-        findViewById<View>(R.id.voiceRow).setOnClickListener {
-            val enabled = !Prefs.voiceEnabled(this)
-            Prefs.setVoiceEnabled(this, enabled)
-            voiceSwitch.isChecked = enabled
-            updateVoice()
-        }
-        voiceOnAssistRow = findViewById(R.id.voiceOnAssistRow)
-        voiceOnAssistTitle = findViewById(R.id.voiceOnAssistTitle)
-        voiceOnAssistSubtitle = findViewById(R.id.voiceOnAssistSubtitle)
-        voiceOnAssistSwitch = findViewById(R.id.voiceOnAssistSwitch)
-        voiceOnAssistRow.setOnClickListener {
-            val enabled = !Prefs.voiceOnAssist(this)
-            Prefs.setVoiceOnAssist(this, enabled)
-            voiceOnAssistSwitch.isChecked = enabled
-        }
-        voiceWordsSubtitle = findViewById(R.id.voiceWordsSubtitle)
-        findViewById<View>(R.id.voiceWordsRow).setOnClickListener { showVoiceWordsDialog() }
-        showVoiceWords()
-        findViewById<View>(R.id.searchEngineRow).setOnClickListener { showSearchEngineDialog() }
-        mapsAppRow = findViewById(R.id.mapsAppRow)
-        mapsAppSubtitle = findViewById(R.id.mapsAppSubtitle)
+        quicklinksRow.setOnClickListener { startActivity(Intent(this, QuicklinksActivity::class.java)) }
+        searchEngineRow.setOnClickListener { showSearchEngineDialog() }
         mapsAppRow.setOnClickListener { showMapsAppDialog() }
-
-        quickSearchSwitch = findViewById(R.id.quickSearchSwitch)
-        quickSearchRow = findViewById(R.id.quickSearchRow)
-        quickSearchRow.setOnClickListener {
-            val enabled = !Prefs.quickSearchEnabled(this)
-            Prefs.setQuickSearchEnabled(this, enabled)
-            quickSearchSwitch.isChecked = enabled
+        bindToggle(R.id.voiceRow, Prefs::voiceEnabled, Prefs::setVoiceEnabled) { updateVoice() }
+        bindToggle(R.id.voiceOnAssistRow, Prefs::voiceOnAssist, Prefs::setVoiceOnAssist)
+        voiceWordsRow.setOnClickListener { showVoiceWordsDialog() }
+        showVoiceWords()
+        bindToggle(R.id.quickSearchRow, Prefs::quickSearchEnabled, Prefs::setQuickSearchEnabled) { enabled ->
             updateQuickSearchTrigger()
             if (enabled) explainSettingsAfterQuickSearch()
         }
-
-        quickSearchTriggerRow = findViewById(R.id.quickSearchTriggerRow)
-        quickSearchTriggerTitle = findViewById(R.id.quickSearchTriggerTitle)
-        quickSearchTriggerSubtitle = findViewById(R.id.quickSearchTriggerSubtitle)
         quickSearchTriggerRow.setOnClickListener { openAssistantSettings() }
 
         // Every tour is due again: home's on the next resume, and the others the next time their
@@ -250,10 +173,7 @@ class SettingsHubActivity : SlidePanelActivity() {
             openDefaultLauncherSettings()
         }
 
-        batterySubtitle = findViewById(R.id.batterySubtitle)
-        findViewById<View>(R.id.batteryRow).setOnClickListener {
-            openBatteryOptimizationSettings()
-        }
+        batteryRow.setOnClickListener { openBatteryOptimizationSettings() }
 
         val version = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
@@ -320,68 +240,82 @@ class SettingsHubActivity : SlidePanelActivity() {
      *  which writes nearly every setting at once, so it refreshes through the same path rather than
      *  a list of its own that can fall behind this one. */
     private fun refreshRows() {
-        gesturesSubtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
+        toggles.forEach { (row, isOn) -> row.isChecked = isOn() }
+        gesturesRow.subtitle.text = getString(R.string.gestures_row_subtitle, GestureStore.all(this).size)
         updateLaunchStyle()
-        pieAppsSubtitle.text = getString(R.string.pie_apps_row_subtitle, PieStore.all(this).size, PieStore.MAX_APPS)
+        pieAppsRow.subtitle.text = getString(R.string.pie_apps_row_subtitle, PieStore.all(this).size, PieStore.MAX_APPS)
         val links = QuicklinkStore.all(this).size
-        quicklinksSubtitle.text = resources.getQuantityString(R.plurals.quicklinks_row_subtitle, links, links)
-        autoKeyboardSwitch.isChecked = Prefs.autoKeyboard(this)
-        hapticFeedbackSwitch.isChecked = Prefs.hapticFeedback(this)
-        widgetsPageSwitch.isChecked = Prefs.widgetsPage(this)
-        notesPageSwitch.isChecked = Prefs.notesPage(this)
-        searchSideSubtitle.setText(searchSideLabel(Prefs.searchOnLeft(this)))
-        themeSubtitle.setText(themeLabelFor(Prefs.themeMode(this)))
+        quicklinksRow.subtitle.text = resources.getQuantityString(R.plurals.quicklinks_row_subtitle, links, links)
+        searchSideRow.subtitle.setText(searchSideLabel(Prefs.searchOnLeft(this)))
+        themeRow.subtitle.setText(themeLabelFor(Prefs.themeMode(this)))
         // Re-read on every resume, not just at create: the usual flow is tapping the row, changing
         // it in system settings, and coming straight back here.
-        batterySubtitle.setText(
+        batteryRow.subtitle.setText(
             if (isBatteryOptimizationExempt()) R.string.battery_exempt else R.string.battery_optimized
         )
-        fontSubtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
-        fontScaleSubtitle.text = fontScaleLabel(Prefs.fontScale(this))
-        searchEngineSubtitle.setText(Prefs.searchEngine(this).label)
+        fontRow.subtitle.text = Prefs.fontName(this) ?: getString(R.string.font_system_default)
+        fontScaleRow.subtitle.text = fontScaleLabel(Prefs.fontScale(this))
+        searchEngineRow.subtitle.setText(Prefs.searchEngine(this).label)
         // Re-read on every resume: Waze can be installed or removed while this screen is away.
         mapsAppRow.isVisible = MapSearch.isInstalled(this, MapSearch.App.WAZE)
-        mapsAppSubtitle.setText(MapSearch.app(this).label)
-        quickSearchSwitch.isChecked = Prefs.quickSearchEnabled(this)
+        mapsAppRow.subtitle.setText(MapSearch.app(this).label)
         updateQuickSearchTrigger()
         updateVoice()
     }
 
-    /** Where the `web` command searches. Read when the row is built, so nothing needs refreshing
-     *  beyond this screen's own subtitle. */
-    private fun showSearchEngineDialog() {
-        val engines = WebSearch.Engine.entries
-        val labels = engines.map { getString(it.label) }.toTypedArray()
+    /**
+     * Wires the switch row [id] to a stored setting: a tap flips it and saves it, [after] runs with
+     * the new value, and [refreshRows] reads it back with the rest.
+     */
+    private fun bindToggle(
+        id: Int,
+        isOn: (Context) -> Boolean,
+        setOn: (Context, Boolean) -> Unit,
+        after: (Boolean) -> Unit = {}
+    ) {
+        val row = findViewById<SettingsRow>(id)
+        row.setOnClickListener {
+            val on = !isOn(this)
+            setOn(this, on)
+            row.isChecked = on
+            after(on)
+        }
+        toggles += row to { isOn(this) }
+    }
+
+    /** A pick-one dialog over [options], with [current] ticked. It closes before [onPick] runs:
+     *  the theme and the font size recreate this screen, and a dialog still attached when its
+     *  window is torn down leaks. */
+    private fun <T> chooseOne(@StringRes title: Int, options: List<T>, current: T, label: (T) -> String, onPick: (T) -> Unit) {
         AlertDialog.Builder(this)
-            .setTitle(R.string.menu_search_engine)
-            .setSingleChoiceItems(labels, engines.indexOf(Prefs.searchEngine(this))) { dialog, which ->
-                Prefs.setSearchEngine(this, engines[which])
-                searchEngineSubtitle.setText(engines[which].label)
+            .setTitle(title)
+            .setSingleChoiceItems(options.map(label).toTypedArray(), options.indexOf(current)) { dialog, which ->
                 dialog.dismiss()
+                onPick(options[which])
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.cancel, null)
             .showWithFont()
     }
 
+    /** Where the `web` command searches. Read when the row is built, so nothing needs refreshing
+     *  beyond this screen's own subtitle. */
+    private fun showSearchEngineDialog() =
+        chooseOne(R.string.menu_search_engine, WebSearch.Engine.entries, Prefs.searchEngine(this), { getString(it.label) }) {
+            Prefs.setSearchEngine(this, it)
+            searchEngineRow.subtitle.setText(it.label)
+        }
+
     /** Where the `map` command searches and routes. */
-    private fun showMapsAppDialog() {
-        val apps = MapSearch.App.entries
-        val labels = apps.map { getString(it.label) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.menu_maps_app)
-            .setSingleChoiceItems(labels, apps.indexOf(MapSearch.app(this))) { dialog, which ->
-                Prefs.setMapsApp(this, apps[which])
-                mapsAppSubtitle.setText(apps[which].label)
-                dialog.dismiss()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .showWithFont()
-    }
+    private fun showMapsAppDialog() =
+        chooseOne(R.string.menu_maps_app, MapSearch.App.entries, MapSearch.app(this), { getString(it.label) }) {
+            Prefs.setMapsApp(this, it)
+            mapsAppRow.subtitle.setText(it.label)
+        }
 
     /** The words themselves, comma-separated, or what the row is for while there are none. */
     private fun showVoiceWords() {
         val words = Prefs.voiceWords(this)
-        voiceWordsSubtitle.text =
+        voiceWordsRow.subtitle.text =
             if (words.isEmpty()) getString(R.string.voice_words_none) else words.joinToString(", ")
     }
 
@@ -407,34 +341,17 @@ class SettingsHubActivity : SlidePanelActivity() {
 
     /** Greys the trigger row out while the overlay is off, and reports whether the role is held. */
     private fun updateQuickSearchTrigger() {
-        val enabled = Prefs.quickSearchEnabled(this)
-        setRowEnabled(
-            quickSearchTriggerRow,
-            enabled,
-            quickSearchTriggerTitle,
-            quickSearchTriggerSubtitle
-        )
-        quickSearchTriggerSubtitle.setText(
+        quickSearchTriggerRow.isEnabled = Prefs.quickSearchEnabled(this)
+        quickSearchTriggerRow.subtitle.setText(
             if (isAssistantRoleHeld()) R.string.quick_search_trigger_granted
             else R.string.quick_search_trigger_missing
         )
     }
 
-    /** Both voice switches' state, and the assistant-listening row greyed while voice search is
-     *  off — with nothing to start, its choice means nothing. */
+    /** The assistant-listening row greyed while voice search is off — with nothing to start, its
+     *  choice means nothing. */
     private fun updateVoice() {
-        val voice = Prefs.voiceEnabled(this)
-        voiceSwitch.isChecked = voice
-        voiceOnAssistSwitch.isChecked = Prefs.voiceOnAssist(this)
-        setRowEnabled(voiceOnAssistRow, voice, voiceOnAssistTitle, voiceOnAssistSubtitle)
-        voiceOnAssistSwitch.isEnabled = voice
-    }
-
-    /** Both halves of "this row doesn't apply right now": it stops taking taps, and it dims. */
-    private fun setRowEnabled(row: View, enabled: Boolean, vararg labels: TextView) {
-        row.isEnabled = enabled
-        row.alpha = if (enabled) 1f else DISABLED_ROW_ALPHA
-        labels.forEach { it.isEnabled = enabled }
+        voiceOnAssistRow.isEnabled = Prefs.voiceEnabled(this)
     }
 
     /** "Default (100%)" for 1.0, a bare percentage otherwise — the default is worth naming so it's
@@ -446,25 +363,12 @@ class SettingsHubActivity : SlidePanelActivity() {
             getString(R.string.font_size_percent, (scale * 100).roundToInt())
         }
 
-    private fun showFontScaleDialog() {
-        val scales = Prefs.FONT_SCALES
-        val labels = scales.map { fontScaleLabel(it) }.toTypedArray()
-        val current = Prefs.fontScale(this)
-        val selected = scales.indexOfFirst { it == current }
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.menu_font_size)
-            .setSingleChoiceItems(labels, selected) { dialog, which ->
-                Prefs.setFontScale(this, scales[which])
-                // Dismiss before recreating, for the same reason as the theme dialog above:
-                // tearing the window down with the dialog attached leaks it.
-                dialog.dismiss()
-                FontEngine.notifyScaleChanged()
-                recreate()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .showWithFont()
-    }
+    private fun showFontScaleDialog() =
+        chooseOne(R.string.menu_font_size, Prefs.FONT_SCALES.toList(), Prefs.fontScale(this), ::fontScaleLabel) {
+            Prefs.setFontScale(this, it)
+            FontEngine.notifyScaleChanged()
+            recreate()
+        }
 
     private fun showFontDialog() {
         val options = arrayOf(
@@ -533,7 +437,7 @@ class SettingsHubActivity : SlidePanelActivity() {
      *  while the pie is in use, and the other way round. */
     private fun updateLaunchStyle() {
         val style = Prefs.launchStyle(this)
-        launchStyleSubtitle.setText(launchStyleLabel(style))
+        launchStyleRow.subtitle.setText(launchStyleLabel(style))
         val pie = style == LaunchStyle.PIE
         gesturesRow.isVisible = !pie
         sensitivityRow.isVisible = !pie
@@ -547,19 +451,11 @@ class SettingsHubActivity : SlidePanelActivity() {
     }
 
     /** The home screen switches surfaces on its next resume, which is the moment this panel closes. */
-    private fun showLaunchStyleDialog() {
-        val styles = LaunchStyle.entries
-        val labels = styles.map { getString(launchStyleLabel(it)) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.launch_style_title)
-            .setSingleChoiceItems(labels, styles.indexOf(Prefs.launchStyle(this))) { dialog, which ->
-                Prefs.setLaunchStyle(this, styles[which])
-                updateLaunchStyle()
-                dialog.dismiss()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .showWithFont()
-    }
+    private fun showLaunchStyleDialog() =
+        chooseOne(R.string.launch_style_title, LaunchStyle.entries, Prefs.launchStyle(this), { getString(launchStyleLabel(it)) }) {
+            Prefs.setLaunchStyle(this, it)
+            updateLaunchStyle()
+        }
 
     @StringRes
     private fun searchSideLabel(left: Boolean): Int =
@@ -567,19 +463,11 @@ class SettingsHubActivity : SlidePanelActivity() {
 
     /** Which corner of the home screen's dock holds the search button. The home screen reads the
      *  choice on its next resume, which is the moment this panel closes. */
-    private fun showSearchSideDialog() {
-        val sides = booleanArrayOf(true, false)
-        val labels = sides.map { getString(searchSideLabel(it)) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.menu_search_side)
-            .setSingleChoiceItems(labels, sides.indexOf(Prefs.searchOnLeft(this))) { dialog, which ->
-                Prefs.setSearchOnLeft(this, sides[which])
-                searchSideSubtitle.setText(searchSideLabel(sides[which]))
-                dialog.dismiss()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .showWithFont()
-    }
+    private fun showSearchSideDialog() =
+        chooseOne(R.string.menu_search_side, listOf(true, false), Prefs.searchOnLeft(this), { getString(searchSideLabel(it)) }) {
+            Prefs.setSearchOnLeft(this, it)
+            searchSideRow.subtitle.setText(searchSideLabel(it))
+        }
 
     /** Label for a MODE_NIGHT_* constant. Anything unrecognised (an older build's value, or a
      *  mode we don't offer) falls back to "follow system", which is also the stored default. */
@@ -590,25 +478,11 @@ class SettingsHubActivity : SlidePanelActivity() {
         else -> R.string.theme_system
     }
 
-    private fun showThemeDialog() {
-        val modes = Prefs.THEME_MODES
-        val labels = modes.map { getString(themeLabelFor(it)) }.toTypedArray()
-        val current = modes.indexOf(Prefs.themeMode(this))
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.menu_theme)
-            .setSingleChoiceItems(labels, current) { dialog, which ->
-                val mode = modes[which]
-                Prefs.setThemeMode(this, mode)
-                // Dismiss before applying: setDefaultNightMode recreates this activity
-                // synchronously, and tearing the window down with the dialog still attached
-                // leaks it (and logs a WindowLeaked warning).
-                dialog.dismiss()
-                AppCompatDelegate.setDefaultNightMode(mode)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .showWithFont()
-    }
+    private fun showThemeDialog() =
+        chooseOne(R.string.menu_theme, Prefs.THEME_MODES.toList(), Prefs.themeMode(this), { getString(themeLabelFor(it)) }) {
+            Prefs.setThemeMode(this, it)
+            AppCompatDelegate.setDefaultNightMode(it)
+        }
 
     /** The file goes through a document provider, which can be a cloud one — so the work runs
      *  off the main thread, and only the toast comes back. */
@@ -729,7 +603,5 @@ class SettingsHubActivity : SlidePanelActivity() {
         private const val STATE_IMPORT_SUMMARY = "import_summary"
         private const val STATE_IMPORT_SCALE = "import_scale"
 
-        /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
-        private const val DISABLED_ROW_ALPHA = 0.4f
     }
 }

@@ -361,7 +361,7 @@ class GestureTrainingActivity : BaseActivity() {
         var bestId: String? = null
         for ((idx, stroke) in strokes.withIndex()) {
             val r = OneDollarRecognizer.recognize(
-                stroke.toPt(), templates, strokeSubLengths[idx].size.coerceAtLeast(1)
+                stroke.toPt(), templates, strokeSubLengths[idx].size
             )
             if (r.score > bestScore) { bestScore = r.score; bestId = r.name }
         }
