@@ -141,7 +141,7 @@
 
     <string name="gesture_sensitivity_title">Adjust gesture sensitivity</string>
     <string name="sensitivity_message">Higher = stricter matching (fewer wrong launches). Lower = more forgiving.</string>
-    <string name="sensitivity_row_subtitle">Tune the match threshold and test gestures live</string>
+    <string name="sensitivity_row_subtitle">Match threshold, with a live test</string>
 
     <string name="test_hint">Draw a gesture to see what it would match, without launching anything</string>
     <string name="test_no_gestures">No gestures saved yet</string>
@@ -168,12 +168,12 @@
     <string name="settings_hub_title">Settings</string>
     <string name="section_backup">Backup</string>
     <string name="gestures_row_subtitle">%1$d saved</string>
-    <string name="export_row_subtitle">Save your gestures, app aliases, and settings to a file</string>
-    <string name="import_row_subtitle">Restore from a previously exported backup file</string>
+    <string name="export_row_subtitle">Save gestures, aliases and settings to a file</string>
+    <string name="import_row_subtitle">Restore from a backup file</string>
     <string name="about_version">Gessearch Launcher v%1$s</string>
 
     <string name="section_general">General</string>
-    <string name="auto_keyboard_row_subtitle">Auto-open the keyboard when the app drawer opens</string>
+    <string name="auto_keyboard_row_subtitle">Show the keyboard when the drawer opens</string>
     <string name="haptic_feedback_row_subtitle">Vibrate when a gesture is recognized</string>
     <string name="menu_theme">Theme</string>
     <string name="theme_light">Light</string>
@@ -192,11 +192,11 @@
     <string name="font_import_failed">Couldn\'t use that file</string>
     <string name="font_import_failed_message">%1$s\n\nPick a .ttf or .otf font file. Your current font hasn\'t been changed.</string>
     <string name="change_default_launcher">Change default launcher</string>
-    <string name="change_default_launcher_row_subtitle">Open system settings to switch your default Home app</string>
+    <string name="change_default_launcher_row_subtitle">Pick your Home app in system settings</string>
     <string name="could_not_open_settings">Could not open settings</string>
     <string name="keep_launcher_responsive">Keep launcher in memory</string>
-    <string name="battery_exempt">Unrestricted — the launcher stays loaded</string>
-    <string name="battery_optimized">Restricted — the system may unload the launcher, making the app drawer slow to open</string>
+    <string name="battery_exempt">Unrestricted — stays loaded</string>
+    <string name="battery_optimized">Restricted — the drawer may open slowly</string>
 
     <string name="section_search">Search</string>
     <string name="menu_search_engine">Search engine</string>
@@ -209,10 +209,10 @@
     <string name="engine_brave">Brave Search</string>
     <string name="engine_ecosia">Ecosia</string>
     <string name="menu_quick_search">Quick search overlay</string>
-    <string name="quick_search_row_subtitle">A floating search bar over any app, for switching apps and quick actions. Once it\'s on, hold the home screen\'s search button for the app list and Settings</string>
+    <string name="quick_search_row_subtitle">A search bar that floats over any app</string>
     <string name="quick_search_trigger">Quick search trigger</string>
-    <string name="quick_search_trigger_granted">Ready — this launcher is your digital assistant. On Android 12+, also set Settings → System → Gestures → Press and hold power button to “Digital assistant”.</string>
-    <string name="quick_search_trigger_missing">Tap to open “Assist &amp; voice input”, then set Digital assistant app to Gessearch Launcher. Long-pressing the power button will then open quick search.</string>
+    <string name="quick_search_trigger_granted">Ready — also set the power button hold to Digital assistant</string>
+    <string name="quick_search_trigger_missing">Tap, then make Gessearch your Digital assistant app</string>
 
     <!-- The home screen dock: search at one corner, the strip beside it. -->
     <string name="dock_strip">Swipe to turn the page, touch and hold to speak</string>
@@ -231,17 +231,17 @@
     <string name="voice_unavailable">This phone has no speech recognition service</string>
     <string name="voice_permission_denied">Voice search needs microphone access</string>
     <string name="voice_search">Voice search</string>
-    <string name="voice_search_subtitle">Hold the dock to talk, and use the mic in quick search</string>
+    <string name="voice_search_subtitle">Hold the dock or tap the mic to talk</string>
     <string name="voice_on_assist">Listen when opened as assistant</string>
-    <string name="voice_on_assist_subtitle">Start listening as soon as a long-press of the home or power button opens quick search</string>
+    <string name="voice_on_assist_subtitle">Skip the tap on the mic</string>
     <string name="voice_words">Voice words</string>
-    <string name="voice_words_none">Names and terms voice search keeps mishearing</string>
+    <string name="voice_words_none">Names voice search keeps mishearing</string>
     <string name="voice_words_hint">e.g. Ollama</string>
     <string name="voice_words_cleared">Voice words cleared</string>
     <string name="widgets_page">Widgets page</string>
-    <string name="widgets_page_subtitle">A page of widgets to the left of the home screen</string>
+    <string name="widgets_page_subtitle">Widgets, left of the home screen</string>
     <string name="notes_page">Notes page</string>
-    <string name="notes_page_subtitle">A page of quick notes to the right of the home screen</string>
+    <string name="notes_page_subtitle">Quick notes, right of the home screen</string>
     <plurals name="voice_words_saved">
         <item quantity="one">Saved %d voice word</item>
         <item quantity="other">Saved %d voice words</item>
@@ -314,7 +314,7 @@
     <string name="quick_search_on_title">Finding Settings from now on</string>
     <string name="quick_search_on_body">A tap on the home screen\'s search button now opens the floating bar. Touch and hold that button for the full app list, and tap its ⚙ to come back here. You can also type settings in the bar.</string>
     <string name="tour_replay">Show the tours again</string>
-    <string name="tour_replay_subtitle">The home screen walk-through, and the tips for search, widgets and notes</string>
+    <string name="tour_replay_subtitle">Replay the tips for every screen</string>
     <!-- The floating search bar's tour, on its first plain open. -->
     <string name="qs_tour_buttons_title">One-tap commands</string>
     <string name="qs_tour_buttons_body">Each button types a command into the bar for you: a new event, timer, alarm, web search or a question for an AI app. Then add the rest, like the time, the length or what to look up.</string>
@@ -359,8 +359,8 @@
     <!-- Quicklinks -->
     <string name="quicklinks_title">Quicklinks</string>
     <plurals name="quicklinks_row_subtitle">
-        <item quantity="one">%1$d link — found by name or alias in search</item>
-        <item quantity="other">%1$d links — found by name or alias in search</item>
+        <item quantity="one">%1$d link · search by name or alias</item>
+        <item quantity="other">%1$d links · search by name or alias</item>
     </plurals>
     <string name="quicklinks_empty">No quicklinks yet — tap + to save a web address you can open from search.</string>
     <string name="quicklink_add">Add quicklink</string>
