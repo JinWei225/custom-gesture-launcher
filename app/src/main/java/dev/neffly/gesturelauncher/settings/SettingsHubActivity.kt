@@ -7,10 +7,12 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.BundleCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
@@ -26,23 +28,23 @@ import dev.neffly.gesturelauncher.data.FontStore
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.LaunchStyle
 import dev.neffly.gesturelauncher.data.PieStore
-import dev.neffly.gesturelauncher.data.QuicklinkStore
 import dev.neffly.gesturelauncher.data.Prefs
+import dev.neffly.gesturelauncher.data.QuicklinkStore
 import dev.neffly.gesturelauncher.drawer.AppRepository
-import dev.neffly.gesturelauncher.search.MapSearch
-import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.onboarding.Backdrop
 import dev.neffly.gesturelauncher.onboarding.Placement
 import dev.neffly.gesturelauncher.onboarding.TourBalloon
 import dev.neffly.gesturelauncher.onboarding.TourCard
+import dev.neffly.gesturelauncher.search.MapSearch
+import dev.neffly.gesturelauncher.search.WebSearch
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import dev.neffly.gesturelauncher.ui.showWithFont
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 /**
  * Settings entry point: sections for Gestures ([GestureSettingsActivity], sensitivity/test via
@@ -84,6 +86,14 @@ class SettingsHubActivity : SlidePanelActivity() {
     private lateinit var quickSearchRow: View
     /** The guide pop-up open over a row, if any — see [pointAtQuickSearch]. */
     private var guide: Balloon? = null
+
+    /** Back closes a modal guide rather than the screen under it: its spotlight blocks the screen,
+     *  and the pop-up's own contract leaves Back to the caller (see TourBalloon). */
+    private val closeGuideOnBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            guide?.dismiss()
+        }
+    }
     private lateinit var quickSearchTriggerRow: View
     private lateinit var quickSearchTriggerTitle: TextView
     private lateinit var quickSearchTriggerSubtitle: TextView
@@ -91,6 +101,14 @@ class SettingsHubActivity : SlidePanelActivity() {
     /** The font scale in force when an import started, so [applyImportedAppearance] can tell
      *  whether the imported one is actually different before rebuilding the screen. */
     private var importedFromScale = 1f
+
+    /** The backup whose confirm dialog is up, and the summary of the import whose result dialog
+     *  is up. Kept across a recreation so neither is lost to a rotation: the confirm is asked
+     *  again, and the result is shown again so that dismissing it still applies the imported
+     *  theme and font size. */
+    private var pendingImport: Uri? = null
+    private var pendingSummary: String? = null
+    private var importDialog: AlertDialog? = null
 
     private val exportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -111,6 +129,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         setContentView(R.layout.activity_settings_hub)
 
         slideIn(findViewById(R.id.settingsHubRoot), savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, closeGuideOnBack)
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
@@ -134,10 +153,10 @@ class SettingsHubActivity : SlidePanelActivity() {
             startActivity(Intent(this, GestureSensitivityActivity::class.java))
         }
         findViewById<View>(R.id.exportRow).setOnClickListener {
-            exportLauncher.launch("gesture-launcher-backup.json")
+            launchPicker { exportLauncher.launch("gesture-launcher-backup.json") }
         }
         findViewById<View>(R.id.importRow).setOnClickListener {
-            importLauncher.launch(arrayOf("application/json"))
+            launchPicker { importLauncher.launch(arrayOf("application/json")) }
         }
 
         autoKeyboardSwitch = findViewById(R.id.autoKeyboardSwitch)
@@ -240,6 +259,13 @@ class SettingsHubActivity : SlidePanelActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull().orEmpty()
         findViewById<TextView>(R.id.aboutRow).text = getString(R.string.about_version, version)
+
+        // An import dialog that was up when the screen was recreated — see pendingImport.
+        savedInstanceState?.let { state ->
+            importedFromScale = state.getFloat(STATE_IMPORT_SCALE, 1f)
+            state.getString(STATE_IMPORT_SUMMARY)?.let(::showImportResult)
+            BundleCompat.getParcelable(state, STATE_IMPORT_URI, Uri::class.java)?.let(::doImport)
+        }
     }
 
     /** Opened from the home tour's floating-search step: show where that switch is. */
@@ -279,7 +305,10 @@ class SettingsHubActivity : SlidePanelActivity() {
                 body = getText(R.string.quick_search_on_body),
                 primary = TourCard.Action(getText(R.string.tour_got_it)) {},
             ),
-        )
+        ).also { balloon ->
+            closeGuideOnBack.isEnabled = true
+            balloon.setOnBalloonDismissListener { closeGuideOnBack.isEnabled = false }
+        }
     }
 
     override fun onResume() {
@@ -445,7 +474,7 @@ class SettingsHubActivity : SlidePanelActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.menu_font)
             .setItems(options) { _, which ->
-                if (which == 0) fontLauncher.launch(FontStore.PICKER_MIME_TYPES) else clearFont()
+                if (which == 0) launchPicker { fontLauncher.launch(FontStore.PICKER_MIME_TYPES) } else clearFont()
             }
             .setNegativeButton(R.string.cancel, null)
             .showWithFont()
@@ -581,13 +610,12 @@ class SettingsHubActivity : SlidePanelActivity() {
             .showWithFont()
     }
 
-    /** The file goes through a document provider, which can be a cloud one — so the write runs
+    /** The file goes through a document provider, which can be a cloud one — so the work runs
      *  off the main thread, and only the toast comes back. */
     private fun doExport(uri: Uri) {
-        val backup = BackupManager.buildBackup(this)
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                BackupManager.writeTo(this@SettingsHubActivity, uri, backup)
+                BackupManager.writeTo(applicationContext, uri, BackupManager.buildBackup(applicationContext))
             }
             val message = if (result.isSuccess) R.string.export_success else R.string.export_failed
             Toast.makeText(this@SettingsHubActivity, message, Toast.LENGTH_LONG).show()
@@ -596,8 +624,8 @@ class SettingsHubActivity : SlidePanelActivity() {
 
     private fun doImport(uri: Uri) {
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) { BackupManager.readFrom(this@SettingsHubActivity, uri) }.fold(
-                onSuccess = { data -> showImportConfirmDialog(data) },
+            withContext(Dispatchers.IO) { BackupManager.readFrom(applicationContext, uri) }.fold(
+                onSuccess = { data -> showImportConfirmDialog(uri, data) },
                 onFailure = {
                     AlertDialog.Builder(this@SettingsHubActivity)
                         .setTitle(R.string.import_confirm_title)
@@ -609,42 +637,73 @@ class SettingsHubActivity : SlidePanelActivity() {
         }
     }
 
-    private fun showImportConfirmDialog(data: BackupData) {
+    private fun showImportConfirmDialog(uri: Uri, data: BackupData) {
+        pendingImport = uri
         val message = getString(R.string.import_confirm_message, data.gestures.size, data.appTags.size)
-        AlertDialog.Builder(this)
+        importDialog = AlertDialog.Builder(this)
             .setTitle(R.string.import_confirm_title)
             .setMessage(message)
-            .setPositiveButton(R.string.import_replace) { _, _ -> applyImport(data, replace = true) }
-            .setNeutralButton(R.string.import_merge) { _, _ -> applyImport(data, replace = false) }
-            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.import_replace) { _, _ -> pendingImport = null; applyImport(data, replace = true) }
+            .setNeutralButton(R.string.import_merge) { _, _ -> pendingImport = null; applyImport(data, replace = false) }
+            .setNegativeButton(R.string.cancel) { _, _ -> pendingImport = null }
+            .setOnCancelListener { pendingImport = null }
             .showWithFont()
     }
 
+    /** Applied off the main thread: a backup is several file writes and a package lookup per
+     *  gesture. */
     private fun applyImport(data: BackupData, replace: Boolean) {
         importedFromScale = Prefs.fontScale(this)
-        val result = BackupManager.apply(this, data, replace)
-        AppRepository.invalidate()
-        refreshRows()
-        showVoiceWords()
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) { BackupManager.apply(applicationContext, data, replace) }
+            AppRepository.invalidate()
+            refreshRows()
+            showVoiceWords()
 
-        var message = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
-        if (result.missingApps.isNotEmpty()) {
-            message += getString(
-                R.string.import_result_missing_apps,
-                result.missingApps.size,
-                result.missingApps.joinToString("\n") { "• $it" }
-            )
+            var summary = getString(R.string.import_result_message, result.gesturesImported, result.tagsImported)
+            if (result.missingApps.isNotEmpty()) {
+                summary += getString(
+                    R.string.import_result_missing_apps,
+                    result.missingApps.size,
+                    result.missingApps.joinToString("\n") { "• $it" }
+                )
+            }
+            showImportResult(summary)
         }
-        // Theme and font size land last, once the summary has been read: applying either recreates
-        // this activity, which would tear the dialog down with it (the same leak the theme and
-        // font-size dialogs above dismiss themselves to avoid). Cancel is covered as well as the
-        // button — the dismiss slot belongs to showWithFont.
-        AlertDialog.Builder(this)
+    }
+
+    /** Theme and font size land last, once the summary has been read: applying either recreates
+     *  this activity, which would tear the dialog down with it (the same leak the theme and
+     *  font-size dialogs above dismiss themselves to avoid). Cancel is covered as well as the
+     *  button — the dismiss slot belongs to showWithFont. */
+    private fun showImportResult(summary: String) {
+        pendingSummary = summary
+        importDialog = AlertDialog.Builder(this)
             .setTitle(R.string.import_result_title)
-            .setMessage(message)
-            .setPositiveButton(R.string.ok) { _, _ -> applyImportedAppearance() }
-            .setOnCancelListener { applyImportedAppearance() }
+            .setMessage(summary)
+            .setPositiveButton(R.string.ok) { _, _ -> pendingSummary = null; applyImportedAppearance() }
+            .setOnCancelListener { pendingSummary = null; applyImportedAppearance() }
             .showWithFont()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelable(STATE_IMPORT_URI, pendingImport)
+        outState.putString(STATE_IMPORT_SUMMARY, pendingSummary)
+        outState.putFloat(STATE_IMPORT_SCALE, importedFromScale)
+    }
+
+    override fun onDestroy() {
+        importDialog?.dismiss()
+        super.onDestroy()
+    }
+
+    /** ActivityResultLauncher.launch throws when no app handles the document intent — DocumentsUI
+     *  can be disabled on managed and Go devices. */
+    private fun launchPicker(launch: () -> Unit) {
+        if (runCatching(launch).isFailure) {
+            Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
@@ -665,6 +724,10 @@ class SettingsHubActivity : SlidePanelActivity() {
         /** Which row to point at once the screen has slid in; see [onSlidIn]. */
         const val EXTRA_HIGHLIGHT = "highlight"
         const val HIGHLIGHT_QUICK_SEARCH = "quick_search"
+
+        private const val STATE_IMPORT_URI = "import_uri"
+        private const val STATE_IMPORT_SUMMARY = "import_summary"
+        private const val STATE_IMPORT_SCALE = "import_scale"
 
         /** Faded, not hidden: the row stays visible so it's clear what the toggle above unlocks. */
         private const val DISABLED_ROW_ALPHA = 0.4f

@@ -117,12 +117,29 @@ class CommandsTest {
         assertEquals(Duration.ofMinutes(90), timer("timer 1.5h").length)
         assertEquals(Duration.ofSeconds(45), timer("timer 45s").length)
         assertEquals(Duration.ofSeconds(45), timer("timer for 45 sec").length)
+        assertEquals(Duration.ofMinutes(90), timer("timer 1h30").length)
+        assertEquals(Duration.ofMinutes(125), timer("timer 2 hours 05").length)
+    }
+
+    @Test
+    fun `two digits after a length are only minutes after an hour`() {
+        val t = timer("timer 10 min 2 eggs")
+        assertEquals(Duration.ofMinutes(10), t.length)
+        assertEquals("2 eggs", t.label)
+    }
+
+    @Test
+    fun `a length the clock app would refuse is not read`() {
+        assertNull(timer("timer 0").length)
+        assertNull(timer("timer 25h").length)
+        assertEquals(Duration.ofHours(24), timer("timer 24h").length)
+        assertEquals(Duration.ofHours(24), timer("timer 1440").length)
     }
 
     @Test
     fun `a number too long to be a length is left alone rather than overflowing`() {
         // Five digits is the most a bare minutes count may have; beyond it nothing is read.
-        assertEquals(Duration.ofMinutes(99999), timer("timer 99999").length)
+        assertNull(timer("timer 99999").length)
         assertNull(timer("timer 123456789012345678901234567890").length)
     }
 
@@ -238,6 +255,25 @@ class CommandsTest {
         assertEquals(Command.Event("Team Discussion", null, null, null), parse("event Team Discussion"))
     }
 
+    @Test
+    fun `an end with no meridiem takes the start's`() {
+        var e = event("event work 9am-5")
+        assertEquals(t("09:00") to t("17:00"), e.start to e.end)
+        assertEquals(Duration.ofHours(8), e.length)
+        e = event("event dinner 7pm-9")
+        assertEquals(t("19:00") to t("21:00"), e.start to e.end)
+        e = event("event standup 10am-11")
+        assertEquals(t("10:00") to t("11:00"), e.start to e.end)
+    }
+
+    @Test
+    fun `a range or length past midnight keeps its real length`() {
+        assertEquals(Duration.ofHours(2), event("event party 11pm-1am").length)
+        val e = event("event retreat 9am for 25h")
+        assertEquals(Duration.ofHours(25), e.length)
+        assertEquals(t("10:00"), e.end)
+    }
+
     // --- web and map --------------------------------------------------------
 
     @Test
@@ -254,6 +290,14 @@ class CommandsTest {
         assertEquals(MapSearch.Place.WORK, (parse("maps My Work") as Command.Map).place)
         assertNull((parse("map home depot") as Command.Map).place)
         assertNull((parse("map homework") as Command.Map).place)
+    }
+
+    @Test
+    fun `web and map send the rest as typed, not folded`() {
+        assertEquals("x² + y²", (parse("web x² + y²") as Command.Web).query)
+        assertEquals("Room ①", (parse("map Room ①") as Command.Map).query)
+        // The keyword still matches when typed on a CJK keyboard.
+        assertEquals("k2", (parse("ｗｅｂ　k2") as Command.Web).query)
         assertNull(parse("googled it"))
     }
 }

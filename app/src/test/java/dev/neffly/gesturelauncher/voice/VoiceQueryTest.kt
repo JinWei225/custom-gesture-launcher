@@ -151,6 +151,22 @@ class VoiceQueryTest {
     }
 
     @Test
+    fun `a lower guess cannot turn a plain name into an open request`() {
+        val amazon = app("Amazon")
+        assertEquals(
+            Resolution.Search("Opera"),
+            VoiceQuery.resolve(listOf("Opera", "open a"), apps + amazon)
+        )
+    }
+
+    @Test
+    fun `a letter or two is not the start of an app's name`() {
+        val amazon = app("Amazon")
+        assertEquals(Resolution.Search("a"), VoiceQuery.resolve(listOf("open a"), apps + amazon))
+        assertEquals(Resolution.Launch(amazon), VoiceQuery.resolve(listOf("open ama"), apps + amazon))
+    }
+
+    @Test
     fun `an unknown app is searched for instead`() {
         assertEquals(Resolution.Search("Strava"), VoiceQuery.resolve(listOf("open Strava"), apps))
     }

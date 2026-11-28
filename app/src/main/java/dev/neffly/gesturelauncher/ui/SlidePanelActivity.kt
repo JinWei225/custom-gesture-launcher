@@ -57,9 +57,13 @@ abstract class SlidePanelActivity : BaseActivity() {
             .translationX(resources.displayMetrics.widthPixels.toFloat())
             .setDuration(SLIDE_DURATION_MS)
             .setInterpolator(AccelerateInterpolator())
-            .withEndAction { super.finish() }
+            .withEndAction {
+                super.finish()
+                // Right after the real finish: below API 34 the override only applies to a
+                // transition already pending, and the slide-out above is what delayed it.
+                overrideNextTransition()
+            }
             .start()
-        overrideNextTransition()
     }
 
     /**
@@ -69,7 +73,10 @@ abstract class SlidePanelActivity : BaseActivity() {
      */
     override fun onStop() {
         super.onStop()
-        if (isClosing && !isFinishing) super.finish()
+        if (isClosing && !isFinishing) {
+            super.finish()
+            overrideNextTransition()
+        }
     }
 
     private companion object {

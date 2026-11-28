@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.notes
 
 import android.content.Context
+import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,13 +21,20 @@ data class Note(val id: Long, val text: String, val editedAt: Long? = null)
 object NoteStore {
 
     private const val FILE = "notes"
+    private const val KEY_NOTES_CORRUPT = "notes.corrupt"
     private const val KEY_NOTES = "notes"
 
     private val json = Json { ignoreUnknownKeys = true }
 
     fun load(context: Context): List<Note> {
         val raw = prefs(context).getString(KEY_NOTES, null) ?: return emptyList()
-        return runCatching { json.decodeFromString<List<Note>>(raw) }.getOrDefault(emptyList())
+        return runCatching { json.decodeFromString<List<Note>>(raw) }.getOrElse { e ->
+            // Kept rather than dropped: the next save would otherwise make the loss permanent.
+            // The same rule as JsonListFile's ".corrupt" copy.
+            Log.e("NoteStore", "unreadable list; kept under $KEY_NOTES_CORRUPT", e)
+            prefs(context).edit().putString(KEY_NOTES_CORRUPT, raw).remove(KEY_NOTES).apply()
+            emptyList()
+        }
     }
 
     fun save(context: Context, notes: List<Note>) {

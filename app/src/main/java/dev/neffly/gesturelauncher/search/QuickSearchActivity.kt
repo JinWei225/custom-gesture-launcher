@@ -72,8 +72,9 @@ import kotlinx.coroutines.withContext
  *
  * The mic beside the field types by voice: what is heard fills the field as it is said, so the
  * results follow along, and "open <app>" launches the app outright (see [VoiceQuery]). The home
- * screen's push-to-talk opens this window with what it heard as the query — [EXTRA_QUERY]. Opened
- * by the power button, the window starts listening by itself.
+ * screen's push-to-talk opens this window with what it heard as the query — [EXTRA_QUERY], which
+ * is only read when the window was opened through the app's own, unexported alias (see [intent]).
+ * Opened by the power button, the window starts listening by itself.
  */
 class QuickSearchActivity : BaseActivity() {
 
@@ -154,7 +155,7 @@ class QuickSearchActivity : BaseActivity() {
         // as their assistant must get their power button back, not an empty search bar. A query
         // from the home screen's push-to-talk is not that: the user just asked for it by voice,
         // and this window is where its results are shown.
-        val voiceQuery = intent.getStringExtra(EXTRA_QUERY)
+        val voiceQuery = spokenQuery(intent)
         if (!Prefs.quickSearchEnabled(this) && voiceQuery == null) {
             finish()
             return
@@ -235,7 +236,7 @@ class QuickSearchActivity : BaseActivity() {
                     event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
             if (isSearchAction) {
                 if (!searchInput.text.isNullOrBlank()) {
-                    adapter.firstResult()?.let { open(it) }
+                    search.results.firstOrNull()?.let { open(it) }
                 }
                 true
             } else {
@@ -257,8 +258,7 @@ class QuickSearchActivity : BaseActivity() {
         // The power button is the hands-free way in, so it opens listening rather than typing —
         // once the microphone has been granted: a permission dialog on every power-button hold
         // would be a toll on the people who type. The keyboard is a tap on the field away.
-        val listenOnOpen = intent.action == Intent.ACTION_ASSIST && Prefs.voiceOnAssist(this) &&
-            voiceButton.isVisible && VoiceInput.hasPermission(this)
+        val listenOnOpen = listensOnOpen(intent)
         // The first plain open walks through the bar's buttons, with the keyboard held back until
         // it's over — it would only cover the pop-ups. Not over a spoken query or while listening:
         // the person is mid-request there, not exploring.
@@ -273,6 +273,28 @@ class QuickSearchActivity : BaseActivity() {
         }
         if (savedInstanceState == null) animateIn { if (showTour) tour.start(tourSteps()) }
     }
+
+    /** singleInstance, so a second assistant gesture or a spoken query lands here while the window
+     *  is already up — and is answered the way it would be on opening, rather than dropped. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val spoken = spokenQuery(intent)
+        when {
+            spoken != null -> showSpoken(spoken)
+            listensOnOpen(intent) -> startListening()
+        }
+    }
+
+    private fun listensOnOpen(intent: Intent): Boolean =
+        intent.action == Intent.ACTION_ASSIST && Prefs.voiceOnAssist(this) &&
+            voiceButton.isVisible && VoiceInput.hasPermission(this)
+
+    /** [EXTRA_QUERY], only from the app's own alias: this activity is exported for ACTION_ASSIST,
+     *  and any app could otherwise open it over itself with words of its choosing in the field —
+     *  past the quick-search switch, too, which a spoken query bypasses. */
+    private fun spokenQuery(intent: Intent): String? =
+        intent.getStringExtra(EXTRA_QUERY)?.takeIf { intent.component?.className == SPOKEN_ALIAS }
 
     private fun tourSteps(): List<Tour.Step> = buildList {
         val skip = Tour.Choice(R.string.tour_skip, Tour.Move.End)
@@ -686,10 +708,17 @@ class QuickSearchActivity : BaseActivity() {
         /** Text to open the window with — what the home screen's push-to-talk heard. */
         private const val EXTRA_QUERY = "dev.neffly.gesturelauncher.extra.QUERY"
 
+        /** The manifest's unexported alias of this activity, the only way in that carries a query. */
+        private const val SPOKEN_ALIAS = "dev.neffly.gesturelauncher.search.QuickSearchSpoken"
+
         /** Opens the floating search, with [query] already in the field when given. */
-        fun intent(context: Context, query: String? = null): Intent =
-            Intent(context, QuickSearchActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .apply { if (query != null) putExtra(EXTRA_QUERY, query) }
+        fun intent(context: Context, query: String? = null): Intent {
+            val intent = if (query == null) {
+                Intent(context, QuickSearchActivity::class.java)
+            } else {
+                Intent().setClassName(context, SPOKEN_ALIAS).putExtra(EXTRA_QUERY, query)
+            }
+            return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
     }
 }

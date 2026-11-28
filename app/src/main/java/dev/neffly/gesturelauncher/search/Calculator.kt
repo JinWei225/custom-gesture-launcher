@@ -92,7 +92,8 @@ object Calculator {
      * fails the last of those the same way "e-mail" does.
      */
     private fun toAsciiMath(query: String): String =
-        Normalizer.normalize(query, Normalizer.Form.NFKC)
+        // Superscript digits first: NFKC folds them into plain ones, and "3²+1" would read as 32+1.
+        Normalizer.normalize(SUPERSCRIPT.replace(query) { "^" + it.value.map(SUPERSCRIPT_DIGITS::indexOf).joinToString("") }, Normalizer.Form.NFKC)
             .map { CJK_OPERATORS[it] ?: it }
             .joinToString("")
 
@@ -138,7 +139,10 @@ object Calculator {
      * tells the reader nothing.
      */
     private fun format(value: BigDecimal): String {
-        val pattern = if (value.abs() >= SCIENTIFIC_ABOVE) SCIENTIFIC_PATTERN else PLAIN_PATTERN
+        val abs = value.abs()
+        // Below SCIENTIFIC_BELOW, rounding to MAX_DECIMALS leaves a misleading 0 or -0.
+        val scientific = abs >= SCIENTIFIC_ABOVE || (value.signum() != 0 && abs < SCIENTIFIC_BELOW)
+        val pattern = if (scientific) SCIENTIFIC_PATTERN else PLAIN_PATTERN
         val format = DecimalFormat(pattern, DecimalFormatSymbols.getInstance(Locale.getDefault()))
         format.roundingMode = RoundingMode.HALF_UP
         return format.format(value)
@@ -156,13 +160,19 @@ object Calculator {
     private val CJK_OPERATORS = mapOf('×' to '*', '÷' to '/', '−' to '-', '。' to '.')
 
     private val SCIENTIFIC_ABOVE = BigDecimal("1E15")
+    private val SCIENTIFIC_BELOW = BigDecimal("1E-10")
+
+    private const val SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+    private val SUPERSCRIPT = Regex("[$SUPERSCRIPT_DIGITS]+")
     // Built from MAX_DECIMALS rather than written out, so the two can't drift apart.
     private val PLAIN_PATTERN = "#,##0." + "#".repeat(MAX_DECIMALS)
     private val SCIENTIFIC_PATTERN = "0." + "#".repeat(MAX_DECIMALS) + "E0"
 
     private val NEGATIVE_EXPONENT = Regex("""\^\s*-\s*(\d+(?:\.\d+)?)""")
     private val PERCENT_OF = Regex("""(\d+(?:\.\d+)?)\s*%\s*of\s+""", RegexOption.IGNORE_CASE)
-    private val PERCENT_ADJUST = Regex("""^(.+)([+\-])\s*(\d+(?:\.\d+)?)\s*%$""")
+    // The left side has to end in an operand: in "5*-10%" the minus is the percent's sign, not an
+    // adjustment of "5*".
+    private val PERCENT_ADJUST = Regex("""^(.*[\d)])\s*([+\-])\s*(\d+(?:\.\d+)?)\s*%$""")
     private val PERCENT_BARE = Regex("""(\d+(?:\.\d+)?)\s*%""")
 
     /** Declared last because Kotlin initialises an object's properties in source order, and this

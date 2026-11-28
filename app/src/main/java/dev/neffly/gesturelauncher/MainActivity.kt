@@ -6,12 +6,12 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.res.Configuration
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.database.ContentObserver
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
-import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.AlarmClock
@@ -19,10 +19,11 @@ import android.provider.CalendarContract
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.LayoutInflater
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -37,10 +38,8 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.viewpager2.widget.ViewPager2
+import com.skydoves.balloon.Balloon
 import dev.neffly.gesturelauncher.crash.SafeModeActivity
 import dev.neffly.gesturelauncher.data.CalendarRepository
 import dev.neffly.gesturelauncher.data.DayEvent
@@ -48,23 +47,16 @@ import dev.neffly.gesturelauncher.data.GestureMapping
 import dev.neffly.gesturelauncher.data.GestureStore
 import dev.neffly.gesturelauncher.data.LaunchStyle
 import dev.neffly.gesturelauncher.data.PieStore
-import dev.neffly.gesturelauncher.drawer.AppInfo
-import dev.neffly.gesturelauncher.drawer.AppRepository
-import dev.neffly.gesturelauncher.drawer.IconCache
 import dev.neffly.gesturelauncher.data.Prefs
-import dev.neffly.gesturelauncher.ui.BaseActivity
-import dev.neffly.gesturelauncher.ui.DockStrip
-import dev.neffly.gesturelauncher.ui.PageDotsView
-import dev.neffly.gesturelauncher.widgets.WidgetPage
-import dev.neffly.gesturelauncher.notes.NotesPage
-import dev.neffly.gesturelauncher.ui.StaticPagesAdapter
-import androidx.viewpager2.widget.ViewPager2
-import android.view.LayoutInflater
 import dev.neffly.gesturelauncher.data.anyMultiStroke
 import dev.neffly.gesturelauncher.data.maxExpectedSubStrokes
 import dev.neffly.gesturelauncher.data.toPt
 import dev.neffly.gesturelauncher.data.toTemplates
+import dev.neffly.gesturelauncher.drawer.AppInfo
+import dev.neffly.gesturelauncher.drawer.AppRepository
+import dev.neffly.gesturelauncher.drawer.IconCache
 import dev.neffly.gesturelauncher.launch.UnrequestedHomeLaunch
+import dev.neffly.gesturelauncher.notes.NotesPage
 import dev.neffly.gesturelauncher.onboarding.Backdrop
 import dev.neffly.gesturelauncher.onboarding.HomeTour
 import dev.neffly.gesturelauncher.onboarding.Placement
@@ -72,17 +64,25 @@ import dev.neffly.gesturelauncher.onboarding.TourBalloon
 import dev.neffly.gesturelauncher.onboarding.TourCard
 import dev.neffly.gesturelauncher.settings.GestureActionChooserActivity
 import dev.neffly.gesturelauncher.settings.PieAppsActivity
-import com.skydoves.balloon.Balloon
+import dev.neffly.gesturelauncher.ui.BaseActivity
+import dev.neffly.gesturelauncher.ui.DockStrip
 import dev.neffly.gesturelauncher.ui.FontEngine
 import dev.neffly.gesturelauncher.ui.GestureCanvasView
+import dev.neffly.gesturelauncher.ui.PageDotsView
 import dev.neffly.gesturelauncher.ui.PieMenuView
+import dev.neffly.gesturelauncher.ui.StaticPagesAdapter
 import dev.neffly.gesturelauncher.ui.overrideNextTransition
 import dev.neffly.gesturelauncher.unistroke.GestureTemplate
 import dev.neffly.gesturelauncher.unistroke.OneDollarRecognizer
 import dev.neffly.gesturelauncher.voice.PushToTalk
+import dev.neffly.gesturelauncher.widgets.WidgetPage
 import java.util.Calendar
 import java.util.Date
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Home screen: up to three pages over the system wallpaper, under the home page's dock.
@@ -162,6 +162,10 @@ class MainActivity : BaseActivity() {
     private var eventsCacheAtMillis = 0L
     private var eventsCacheDay = -1L
 
+    /** The query in flight, cancelled by the next: a slow one finishing after a newer one would
+     *  otherwise cache what it read before the change, and serve it for the whole TTL. */
+    private var eventsLoad: Job? = null
+
     /** The lines currently in [eventsContainer], so a resume that would draw the same rows
      *  again doesn't rebuild the views — this runs on every Home press. */
     private var renderedRows: List<String> = emptyList()
@@ -196,7 +200,12 @@ class MainActivity : BaseActivity() {
 
         // Safety net: after repeated crashes, don't render the gesture canvas at all.
         if (Prefs.shouldEnterSafeMode(this)) {
-            startActivity(Intent(this, SafeModeActivity::class.java))
+            // Onto the safe-mode screen already in this task, if there is one: every Home press
+            // lands here again, and would otherwise stack another for Back to wade through.
+            startActivity(
+                Intent(this, SafeModeActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
             finish()
             return
         }
@@ -310,7 +319,12 @@ class MainActivity : BaseActivity() {
         dockStrip.count = if (pages.size > 1) pages.size else 0
         dockStrip.position = pageHome.toFloat()
         pushToTalk = PushToTalk(this, voiceCaption)
-        DockStrip(dockStrip, pager, onHold = pushToTalk::press, onRelease = pushToTalk::lift)
+        DockStrip(
+            dockStrip, pager,
+            canHold = { Prefs.voiceEnabled(this) },
+            onHold = pushToTalk::press,
+            onRelease = pushToTalk::lift
+        )
         placeSearch()
         showDock(pager.currentItem, animate = false)
 
@@ -680,7 +694,8 @@ class MainActivity : BaseActivity() {
             renderEvents(cached)
             return
         }
-        lifecycleScope.launch {
+        eventsLoad?.cancel()
+        eventsLoad = lifecycleScope.launch {
             val events = withContext(Dispatchers.IO) { CalendarRepository.todaysEvents(this@MainActivity) }
             eventsCache = events
             eventsCacheAtMillis = System.currentTimeMillis()
@@ -850,7 +865,9 @@ class MainActivity : BaseActivity() {
             System.currentTimeMillis()
         ).build()
         val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { startActivity(intent) }
+        if (runCatching { startActivity(intent) }.isFailure) {
+            Toast.makeText(this, R.string.calendar_app_missing, Toast.LENGTH_SHORT).show()
+        }
     }
 
     companion object {

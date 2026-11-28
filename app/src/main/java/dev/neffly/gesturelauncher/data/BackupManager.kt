@@ -99,7 +99,9 @@ object BackupManager {
 
     fun writeTo(context: Context, uri: Uri, data: BackupData): Result<Unit> = runCatching {
         val text = json.encodeToString(data)
-        context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+        // "wt", not the default "w": some document providers don't truncate on "w", and writing
+        // over a longer backup would leave its tail behind as unreadable JSON.
+        context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray()) }
             ?: error("Couldn't open destination for writing")
     }
 
@@ -122,7 +124,7 @@ object BackupManager {
             // that shares ids with what is already here — re-importing one taken from this device
             // is the obvious case — must replace those gestures rather than store a second copy
             // under the same id. Matches how mergeAll overlays tags below.
-            data.gestures.forEach { GestureStore.update(context, it) }
+            GestureStore.upsertAll(context, data.gestures)
             AppTagStore.mergeAll(context, data.appTags)
             NoteStore.merge(context, data.notes)
             Prefs.setVoiceWords(context, Prefs.voiceWords(context) + data.voiceWords)

@@ -21,6 +21,10 @@ object IconCache {
 
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
 
+    /** Bumped by [clear]. A [load] already fetching when the cache is cleared would otherwise put
+     *  the icon from before the change back, to stay until the next clear. */
+    @Volatile private var generation = 0
+
     /** Notified whenever [clear] runs, so any adapter currently showing icons (see
      *  AppListAdapter) can force its bound rows to rebind — DiffUtil alone won't do this, since an
      *  app's label/tag are typically unchanged when only its icon did (a theme swap, or an update
@@ -40,6 +44,7 @@ object IconCache {
      *  can't see across profiles. */
     fun load(context: Context, app: AppInfo): Drawable? {
         cache.get(app.key)?.let { return it }
+        val fetching = generation
         val pm = context.packageManager
         val icon = if (app.user == Process.myUserHandle()) {
             runCatching { pm.getActivityIcon(app.componentName) }.getOrNull()
@@ -54,7 +59,7 @@ object IconCache {
             }.getOrNull()
         } ?: return null
         val badged = pm.getUserBadgedIcon(icon, app.user)
-        cache.put(app.key, badged)
+        if (fetching == generation) cache.put(app.key, badged)
         return badged
     }
 
@@ -62,6 +67,7 @@ object IconCache {
      *  icons) and whenever the system theme/icon pack changes (see App's configuration-change
      *  receiver). */
     fun clear() {
+        generation++
         cache.evictAll()
         listeners.forEach { it() }
     }

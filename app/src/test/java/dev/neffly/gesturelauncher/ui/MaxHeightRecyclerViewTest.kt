@@ -36,7 +36,7 @@ class MaxHeightRecyclerViewTest {
         override fun getItemCount(): Int = heights.size
     }
 
-    private fun list(rows: Rows, maxHeight: Int): MaxHeightRecyclerView {
+    private fun list(rows: Rows, maxHeight: Int?): MaxHeightRecyclerView {
         val list = MaxHeightRecyclerView(context)
         list.layoutManager = LinearLayoutManager(context)
         list.adapter = rows
@@ -54,6 +54,12 @@ class MaxHeightRecyclerViewTest {
             View.MeasureSpec.makeMeasureSpec(2000, View.MeasureSpec.AT_MOST)
         )
         parent.layout(0, 0, parent.measuredWidth, parent.measuredHeight)
+    }
+
+    @Test
+    fun `a ceiling of zero is no room, not unbounded`() {
+        val list = list(Rows(count = 3, rowHeight = 100), maxHeight = 0)
+        assertEquals(0, list.height)
     }
 
     @Test
@@ -103,7 +109,7 @@ class MaxHeightRecyclerViewTest {
 
     @Test
     fun `is unbounded without a ceiling`() {
-        val list = list(Rows(count = 10, rowHeight = 100), maxHeight = 0)
+        val list = list(Rows(count = 10, rowHeight = 100), maxHeight = null)
         assertEquals(1000, list.height)
     }
 }

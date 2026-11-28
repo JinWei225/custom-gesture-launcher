@@ -57,6 +57,7 @@ import kotlinx.serialization.json.Json
  */
 class GestureTrainingActivity : BaseActivity() {
 
+    private lateinit var toolbar: MaterialToolbar
     private lateinit var pickerContainer: View
     private lateinit var drawContainer: View
     private lateinit var appList: RecyclerView
@@ -93,7 +94,8 @@ class GestureTrainingActivity : BaseActivity() {
         editingId = intent.getStringExtra(EXTRA_ID)
         editingId?.let { id -> editingMapping = GestureStore.all(this).firstOrNull { it.id == id } }
 
-        findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
+        toolbar = findViewById(R.id.toolbar)
+        toolbar.setNavigationOnClickListener { finish() }
 
         pickerContainer = findViewById(R.id.pickerContainer)
         drawContainer = findViewById(R.id.drawContainer)
@@ -203,7 +205,6 @@ class GestureTrainingActivity : BaseActivity() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
-        refreshApps()
     }
 
     private fun refreshApps() {
@@ -229,6 +230,9 @@ class GestureTrainingActivity : BaseActivity() {
     override fun onStart() {
         super.onStart()
         AppRepository.addListener(onAppsChanged)
+        // The listener is off while this screen is away, so whatever was installed or removed
+        // meanwhile — a trip to the Play Store from the picker — is picked up on the way back.
+        refreshApps()
     }
 
     override fun onStop() {
@@ -259,7 +263,7 @@ class GestureTrainingActivity : BaseActivity() {
     private fun showPicker() {
         pickerContainer.visibility = View.VISIBLE
         drawContainer.visibility = View.GONE
-        title = getString(R.string.pick_app)
+        toolbar.setTitle(R.string.pick_app)
     }
 
     private fun showDraw() {
@@ -267,6 +271,7 @@ class GestureTrainingActivity : BaseActivity() {
         searchInput.clearFocus()
         WindowInsetsControllerCompat(window, searchInput).hide(WindowInsetsCompat.Type.ime())
 
+        toolbar.setTitle(R.string.training_title)
         pickerContainer.visibility = View.GONE
         drawContainer.visibility = View.VISIBLE
         strokes.clear()

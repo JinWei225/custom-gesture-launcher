@@ -25,11 +25,15 @@ object Times {
      */
     const val TIME_STRICT = """(?:noon|midnight|\d{1,2}(?::\d{2}(?: ?[ap]\.?m\.?)?| ?[ap]\.?m\.?))"""
 
-    /** `10 min`, `1h30m`, `1 hour 30 minutes`, `1.5h`, `90s` — one or more unit-suffixed numbers. */
-    const val DURATION = """(?:\d+(?:\.\d+)?\s?(?:h|hrs?|hours?|m|mins?|minutes?|s|secs?|seconds?)(?![a-z])\s?)+"""
+    /**
+     * `10 min`, `1h30m`, `1 hour 30 minutes`, `1.5h`, `90s` — one or more unit-suffixed numbers —
+     * and `1h30`, where two digits straight after an hour are minutes, the way it is written down.
+     * Only two, and only after an hour: "10 min 2 eggs" keeps its eggs.
+     */
+    const val DURATION = """(?:\d+\s?(?:h|hrs?|hours?)\s?\d{2}(?![\w:.])|(?:\d+(?:\.\d+)?\s?(?:h|hrs?|hours?|m|mins?|minutes?|s|secs?|seconds?)(?![a-z])\s?)+)"""
 
     private val TIME_PARTS = Regex("""(\d{1,2})(?::(\d{2}))?(?: ?([ap])\.?m\.?)?""")
-    private val DURATION_PART = Regex("""(\d+(?:\.\d+)?)\s?([a-z]+)""")
+    private val DURATION_PART = Regex("""(\d+(?:\.\d+)?)\s?([a-z]*)""")
 
     /** The time [text] names, or null when it is not one [TIME] accepts. */
     fun parse(text: String): LocalTime? {
@@ -55,14 +59,18 @@ object Times {
     fun duration(text: String): Duration? {
         var seconds = 0.0
         var parts = 0
+        var last = ' '
         for (m in DURATION_PART.findAll(text)) {
             val amount = m.groupValues[1].toDouble()
-            seconds += amount * when (m.groupValues[2].first()) {
+            // A number with no unit is only ever the minutes of "1h30" — see DURATION.
+            val unit = m.groupValues[2].firstOrNull() ?: if (last == 'h') 'm' else return null
+            seconds += amount * when (unit) {
                 'h' -> 3600
                 'm' -> 60
                 's' -> 1
                 else -> return null
             }
+            last = unit
             parts++
         }
         if (parts == 0 || seconds < 1) return null

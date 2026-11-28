@@ -22,6 +22,10 @@ import kotlin.math.abs
 class DockStrip(
     strip: View,
     private val pager: ViewPager2,
+    /** Whether a hold means anything right now. When it doesn't, the strip takes no long press
+     *  at all — no buzz for nothing, and the touch can still turn the page, which a long press
+     *  would otherwise end. */
+    private val canHold: () -> Boolean,
     private val onHold: () -> Unit,
     private val onRelease: () -> Unit
 ) {
@@ -69,6 +73,7 @@ class DockStrip(
 
     init {
         strip.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) detector.setIsLongpressEnabled(canHold())
             detector.onTouchEvent(event)
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                 if (dragging) pager.endFakeDrag()

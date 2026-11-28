@@ -24,8 +24,9 @@ class MaxHeightRecyclerView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : RecyclerView(context, attrs, defStyleAttr) {
 
-    /** Ceiling in pixels. 0 or less means unbounded. */
-    var maxHeightPx: Int = 0
+    /** Ceiling in pixels, or null for none. 0 is a real ceiling — no room at all, as on a short
+     *  window under a tall keyboard — not a stand-in for "unbounded". */
+    var maxHeightPx: Int? = null
         set(value) {
             if (field == value) return
             field = value
@@ -33,11 +34,16 @@ class MaxHeightRecyclerView @JvmOverloads constructor(
         }
 
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
-        if (maxHeightPx <= 0) {
+        val ceiling = maxHeightPx
+        if (ceiling == null) {
             super.onMeasure(widthSpec, heightSpec)
             return
         }
-        super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST))
+        // Never past what the parent offers either: the ceiling narrows the parent's limit, it
+        // doesn't replace it.
+        val limit = if (MeasureSpec.getMode(heightSpec) == MeasureSpec.UNSPECIFIED) ceiling
+            else minOf(ceiling, MeasureSpec.getSize(heightSpec))
+        super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST))
         // Under an AT_MOST spec the layout manager has just laid the rows out to fill the ceiling,
         // so its children are exactly the rows that fit — the last of them possibly only in part.
         // Rows are read off the layout rather than assumed because they aren't uniform: a row with

@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.widgets
 
 import android.content.Context
+import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,13 +21,20 @@ data class WidgetEntry(val id: Int, val heightDp: Int)
 object WidgetStore {
 
     private const val FILE = "widgets"
+    private const val KEY_ENTRIES_CORRUPT = "entries.corrupt"
     private const val KEY_ENTRIES = "entries"
 
     private val json = Json { ignoreUnknownKeys = true }
 
     fun load(context: Context): List<WidgetEntry> {
         val raw = prefs(context).getString(KEY_ENTRIES, null) ?: return emptyList()
-        return runCatching { json.decodeFromString<List<WidgetEntry>>(raw) }.getOrDefault(emptyList())
+        return runCatching { json.decodeFromString<List<WidgetEntry>>(raw) }.getOrElse { e ->
+            // Kept rather than dropped: the next save would otherwise make the loss permanent.
+            // The same rule as JsonListFile's ".corrupt" copy.
+            Log.e("WidgetStore", "unreadable list; kept under $KEY_ENTRIES_CORRUPT", e)
+            prefs(context).edit().putString(KEY_ENTRIES_CORRUPT, raw).remove(KEY_ENTRIES).apply()
+            emptyList()
+        }
     }
 
     fun save(context: Context, entries: List<WidgetEntry>) {

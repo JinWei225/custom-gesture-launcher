@@ -74,7 +74,10 @@ class QuicklinksActivity : BaseActivity() {
                 urlLayout.error = getString(R.string.gesture_url_empty)
                 return@setOnClickListener
             }
-            val address = Links.normalize(typedUrl)
+            val address = Links.normalize(typedUrl) ?: run {
+                urlLayout.error = getString(R.string.url_scheme_refused)
+                return@setOnClickListener
+            }
             QuicklinkStore.save(
                 this,
                 Quicklink(

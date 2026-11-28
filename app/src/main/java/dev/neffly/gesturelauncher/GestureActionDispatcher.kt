@@ -28,10 +28,14 @@ object GestureActionDispatcher {
      */
     fun perform(context: Context, mapping: GestureMapping) {
         when (mapping.action) {
-            GestureAction.LAUNCH_APP ->
-                ComponentName.unflattenFromString(mapping.componentName)?.let { comp ->
-                    AppRepository.launch(context, comp)
-                }
+            GestureAction.LAUNCH_APP -> {
+                // Never this app's own components: training can't pick them, so one here came from
+                // a backup file — and an explicit launch would reach screens that aren't exported.
+                val comp = ComponentName.unflattenFromString(mapping.componentName)
+                    ?.takeIf { it.packageName != context.packageName }
+                if (comp != null) AppRepository.launch(context, comp)
+                else Toast.makeText(context, R.string.app_not_available, Toast.LENGTH_SHORT).show()
+            }
             GestureAction.OPEN_DRAWER -> openDrawer(context)
             GestureAction.QUICK_SEARCH -> openSearch(context)
             GestureAction.NOTIFICATIONS -> if (!SystemPanels.expandNotifications(context)) {

@@ -116,6 +116,7 @@
     <string name="gesture_url_entry_title">Open a URL</string>
     <string name="gesture_url_hint">example.com</string>
     <string name="gesture_url_empty">Enter a URL</string>
+    <string name="url_scheme_refused">Only web addresses, and mailto:, tel: and geo: links, can be saved</string>
     <string name="gesture_url_open_failed">Couldn\'t open that link</string>
     <string name="gesture_not_recognized">Not recognized — try again</string>
 

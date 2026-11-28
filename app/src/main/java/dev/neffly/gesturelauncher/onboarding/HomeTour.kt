@@ -48,7 +48,7 @@ class HomeTour(
         if (tour.isShowing || (!tour.isPending && !tour.isDue)) return
         canvasFrame.post {
             if (tour.isShowing) return@post
-            if (!tour.resumeIfPending() && tour.isDue) tour.start(buildSteps())
+            if (!tour.resumeIfPending(buildSteps()) && tour.isDue) tour.start(buildSteps())
         }
     }
 

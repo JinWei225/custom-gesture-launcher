@@ -39,10 +39,14 @@ object VoiceQuery {
     }
 
     /**
-     * The first "open …" hypothesis that names any installed app decides, from all of [candidates]:
-     * the recognizer's best guess at an unusual name is often an ordinary word, and the right
-     * spelling is further down its list. It launches the app when it names exactly one, and
-     * searches for the name when it fits several. With no app named, the best guess is searched.
+     * When the best guess is an "open …" request, the first "open …" hypothesis that names any
+     * installed app decides, from all of [candidates]: the recognizer's best guess at an unusual
+     * name is often an ordinary word, and the right spelling is further down its list. It launches
+     * the app when it names exactly one, and searches for the name when it fits several. With no
+     * app named, the best guess is searched.
+     *
+     * Only then, though: a best guess that isn't a request to open anything says what was asked,
+     * and a lower guess like "open a" for "Opera" is the recognizer reaching, not a second opinion.
      *
      * Hypotheses containing one of the user's [words] are taken first. Those are the words the
      * user has said the recognizer gets wrong — "Ollama" heard as "Obama" — so when the
@@ -52,7 +56,7 @@ object VoiceQuery {
         val spoken = candidates
             .sortedByDescending { c -> words.any { c.contains(it, ignoreCase = true) } }
             .map { read(it, apps) }
-        for (s in spoken) {
+        for (s in if (spoken.first().open) spoken else emptyList()) {
             if (!s.open) continue
             val matches = matchingApps(apps, s.query)
             if (matches.size == 1) return Resolution.Launch(matches.single())
@@ -130,6 +134,8 @@ object VoiceQuery {
     private fun tier(normalizedName: String, q: String): Int? {
         val words = normalizedName.split(NON_WORD).filter { it.isNotEmpty() }
         if (words.joinToString("") == q) return 0
+        // A letter or two starts too many names to stand for one of them: "a" is not Amazon.
+        if (q.length < MIN_PREFIX) return null
         for (i in words.indices) {
             if (words.drop(i).joinToString("").startsWith(q)) return if (i == 0) 1 else 2
         }
@@ -139,6 +145,8 @@ object VoiceQuery {
     private fun compact(s: String): String = SearchScoring.normalize(s).filter { it.isLetterOrDigit() }
 
     private val NON_WORD = Regex("""[^\p{L}\p{N}]+""")
+
+    private const val MIN_PREFIX = 3
 
     /** "7 a.m." → "7 am": the dots would otherwise be left behind in an alarm's label. */
     private val SPOKEN_MERIDIEM = Regex("""\b([ap])\.m\.?""", RegexOption.IGNORE_CASE)

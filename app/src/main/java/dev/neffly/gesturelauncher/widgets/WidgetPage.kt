@@ -185,6 +185,11 @@ class WidgetPage(private val activity: AppCompatActivity, page: View) {
             entries.removeAll(gone)
             WidgetStore.save(activity, entries)
         }
+        // Ids the host holds that no entry names — a list that couldn't be read, or an add cut
+        // short before it was saved — stay bound in the system for good unless released here.
+        // The widget still being added, if any, isn't in the list yet and is left alone.
+        val listed = entries.mapTo(HashSet()) { it.id }
+        host.appWidgetIds.filter { it !in listed && it != pendingId }.forEach(host::deleteAppWidgetId)
         for (entry in entries) column.addView(itemFor(entry, manager.getAppWidgetInfo(entry.id)))
         refreshEditRows()
     }

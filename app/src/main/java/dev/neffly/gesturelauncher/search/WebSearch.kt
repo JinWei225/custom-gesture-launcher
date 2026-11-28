@@ -48,7 +48,8 @@ object WebSearch {
     /** The browser intent for [query] — a search on [engine], or the address it names. */
     fun intentFor(engine: Engine, query: String, url: String?): Intent {
         val target = url ?: (engine.searchBase + Uri.encode(query.trim()))
-        return Intent(Intent.ACTION_VIEW, Uri.parse(target))
+        // Schemes match case-sensitively, so "HTTPS://…" as typed would find no browser.
+        return Intent(Intent.ACTION_VIEW, Uri.parse(target).normalizeScheme())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 

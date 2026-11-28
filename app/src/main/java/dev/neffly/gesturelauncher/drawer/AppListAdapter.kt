@@ -159,9 +159,6 @@ class AppListAdapter(
         return results to chrome
     }
 
-    /** The topmost actionable row of any kind — what Enter activates in a mixed result list. */
-    fun firstResult(): SearchResult? = currentList.firstNotNullOfOrNull { row -> asResult(row) }
-
     private fun asResult(row: Row): SearchResult? =
         when (row) {
             is Row.Item -> SearchResult.App(row.app)

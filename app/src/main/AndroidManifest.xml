@@ -130,6 +130,14 @@
             </intent-filter>
         </activity>
 
+        <!-- The same window, for the home screen's push-to-talk: the only entry that may carry a
+             query. Unexported, so no other app can open quick search with text of its choosing in
+             the field — QuickSearchActivity ignores the query arriving any other way. -->
+        <activity-alias
+            android:name=".search.QuickSearchSpoken"
+            android:exported="false"
+            android:targetActivity=".search.QuickSearchActivity" />
+
         <activity
             android:name=".settings.SettingsHubActivity"
             android:exported="false"

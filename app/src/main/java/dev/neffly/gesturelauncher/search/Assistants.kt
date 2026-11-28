@@ -1,6 +1,7 @@
 package dev.neffly.gesturelauncher.search
 
 import android.content.Intent
+import android.os.Process
 import dev.neffly.gesturelauncher.drawer.AppInfo
 import java.text.Normalizer
 
@@ -30,18 +31,26 @@ object Assistants {
         "ai.x.grok"
     )
 
-    /** The installed assistants among [apps], by name. */
+    /** The installed assistants among [apps], by name — in this profile only: the prompt goes by
+     *  an intent, which can't cross into a work profile, and a work copy would leave the row
+     *  showing one app and opening another. */
     fun installed(apps: List<AppInfo>): List<AppInfo> =
-        apps.filter { it.packageName in KNOWN }.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
+        apps.filter { it.packageName in KNOWN && it.user == Process.myUserHandle() }
+            .distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
 
     /** The rows for [query], or null when it isn't an ask command. */
     fun parse(query: String, assistants: List<AppInfo>): List<Command.Ask>? {
         val q = Normalizer.normalize(query, Normalizer.Form.NFKC).replace(WHITESPACE, " ").trimStart()
         val rest = KEYWORD.matchEntire(q)?.groupValues?.get(1)?.trim() ?: return null
+        // The prompt as typed, not folded — see Commands.typedRest. The name is matched on the
+        // folded text and cut from the typed one; the two only differ in length where a name
+        // itself was typed in compatibility forms, and then the folded text is the better guess.
+        val typed = Commands.typedRest(query)
+        val source = if (typed.length == rest.length) typed else rest
         assistants.filter { startsWithName(rest, it.label) }.maxByOrNull { it.label.length }?.let {
-            return listOf(Command.Ask(prompt(rest.substring(it.label.length)), it))
+            return listOf(Command.Ask(prompt(source.substring(it.label.length)), it))
         }
-        return assistants.map { Command.Ask(prompt(rest), it) }
+        return assistants.map { Command.Ask(prompt(source), it) }
     }
 
     /**

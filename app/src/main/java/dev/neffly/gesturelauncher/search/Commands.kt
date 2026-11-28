@@ -38,13 +38,19 @@ sealed class Command {
      * `event team discussion next mon 8pm`, `event dentist tomorrow 9-9:30am`, `event trip 21 sep`.
      * [date] with no [start] is an all-day event; [start] is never set without a [date], since a
      * bare time is read as today, or tomorrow once it has passed.
+     *
+     * A [length] rather than an end time, because an end time can't say which day it falls on:
+     * "9am for 25h" ends the next morning, and as a bare 10:00 it read as a one-hour event.
      */
     data class Event(
         val title: String,
         val date: LocalDate?,
         val start: LocalTime?,
-        val end: LocalTime?
-    ) : Command()
+        val length: Duration?
+    ) : Command() {
+        /** The clock time it ends at, whichever day that is. */
+        val end: LocalTime? get() = length?.let { start?.plus(it) }
+    }
 
     /** `web how tall is k2`, `web docs.google.com`. [url] is set when the query is an address. */
     data class Web(val query: String, val url: String?) : Command()
@@ -93,10 +99,19 @@ object Commands {
             "alarm" -> alarm(slots)
             "timer" -> timer(slots)
             "event" -> event(slots, ZonedDateTime.now(clock))
-            "web" -> slots.rest().let { Command.Web(it, WebSearch.detectUrl(it)) }
-            else -> Command.Map(slots.rest())
+            "web" -> typedRest(query).let { Command.Web(it, WebSearch.detectUrl(it)) }
+            else -> Command.Map(typedRest(query))
         }
     }
+
+    /**
+     * What follows the keyword, as typed. The folding [parse] does is for reading times and dates
+     * typed on a CJK keyboard; a search or a prompt is free text, and folding it would send
+     * "x²" as "x2" or "Room ①" as "Room 1". The keyword itself has already been matched on the
+     * folded text, so this only has to find where it ends.
+     */
+    internal fun typedRest(query: String): String =
+        TYPED_REST.find(query)?.groupValues?.get(1)?.replace(TYPED_SPACE, " ")?.trim().orEmpty()
 
     private fun alarm(slots: Slots): Command.Alarm {
         // A time that says it is one wins over a bare hour, wherever each sits: in "take 2 pills
@@ -120,11 +135,18 @@ object Commands {
         return Command.Alarm(time, days, slots.rest())
     }
 
+    /** A length outside what AlarmClock.EXTRA_LENGTH accepts (1 s to 24 h) isn't read, so the row
+     *  shows the words it couldn't use rather than a timer the clock app would refuse. */
     private fun timer(slots: Slots): Command.Timer {
-        val length = slots.take(TIMER_LENGTH) { Times.duration(it.groupValues[1].lowercase(Locale.ROOT)) }
-            ?: slots.take(BARE_NUMBER) { Duration.ofMinutes(it.groupValues[1].toLong()) }
+        val length = slots.take(TIMER_LENGTH) {
+            Times.duration(it.groupValues[1].lowercase(Locale.ROOT))?.takeIf(::isTimerLength)
+        } ?: slots.take(BARE_NUMBER) {
+            Duration.ofMinutes(it.groupValues[1].toLong()).takeIf(::isTimerLength)
+        }
         return Command.Timer(length, slots.rest())
     }
+
+    private fun isTimerLength(length: Duration): Boolean = length.seconds in 1..MAX_TIMER_SECONDS
 
     private fun event(slots: Slots, now: ZonedDateTime): Command.Event {
         val range = slots.take(EVENT_RANGE) { m ->
@@ -133,34 +155,42 @@ object Commands {
         }
         val length = slots.take(EVENT_LENGTH) { Times.duration(it.groupValues[1].lowercase(Locale.ROOT)) }
         val start = range?.first ?: slots.take(STATED_TIME, ::readStatedTime)
-        var end = range?.second
         var date = slots.take(EVENT_DATE) {
             Dates.resolve(it.groupValues[1].lowercase(Locale.ROOT), now.toLocalDate())
         }
-        if (start != null) {
-            if (end == null && length != null) end = start.plus(length)
-            if (date == null) {
-                date = if (start.isAfter(now.toLocalTime())) now.toLocalDate() else now.toLocalDate().plusDays(1)
-            }
+        if (start != null && date == null) {
+            date = if (start.isAfter(now.toLocalTime())) now.toLocalDate() else now.toLocalDate().plusDays(1)
         }
-        return Command.Event(slots.rest(), date, start, end)
+        return Command.Event(slots.rest(), date, start, range?.let { span(it.first, it.second) } ?: length.takeIf { start != null })
+    }
+
+    /** From [start] to [end], ending the next day when [end] isn't after [start]: "11pm-1am". */
+    private fun span(start: LocalTime, end: LocalTime): Duration {
+        val length = Duration.between(start, end)
+        return if (length.isNegative || length.isZero) length.plusDays(1) else length
     }
 
     /**
-     * `8-9pm`, `8:30 to 9pm`, `11-1pm`, `20:00-21:00`. One side has to carry a colon or a meridiem,
-     * or "8-9" in a title would be read as a time. A start with no meridiem takes the end's, unless
-     * that would put it after the end — "11-1pm" is 11 in the morning.
+     * `8-9pm`, `8:30 to 9pm`, `11-1pm`, `9am-5`, `20:00-21:00`. One side has to carry a colon or a
+     * meridiem, or "8-9" in a title would be read as a time. A side with no meridiem takes the
+     * other's, unless that would put the start after the end — "11-1pm" is 11 in the morning.
      */
     private fun range(startText: String, endText: String): Pair<LocalTime, LocalTime>? {
         val startStrict = STRICT.matches(startText)
         val endStrict = STRICT.matches(endText)
         if (!startStrict && !endStrict) return null
         var start = Times.parse(startText) ?: return null
-        val end = Times.parse(endText) ?: return null
-        if (!MERIDIEM.containsMatchIn(startText) && MERIDIEM.containsMatchIn(endText) && start.hour in 1..12) {
+        var end = Times.parse(endText) ?: return null
+        val startMeridiem = MERIDIEM.containsMatchIn(startText)
+        val endMeridiem = MERIDIEM.containsMatchIn(endText)
+        if (!startMeridiem && endMeridiem && start.hour in 1..12) {
             val pm = end.hour >= 12
             start = start.withHour(start.hour % 12 + if (pm) 12 else 0)
             if (!start.isBefore(end)) start = start.withHour((start.hour + 12) % 24)
+        } else if (startMeridiem && !endMeridiem && end.hour in 1..12) {
+            // The other way round: "9am-5" ends at five in the afternoon, not the next morning.
+            end = end.withHour(end.hour % 12 + if (start.hour >= 12) 12 else 0)
+            if (!end.isAfter(start)) end = end.plusHours(12)
         }
         return start to end
     }
@@ -211,8 +241,11 @@ object Commands {
         val start = event.start
             ?: return day(context, date) + SEPARATOR + context.getString(R.string.search_event_all_day)
         val time = Times.formatter(context)
-        val span = event.end?.let {
-            context.getString(R.string.search_event_span, time.format(start), time.format(it))
+        val span = event.length?.let {
+            // The end's day too when it isn't the start's, or "9am for 25h" would read as an hour.
+            val end = date.atTime(start).plus(it)
+            val endText = if (end.toLocalDate() == date) time.format(end) else day(context, end.toLocalDate()) + " " + time.format(end)
+            context.getString(R.string.search_event_span, time.format(start), endText)
         } ?: time.format(start)
         return day(context, date) + SEPARATOR + span
     }
@@ -303,10 +336,8 @@ object Commands {
                     return@apply
                 }
                 putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, millis(date.atTime(start), zone))
-                command.end?.let { end ->
-                    // "11pm to 1am" ends the next morning.
-                    val endDay = if (end.isAfter(start)) date else date.plusDays(1)
-                    putExtra(CalendarContract.EXTRA_EVENT_END_TIME, millis(endDay.atTime(end), zone))
+                command.length?.let {
+                    putExtra(CalendarContract.EXTRA_EVENT_END_TIME, millis(date.atTime(start).plus(it), zone))
                 }
             }
             is Command.Web -> WebSearch.intentFor(Prefs.searchEngine(context), command.query, command.url)
@@ -345,6 +376,12 @@ object Commands {
     }
 
     private const val MAX_LENGTH = 120
+    private const val MAX_TIMER_SECONDS = 24 * 60 * 60L
+
+    /** The keyword, then everything after it — see [typedRest]. U+3000 is the CJK keyboard's
+     *  space, which `\s` doesn't cover. */
+    private val TYPED_REST = Regex("""^[\s\u3000]*[^\s\u3000]+[\s\u3000](.*)""", RegexOption.DOT_MATCHES_ALL)
+    private val TYPED_SPACE = Regex("""[\s\u3000]+""")
     private const val SEPARATOR = " · "
 
     private val WHITESPACE = Regex("""\s+""")

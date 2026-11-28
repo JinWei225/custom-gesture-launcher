@@ -92,6 +92,9 @@ class GestureCanvasView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** The finger drawing the current stroke; INVALID_POINTER_ID once it has lifted. */
+    private var activePointer = MotionEvent.INVALID_POINTER_ID
+
     init {
         isFocusable = true
         isClickable = true
@@ -115,6 +118,7 @@ class GestureCanvasView @JvmOverloads constructor(
                     subStrokeLengths.clear()
                 }
                 subStrokeLengths.add(1)
+                activePointer = event.getPointerId(0)
                 val start = clamped(event.x, event.y)
                 points.add(start)
                 path.moveTo(start.x, start.y)
@@ -122,25 +126,29 @@ class GestureCanvasView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                // The finger that started the stroke, wherever it now sits among the pointers: a
+                // second finger landing (or the first lifting) would otherwise move index 0 to
+                // another finger and draw a jump across to it.
+                val index = event.findPointerIndex(activePointer)
+                if (index < 0) return true
                 // Android batches fast touch samples into one event; the intermediate samples
                 // arrive as "historical" points. Folding them in costs nothing and gives the
                 // recognizer (and the trail) the full-resolution stroke.
                 for (h in 0 until event.historySize) {
-                    addPoint(clamped(event.getHistoricalX(h), event.getHistoricalY(h)))
+                    addPoint(clamped(event.getHistoricalX(index, h), event.getHistoricalY(index, h)))
                 }
-                addPoint(clamped(event.x, event.y))
+                addPoint(clamped(event.getX(index), event.getY(index)))
                 invalidate()
                 return true
             }
+            MotionEvent.ACTION_POINTER_UP -> {
+                // The drawing finger lifted while another stays down: that is the end of the
+                // stroke, and the finger left behind draws nothing.
+                if (event.getPointerId(event.actionIndex) == activePointer) endStroke()
+                return true
+            }
             MotionEvent.ACTION_UP -> {
-                val complete =
-                    maxExpectedSubStrokes > 0 && subStrokeLengths.size >= maxExpectedSubStrokes
-                if (multiStrokeGapMillis > 0 && !complete) {
-                    finalizePending = true
-                    postDelayed(finalizeRunnable, multiStrokeGapMillis)
-                } else {
-                    finalizeSession()
-                }
+                if (activePointer != MotionEvent.INVALID_POINTER_ID) endStroke()
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
@@ -149,6 +157,17 @@ class GestureCanvasView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun endStroke() {
+        activePointer = MotionEvent.INVALID_POINTER_ID
+        val complete = maxExpectedSubStrokes > 0 && subStrokeLengths.size >= maxExpectedSubStrokes
+        if (multiStrokeGapMillis > 0 && !complete) {
+            finalizePending = true
+            postDelayed(finalizeRunnable, multiStrokeGapMillis)
+        } else {
+            finalizeSession()
+        }
     }
 
     private fun addPoint(point: PointF) {

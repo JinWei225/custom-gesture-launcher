@@ -54,7 +54,10 @@ class GestureUrlEntryActivity : SlidePanelActivity() {
             Toast.makeText(this, R.string.gesture_url_empty, Toast.LENGTH_SHORT).show()
             return
         }
-        val normalized = Links.normalize(typed)
+        val normalized = Links.normalize(typed) ?: run {
+            Toast.makeText(this, R.string.url_scheme_refused, Toast.LENGTH_LONG).show()
+            return
+        }
 
         val id = editingId
         if (id != null) {

@@ -1,8 +1,11 @@
 package dev.neffly.gesturelauncher.search
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
+import java.util.Locale
 
 /**
  * The two halves of [Calculator] are tested separately on purpose: that it computes the right
@@ -12,6 +15,38 @@ import org.junit.Test
 class CalculatorTest {
 
     private fun calc(query: String) = Calculator.evaluate(query)
+
+    // Results use the reader's own separators, so the expectations below are for one locale.
+    private lateinit var savedLocale: Locale
+
+    @Before
+    fun pinLocale() {
+        savedLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+    }
+
+    @After
+    fun restoreLocale() = Locale.setDefault(savedLocale)
+
+    @Test
+    fun `superscript digits are powers`() {
+        assertEquals("10", calc("3²+1"))
+        assertEquals("8", calc("2³"))
+        assertEquals("1,024", calc("2¹⁰"))
+    }
+
+    @Test
+    fun `a tiny result shows its exponent instead of rounding to zero`() {
+        assertEquals("-1E-11", calc("0.1-0.10000000001"))
+        assertEquals("1E-12", calc("1/10^12"))
+        assertEquals("0", calc("1-1"))
+    }
+
+    @Test
+    fun `a signed percentage after an operator is just that percentage`() {
+        assertEquals("-0.5", calc("5*-10%"))
+        assertEquals("55", calc("50+10%"))
+    }
 
     // --- arithmetic ---------------------------------------------------------
 

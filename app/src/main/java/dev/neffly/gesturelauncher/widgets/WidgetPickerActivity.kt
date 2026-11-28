@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,6 +34,7 @@ import dev.neffly.gesturelauncher.ui.Glass
 import dev.neffly.gesturelauncher.ui.SlidePanelActivity
 import dev.neffly.gesturelauncher.ui.overrideOwnTransitions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -69,13 +71,23 @@ class WidgetPickerActivity : SlidePanelActivity() {
         list.layoutManager = LinearLayoutManager(this)
         val adapter = ProviderAdapter()
         list.adapter = adapter
-        val groups = groups()
-        adapter.submitList(rowsFor(groups, ""))
-        findViewById<TextInputEditText>(R.id.widgetSearch).doAfterTextChanged { text ->
+        val search = findViewById<TextInputEditText>(R.id.widgetSearch)
+        var groups: List<Group> = emptyList()
+        search.doAfterTextChanged { text ->
             adapter.submitList(rowsFor(groups, text?.toString().orEmpty()))
             list.scrollToPosition(0)
         }
+        // An IPC for the providers, then a label and an icon per app: off the main thread, or the
+        // picker freezes before it slides in on a phone with many widget apps.
+        lifecycleScope.launch {
+            groups = withContext(Dispatchers.IO) { groups() }
+            adapter.submitList(rowsFor(groups, search.text?.toString().orEmpty()))
+        }
     }
+
+    /** Decoded previews, kept while the picker is open: filtering and flinging rebind the same
+     *  rows over and over, and each preview is a full-size bitmap decode. */
+    private val previews = LruCache<ComponentName, Drawable>(PREVIEW_CACHE_SIZE)
 
     /** Every app with widgets, in label order, each with its widgets in label order. */
     private fun groups(): List<Group> {
@@ -165,6 +177,7 @@ class WidgetPickerActivity : SlidePanelActivity() {
         private val label: TextView = view.findViewById(R.id.widgetLabel)
         private val description: TextView = view.findViewById(R.id.widgetDescription)
         private var bound: AppWidgetProviderInfo? = null
+        private var load: Job? = null
 
         fun bind(row: Row.Widget) {
             val info = row.info
@@ -175,10 +188,14 @@ class WidgetPickerActivity : SlidePanelActivity() {
             description.isVisible = !text.isNullOrBlank()
             itemView.setOnClickListener { pick(info) }
             // Previews are full-size bitmaps decoded from the provider's package; off the main
-            // thread, and dropped if the row has moved on to another widget by the time one lands.
-            preview.setImageDrawable(null)
-            lifecycleScope.launch {
-                val drawable = withContext(Dispatchers.IO) { previewOf(info) }
+            // thread, and cancelled when the row moves on to another widget before one lands.
+            load?.cancel()
+            val cached = previews.get(info.provider)
+            preview.setImageDrawable(cached)
+            if (cached != null) return
+            load = lifecycleScope.launch {
+                val drawable = withContext(Dispatchers.IO) { previewOf(info) } ?: return@launch
+                previews.put(info.provider, drawable)
                 if (bound === info) preview.setImageDrawable(drawable)
             }
         }
@@ -201,6 +218,7 @@ class WidgetPickerActivity : SlidePanelActivity() {
 
         private const val TYPE_APP = 0
         private const val TYPE_WIDGET = 1
+        private const val PREVIEW_CACHE_SIZE = 40
 
         fun intent(context: Context) = Intent(context, WidgetPickerActivity::class.java)
     }

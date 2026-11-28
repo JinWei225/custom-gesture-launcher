@@ -3,6 +3,8 @@ package dev.neffly.gesturelauncher.drawer
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
+import android.content.pm.ShortcutInfo
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -33,8 +35,8 @@ import dev.neffly.gesturelauncher.data.Prefs
 import dev.neffly.gesturelauncher.launch.FloatingWindow
 import dev.neffly.gesturelauncher.search.Clipboard
 import dev.neffly.gesturelauncher.search.Commands
-import dev.neffly.gesturelauncher.search.SearchController
 import dev.neffly.gesturelauncher.search.Links
+import dev.neffly.gesturelauncher.search.SearchController
 import dev.neffly.gesturelauncher.search.SearchResult
 import dev.neffly.gesturelauncher.settings.SettingsHubActivity
 import dev.neffly.gesturelauncher.ui.AlphabetIndexView
@@ -206,7 +208,7 @@ class AppDrawerActivity : BaseActivity() {
                 // with Enter one keystroke away, so an empty query would launch whichever app
                 // happens to sort first. Still consumed, to keep the keyboard up.
                 if (!searchInput.text.isNullOrBlank()) {
-                    adapter.firstResult()?.let { open(it) }
+                    search.results.firstOrNull()?.let { open(it) }
                 }
                 true
             } else {
@@ -364,6 +366,20 @@ class AppDrawerActivity : BaseActivity() {
     }
 
     private fun showAppMenu(app: AppInfo, anchor: View) {
+        lifecycleScope.launch {
+            // Binder calls and a shortcut-icon decode each: off the main thread, so the menu
+            // doesn't stutter before it appears.
+            val details = withContext(Dispatchers.IO) { menuDetails(app) }
+            // The row may have scrolled away or the drawer closed while they loaded.
+            if (anchor.isAttachedToWindow) showAppMenu(app, anchor, details)
+        }
+    }
+
+    /** What the long-press menu shows beyond the fixed rows: whether to offer Uninstall, and the
+     *  app's shortcuts with their icons. Blocking. */
+    private class MenuDetails(val isSystemApp: Boolean, val shortcuts: List<Pair<ShortcutInfo, Drawable?>>)
+
+    private fun menuDetails(app: AppInfo): MenuDetails {
         // Everything here goes through the entry's own profile: the same package can be installed
         // in both, and asking the personal profile about a work row answers for the wrong copy.
         val launcherApps = getSystemService(LauncherApps::class.java)
@@ -372,22 +388,25 @@ class AppDrawerActivity : BaseActivity() {
                 ApplicationInfo.FLAG_SYSTEM != 0
         }.getOrDefault(false)
         val shortcuts = AppShortcutHelper.queryShortcuts(this, app.packageName, app.user)
+            .map { it to AppShortcutHelper.icon(this, it) }
+        return MenuDetails(isSystemApp, shortcuts)
+    }
 
+    private fun showAppMenu(app: AppInfo, anchor: View, details: MenuDetails) {
         val items = buildList {
             add(GlassMenu.item(anchor, R.string.app_info, R.drawable.ic_info) { openAppInfo(app) })
             add(GlassMenu.item(anchor, R.string.add_alias, R.drawable.ic_label) { editLabel(app) })
-            if (!isSystemApp) {
+            if (!details.isSystemApp) {
                 add(GlassMenu.item(anchor, R.string.uninstall, R.drawable.ic_delete, destructive = true) {
                     uninstall(app)
                 })
             }
-            for (shortcut in shortcuts) {
+            for ((shortcut, icon) in details.shortcuts) {
                 // Both labels are nullable in the platform API, and a row with nothing to read is
                 // worse than no row.
                 val label = shortcut.longLabel ?: shortcut.shortLabel ?: continue
                 // A shortcut's own icon is a picture and keeps its colours; one without gets the
                 // same glyph treatment as the rows above.
-                val icon = AppShortcutHelper.icon(this@AppDrawerActivity, shortcut)
                 add(
                     GlassMenu.Item(
                         label,
@@ -416,13 +435,13 @@ class AppDrawerActivity : BaseActivity() {
                 } else {
                     AppTagStore.setTag(this, app.packageName, text)
                 }
-                AppRepository.invalidate()
+                AppRepository.retag(this)
             }
             .setNegativeButton(R.string.cancel, null)
         if (app.tag != null) {
             builder.setNeutralButton(R.string.remove_alias) { _, _ ->
                 AppTagStore.clearTag(this, app.packageName)
-                AppRepository.invalidate()
+                AppRepository.retag(this)
             }
         }
         builder.showWithFont()

@@ -18,6 +18,13 @@ object GestureStore {
 
     fun remove(context: Context, id: String) = file.update(context) { list -> list.filterNot { it.id == id } }
 
+    /** Adds [mappings], replacing any already stored under the same id, in one write — backup
+     *  restore's "Merge" mode, which used to rewrite the file once per gesture. */
+    fun upsertAll(context: Context, mappings: List<GestureMapping>) = file.update(context) { list ->
+        val incoming = mappings.associateBy { it.id }
+        list.map { incoming[it.id] ?: it } + mappings.filter { m -> list.none { it.id == m.id } }
+    }
+
     /** Wipes and replaces the whole store — used by backup restore's "Replace all" mode. */
     fun replaceAll(context: Context, list: List<GestureMapping>) = file.write(context, list)
 }

@@ -21,6 +21,12 @@ class SearchController(
 
     private var query: String = ""
 
+    /** What the last [onResults] carried. Enter opens the first of these rather than the adapter's
+     *  first row: the adapter's list only changes once a background diff finishes, so a fast
+     *  keyboard's Enter could open the previous query's top result. */
+    var results: List<SearchResult> = emptyList()
+        private set
+
     fun onQueryChanged(newQuery: String) {
         query = newQuery
         emit()
@@ -30,8 +36,11 @@ class SearchController(
     fun refresh() = onQueryChanged(query)
 
     private fun emit() {
-        if (query.isBlank()) {
-            onResults(query, emptyList())
+        // A query that folds to nothing — a lone dead-key accent, a zero-width space — would
+        // otherwise rank every app as a match.
+        if (query.isBlank() || SearchScoring.normalize(query).isEmpty()) {
+            results = emptyList()
+            onResults(query, results)
             return
         }
         val results = ArrayList<SearchResult>()
@@ -49,6 +58,7 @@ class SearchController(
         results += SearchEngine.apps(apps, query)
         if (!linksFirst) results += links
         SearchEngine.settings(query)?.let { results += it }
+        this.results = results
         onResults(query, results)
     }
 }

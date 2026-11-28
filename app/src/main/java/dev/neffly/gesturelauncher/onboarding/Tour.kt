@@ -4,6 +4,7 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import com.skydoves.balloon.Balloon
 import dev.neffly.gesturelauncher.R
 import dev.neffly.gesturelauncher.data.Prefs
@@ -51,8 +52,21 @@ class Tour(
     private var steps: List<Step> = emptyList()
     private var index = 0
     private var balloon: Balloon? = null
-    /** The step to show when the owner comes back from a screen a step opened. */
+    /** The step to show when the owner comes back from a screen a step opened. Kept in the
+     *  activity's saved state: the screen a step opens is where the theme, the font and the pages
+     *  are changed, and each of those recreates the owner, which would otherwise begin again at
+     *  step one. */
     private var pendingIndex: Int? = null
+
+    init {
+        val key = "tour_" + hint.name
+        activity.savedStateRegistry.consumeRestoredStateForKey(key)?.let { state ->
+            pendingIndex = state.getInt(STATE_PENDING, -1).takeIf { it >= 0 }
+        }
+        activity.savedStateRegistry.registerSavedStateProvider(key) {
+            bundleOf(STATE_PENDING to (pendingIndex ?: -1))
+        }
+    }
 
     /** Back skips the tour while a step is up, rather than reaching the screen's own handling. */
     private val back = object : OnBackPressedCallback(false) {
@@ -76,10 +90,12 @@ class Tour(
         show(0)
     }
 
-    /** Picks the tour up where a step's button left it; false if nothing was waiting. */
-    fun resumeIfPending(): Boolean {
+    /** Picks the tour up where a step's button left it, on [steps] built afresh — after a
+     *  recreation the old ones point at views that are gone. False if nothing was waiting. */
+    fun resumeIfPending(steps: List<Step>): Boolean {
         val resumeAt = pendingIndex ?: return false
         pendingIndex = null
+        this.steps = steps
         show(resumeAt)
         return true
     }
@@ -139,5 +155,9 @@ class Tour(
         balloon = null
         pendingIndex = null
         onEnd()
+    }
+
+    private companion object {
+        const val STATE_PENDING = "pending"
     }
 }

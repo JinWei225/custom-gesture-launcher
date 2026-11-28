@@ -67,6 +67,18 @@ object AppRepository {
     fun addListener(listener: () -> Unit) { listeners.add(listener) }
     fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
 
+    /**
+     * Re-reads every app's alias into the cached list, after one was set or removed. Nothing else
+     * about the apps changed, so unlike [invalidate] there is no rescan and no icon reload — which
+     * flashed every visible row to its placeholder for the sake of one alias.
+     */
+    fun retag(context: Context) {
+        synchronized(publishLock) {
+            cache = cache?.map { it.copy(tag = AppTagStore.tag(context, it.packageName)) }
+        }
+        listeners.forEach { it() }
+    }
+
     /** Drops the cached app list (and stale icons), e.g. after a LauncherApps package callback. */
     fun invalidate() {
         generation++
